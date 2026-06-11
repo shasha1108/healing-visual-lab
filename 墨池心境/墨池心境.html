@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>墨池心境 · 浮水太极</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;600&display=swap');
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #F3EFE8; /* 茶白底色 */
+            font-family: 'Noto Serif SC', serif;
+            /* 治愈系定制毛笔光标 */
+            cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAALGPC/xhBQAAAQBJREFUWMPt1z0OAVEUx/H/WIlEqxONrQQSGxCxBhIrkFhLq0SisQOJVSixAolVqGg03uCTefNGM5OZ8xJvO828997f+828x5wq/lg17y8h4YUa6qihjWbQ12wnbHEF5zQyJdZRRxF5ZFHEA2JE0McQ6yjjgCg6iGGLJbZ+h7+wwxL7IK6wQh951FBFB3n0sMQ+iGss0ccIabSRRwV5bLDEPoibLLEO4gZLtJBHGXnUkUcLS+yDuMQSHeTRwhJ95JFHGYe/u4j8Is4f3+Fy58l+xO1y50t3h8v1zR/x4fL4zR/x6fL8zR/xc3n/5o/4w/L+zR/xl+Xzmyv2+QO24Vs0436YKAAAAABJRU5ErkJggg==') 16 16, crosshair;
+            touch-action: none; /* 阻止移动端默认滑动 */
+        }
+        canvas { display: block; }
+
+        #ui {
+            position: absolute;
+            bottom: 60px;
+            width: 100%;
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            animation: fadeIn 3s ease-in-out;
+        }
+
+        .title {
+            color: rgba(26, 37, 44, 0.85); /* 黛蓝 */
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: 12px;
+            text-indent: 12px; /* 平衡字间距 */
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+        }
+
+        .subtitle {
+            color: rgba(26, 37, 44, 0.5);
+            font-size: 14px;
+            font-weight: 300;
+            letter-spacing: 6px;
+            text-indent: 6px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+            transition: opacity 1s;
+        }
+
+        /* 宣纸纸张肌理叠加层 */
+        .paper-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.35;
+            mix-blend-mode: multiply;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="paper-overlay"></div>
+    <div id="ui">
+        <div class="title">墨池心境 · 浮水太极</div>
+        <div class="subtitle" id="hint">游移拨动涟漪，长按聚墨成极</div>
+    </div>
+
+    <!-- 引入 Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- ==================== 1. 浮水背景 Suminagashi Shader ==================== -->
+    <script type="x-shader/x-vertex" id="bg-vertex">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = vec4(position, 1.0);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="bg-fragment">
+        uniform float uTime;
+        uniform vec2 uMouse;
+        uniform float uTaiChiStrength;
+        varying vec2 vUv;
+
+        // 2D 随机与噪声
+        float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123); }
+        float noise(vec2 st) {
+            vec2 i = floor(st); vec2 f = fract(st);
+            float a = random(i); float b = random(i + vec2(1.0, 0.0));
+            float c = random(i + vec2(0.0, 1.0)); float d = random(i + vec2(1.0, 1.0));
+            vec2 u = f * f * (3.0 - 2.0 * f);
+            return mix(a, b, u.x) + (c - a)* u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+        }
+        float fbm(vec2 st) {
+            float v = 0.0; float a = 0.5;
+            vec2 shift = vec2(100.0);
+            mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.50));
+            for (int i = 0; i < 5; ++i) {
+                v += a * noise(st);
+                st = rot * st * 2.0 + shift;
+                a *= 0.5;
+            }
+            return v;
+        }
+
+        void main() {
+            // 修复比例与居中
+            vec2 st = vUv * 3.0;
+            
+            // 鼠标拨动水的物理场
+            vec2 mouseDir = vUv - (uMouse * 0.5 + 0.5); // 映射到 0~1
+            float mouseDist = length(mouseDir);
+            vec2 ripple = normalize(mouseDir + 0.001) * exp(-mouseDist * 6.0) * 0.3 * sin(uTime * 2.0);
+            st += ripple;
+
+            // 域扭曲 (Domain Warping) 制造水影画拉丝感
+            vec2 q = vec2(fbm(st + uTime * 0.03), fbm(st + vec2(1.0)));
+            vec2 r = vec2(fbm(st + 1.0 * q + vec2(1.7, 9.2) + uTime * 0.02),
+                          fbm(st + 1.0 * q + vec2(8.3, 2.8) + uTime * 0.02));
+            float f = fbm(st + r * 2.5);
+
+            // 治愈系色彩库
+            vec3 bgBase  = vec3(0.95, 0.93, 0.90); // 茶白 (底色)
+            vec3 celadon = vec3(0.61, 0.74, 0.72); // 青瓷
+            vec3 rose    = vec3(0.84, 0.64, 0.60); // 霞粉
+            vec3 gold    = vec3(0.83, 0.72, 0.44); // 藤黄
+            vec3 darkInk = vec3(0.85, 0.85, 0.85); // 当聚墨时，背景泛白衬托
+
+            // 颜色流体融合
+            vec3 color = mix(bgBase, celadon, smoothstep(0.0, 0.9, f));
+            color = mix(color, rose, smoothstep(0.2, 0.8, q.x));
+            color = mix(color, gold, smoothstep(0.6, 1.0, r.y));
+
+            // 当聚力成太极时，水面色彩慢慢变淡变素净，把视觉留给太极
+            color = mix(color, bgBase, uTaiChiStrength * 0.7);
+
+            // 边缘疗愈暗角
+            float vign = 1.0 - length(vUv - 0.5) * 1.2;
+            color *= mix(0.9, 1.0, smoothstep(0.0, 1.0, vign));
+
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <!-- ==================== 2. 粒子物理 & 太极融合 Shader ==================== -->
+    <script type="x-shader/x-vertex" id="particle-vertex">
+        attribute vec3 aTaiChiPos;   // 目标太极阵列的坐标
+        attribute vec3 aSumiColor;   // 随机分配的水影画疗愈色
+        attribute float aIsYang;     // 阴阳属性 (0=阴/墨, 1=阳/白)
+        attribute float aLifeOffset; // 生命周期的随机偏移，用于产生连绵不断的水流感
+
+        uniform float uTime;
+        uniform vec2 uMouse;
+        uniform float uTaiChiStrength; // 0.0 = 无极流体, 1.0 = 太极秩序
+
+        varying vec3 vColor;
+        varying float vAlpha;
+
+        // --- 3D Simplex Noise & Curl Noise (核心物理引擎) ---
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+        vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+        float snoise(vec3 v) {
+            const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+            const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+            vec3 i  = floor(v + dot(v, C.yyy) );
+            vec3 x0 = v - i + dot(i, C.xxx) ;
+            vec3 g = step(x0.yzx, x0.xyz);
+            vec3 l = 1.0 - g;
+            vec3 i1 = min( g.xyz, l.zxy );
+            vec3 i2 = max( g.xyz, l.zxy );
+            vec3 x1 = x0 - i1 + C.xxx;
+            vec3 x2 = x0 - i2 + C.yyy;
+            vec3 x3 = x0 - D.yyy;
+            i = mod289(i);
+            vec4 p = permute( permute( permute(
+                        i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                      + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+                      + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+            float n_ = 0.142857142857;
+            vec3  ns = n_ * D.wyz - D.xzx;
+            vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+            vec4 x_ = floor(j * ns.z);
+            vec4 y_ = floor(j - 7.0 * x_ );
+            vec4 x = x_ *ns.x + ns.yyyy;
+            vec4 y = y_ *ns.x + ns.yyyy;
+            vec4 h = 1.0 - abs(x) - abs(y);
+            vec4 b0 = vec4( x.xy, y.xy );
+            vec4 b1 = vec4( x.zw, y.zw );
+            vec4 s0 = floor(b0)*2.0 + 1.0;
+            vec4 s1 = floor(b1)*2.0 + 1.0;
+            vec4 sh = -step(h, vec4(0.0));
+            vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+            vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+            vec3 p0 = vec3(a0.xy,h.x);
+            vec3 p1 = vec3(a0.zw,h.y);
+            vec3 p2 = vec3(a1.xy,h.z);
+            vec3 p3 = vec3(a1.zw,h.w);
+            vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+            p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+            return 42.0 * dot( vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)), vec4(1.0) );
+        }
+
+        vec3 snoiseVec3( vec3 x ){
+            return vec3( snoise(x), snoise(x + 100.0), snoise(x + 200.0) );
+        }
+
+        vec3 curlNoise( vec3 p ){
+            const float e = 0.1;
+            vec3 dx = vec3( e, 0.0, 0.0 );
+            vec3 dy = vec3( 0.0, e, 0.0 );
+            vec3 dz = vec3( 0.0, 0.0, e );
+            vec3 p_x0 = snoiseVec3( p - dx ); vec3 p_x1 = snoiseVec3( p + dx );
+            vec3 p_y0 = snoiseVec3( p - dy ); vec3 p_y1 = snoiseVec3( p + dy );
+            vec3 p_z0 = snoiseVec3( p - dz ); vec3 p_z1 = snoiseVec3( p + dz );
+            float x = p_y1.z - p_y0.z - p_z1.y + p_z0.y;
+            float y = p_z1.x - p_z0.x - p_x1.z + p_x0.z;
+            float z = p_x1.y - p_x0.y - p_y1.x + p_y0.x;
+            return normalize(vec3( x, y, z )) * 2.0;
+        }
+
+        void main() {
+            // ================= 1. 计算自然水墨流体运动 =================
+            vec3 fluidPos = position;
+            // 通过顶点内置小循环模拟简单的物理步进，无需繁重的 JavaScript 运算
+            for(int i=0; i<3; i++) {
+                fluidPos += curlNoise(fluidPos * 0.015 + uTime * 0.08) * 1.5;
+            }
+
+            // 添加鼠标的拨动涟漪引力 (映射到流体世界中)
+            vec3 worldMouse = vec3(uMouse * 100.0, 0.0);
+            vec3 mouseDir = fluidPos - worldMouse;
+            float mouseDist = length(mouseDir);
+            fluidPos += normalize(mouseDir + 0.01) * exp(-mouseDist * 0.05) * 5.0;
+
+            // ================= 2. 计算太极阵列旋转运动 =================
+            float angle = uTime * 0.5; // 太极自身缓慢旋转
+            float s = sin(angle); float c = cos(angle);
+            mat2 rot = mat2(c, -s, s, c);
+            
+            vec3 tcPos = aTaiChiPos;
+            tcPos.xy = rot * tcPos.xy; // 应用旋转
+            
+            // ================= 3. 万物归宗：流体与太极的引力场 Morphing =================
+            // 使用 uTaiChiStrength 实现从“无极流体”被温柔地卷入“太极阵眼”的过渡
+            // 平滑缓动，并让靠近中心的水滴先被吸入
+            float distToCenter = length(fluidPos.xy);
+            float pullForce = smoothstep(200.0, 0.0, distToCenter) * 0.2 + uTaiChiStrength;
+            pullForce = clamp(pullForce, 0.0, 1.0);
+            // 这里为了让太极彻底成型，当力度趋近于1时强制完全融合
+            pullForce = mix(pullForce, 1.0, smoothstep(0.8, 1.0, uTaiChiStrength));
+
+            vec3 finalPos = mix(fluidPos, tcPos, pullForce);
+
+            // ================= 4. 颜色与透明度推演 =================
+            vec3 inkColor = vec3(0.10, 0.14, 0.17);  // 黛蓝(阴)
+            vec3 pearlColor = vec3(0.99, 1.0, 0.99); // 珍珠白(阳)
+            vec3 coreColor = mix(inkColor, pearlColor, aIsYang);
+
+            // 色彩也是从水彩逐渐浓缩为纯粹的黑白太极
+            vColor = mix(aSumiColor, coreColor, pullForce);
+
+            // 计算粒子的生死循环（制造连绵不断的流体感）
+            float age = fract(uTime * 0.1 + aLifeOffset);
+            float lifeAlpha = sin(age * 3.14159); // 从生到灭的圆滑过渡 0->1->0
+
+            // 若形成太极，粒子不再消散，而是坚固地存在
+            vAlpha = mix(lifeAlpha * 0.6, 0.9, pullForce);
+
+            // ================= 5. 投影与大小计算 =================
+            vec4 mvPosition = modelViewMatrix * vec4(finalPos, 1.0);
+            gl_Position = projectionMatrix * mvPosition;
+
+            // 粒子大小：太极成型时粒子变大以融合产生厚重水墨感
+            float baseSize = mix(8.0, 3.0, aLifeOffset);
+            gl_PointSize = mix(baseSize, 7.0, pullForce) * (200.0 / -mvPosition.z);
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="particle-fragment">
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+            // 将方形的点渲染成边缘柔和的水墨滴球体 (Metaball 质感)
+            float dist = length(gl_PointCoord - vec2(0.5));
+            if(dist > 0.5) discard;
+            
+            // 墨迹晕染边缘
+            float alpha = smoothstep(0.5, 0.1, dist) * vAlpha;
+            gl_FragColor = vec4(vColor, alpha);
+        }
+    </script>
+
+    <script>
+        // ================= 环境与参数初始化 =================
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.z = 160;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        const clock = new THREE.Clock();
+        const mouse = new THREE.Vector2(-999, -999);      // 真实鼠标位置
+        const targetMouse = new THREE.Vector2(-999, -999); // 缓动鼠标位置
+        let targetTaiChiStrength = 0.0;
+        let currentTaiChiStrength = 0.0;
+
+        // ================= 1. 铺设 Suminagashi 流体背景 =================
+        const bgGeo = new THREE.PlaneGeometry(2, 2); // 铺满全屏投影
+        const bgMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('bg-vertex').textContent,
+            fragmentShader: document.getElementById('bg-fragment').textContent,
+            uniforms: {
+                uTime: { value: 0 },
+                uMouse: { value: targetMouse },
+                uTaiChiStrength: { value: 0 }
+            },
+            depthWrite: false,
+            depthTest: false
+        });
+        const bgMesh = new THREE.Mesh(bgGeo, bgMat);
+        // 使用另外一个单独的纯净正交相机渲染背景，确保填满屏幕且不被透视影响
+        const bgScene = new THREE.Scene();
+        const bgCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
+        bgScene.add(bgMesh);
+
+        // ================= 2. 铸造数十万流体粒子与太极拓扑阵列 =================
+        const PARTICLE_COUNT = 60000; // 在现代手机/PC上既能保证性能又能展现流体美感的极佳数量
+        const geometry = new THREE.BufferGeometry();
+
+        const positions = new Float32Array(PARTICLE_COUNT * 3);
+        const taiChiPos = new Float32Array(PARTICLE_COUNT * 3);
+        const sumiColors = new Float32Array(PARTICLE_COUNT * 3);
+        const isYangArr = new Float32Array(PARTICLE_COUNT);
+        const lifeOffsets = new Float32Array(PARTICLE_COUNT);
+
+        const TAI_CHI_RADIUS = 55;
+        // 水影画治愈色盘
+        const palette = [
+            new THREE.Color('#9CBEB8'), // 青瓷
+            new THREE.Color('#D8A49B'), // 霞粉
+            new THREE.Color('#D4B872'), // 藤黄
+            new THREE.Color('#7892A8')  // 烟雨蓝
+        ];
+
+        for(let i = 0; i < PARTICLE_COUNT; i++) {
+            // A. 无极流体初始状态：散落于庞大的空间中
+            positions[i*3]     = (Math.random() - 0.5) * 300;
+            positions[i*3 + 1] = (Math.random() - 0.5) * 300;
+            positions[i*3 + 2] = (Math.random() - 0.5) * 100;
+
+            // B. 太极阵列拓扑演算 (完美阴阳鱼形状预计算)
+            let tx, ty;
+            // 在圆内随机撒点
+            do {
+                tx = (Math.random() - 0.5) * 2 * TAI_CHI_RADIUS;
+                ty = (Math.random() - 0.5) * 2 * TAI_CHI_RADIUS;
+            } while(tx*tx + ty*ty > TAI_CHI_RADIUS*TAI_CHI_RADIUS);
+
+            taiChiPos[i*3]     = tx;
+            taiChiPos[i*3 + 1] = ty;
+            taiChiPos[i*3 + 2] = (Math.random() - 0.5) * 2.0; // 极微小的厚度
+
+            // C. 阴阳鱼逻辑刻画
+            let isYang = tx > 0; // 初步分界
+            const distTop = Math.sqrt(tx*tx + (ty - TAI_CHI_RADIUS/2)**2);
+            const distBot = Math.sqrt(tx*tx + (ty + TAI_CHI_RADIUS/2)**2);
+            
+            // 大鱼尾
+            if (distTop < TAI_CHI_RADIUS/2) isYang = true;
+            if (distBot < TAI_CHI_RADIUS/2) isYang = false;
+            // 鱼眼阵眼 (水生太极的核心所在)
+            if (distTop < TAI_CHI_RADIUS/6) isYang = false;
+            if (distBot < TAI_CHI_RADIUS/6) isYang = true;
+            
+            isYangArr[i] = isYang ? 1.0 : 0.0;
+
+            // D. 赋予 Suminagashi 随机色彩
+            const color = palette[Math.floor(Math.random() * palette.length)];
+            sumiColors[i*3]     = color.r;
+            sumiColors[i*3 + 1] = color.g;
+            sumiColors[i*3 + 2] = color.b;
+
+            // E. 流体生命周期交错分布
+            lifeOffsets[i] = Math.random();
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('aTaiChiPos', new THREE.BufferAttribute(taiChiPos, 3));
+        geometry.setAttribute('aSumiColor', new THREE.BufferAttribute(sumiColors, 3));
+        geometry.setAttribute('aIsYang', new THREE.BufferAttribute(isYangArr, 1));
+        geometry.setAttribute('aLifeOffset', new THREE.BufferAttribute(lifeOffsets, 1));
+
+        const particleMat = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('particle-vertex').textContent,
+            fragmentShader: document.getElementById('particle-fragment').textContent,
+            uniforms: {
+                uTime: { value: 0 },
+                uMouse: { value: new THREE.Vector2(0,0) },
+                uTaiChiStrength: { value: 0 }
+            },
+            transparent: true,
+            depthWrite: false,
+            // 采用 Normal 混合，因为水墨在水中是遮盖与晕染，而非发光(Additive)
+            blending: THREE.NormalBlending
+        });
+
+        const particleMesh = new THREE.Points(geometry, particleMat);
+        scene.add(particleMesh);
+
+        // ================= 3. 心理治愈交互映射 =================
+        const hintEl = document.getElementById('hint');
+        
+        function onPointerMove(e) {
+            let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            // 归一化设备坐标 (NDC)
+            targetMouse.x = (clientX / window.innerWidth) * 2 - 1;
+            targetMouse.y = -(clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function engageTaiChi() {
+            targetTaiChiStrength = 1.0;
+            hintEl.style.opacity = '0'; // 隐去提示文字，让人沉浸
+        }
+
+        function releaseTaiChi() {
+            targetTaiChiStrength = 0.0;
+            hintEl.style.opacity = '1';
+        }
+
+        // 绑定全端事件
+        window.addEventListener('mousemove', onPointerMove);
+        window.addEventListener('touchmove', onPointerMove, { passive: false });
+        window.addEventListener('mousedown', engageTaiChi);
+        window.addEventListener('mouseup', releaseTaiChi);
+        window.addEventListener('touchstart', engageTaiChi, { passive: false });
+        window.addEventListener('touchend', releaseTaiChi);
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ================= 4. 渲染循环引擎 =================
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            // 缓动算法：提供柔和水流阻尼感
+            mouse.lerp(targetMouse, 0.05);
+            currentTaiChiStrength += (targetTaiChiStrength - currentTaiChiStrength) * 0.03; // 非常缓慢深沉的聚拢
+
+            // 统一更新着色器变量
+            bgMat.uniforms.uTime.value = elapsedTime;
+            bgMat.uniforms.uMouse.value.copy(mouse);
+            bgMat.uniforms.uTaiChiStrength.value = currentTaiChiStrength;
+
+            particleMat.uniforms.uTime.value = elapsedTime;
+            particleMat.uniforms.uMouse.value.copy(mouse);
+            particleMat.uniforms.uTaiChiStrength.value = currentTaiChiStrength;
+
+            // 渲染：先画全屏背景，再画前景粒子
+            renderer.autoClear = false;
+            renderer.clear();
+            renderer.render(bgScene, bgCamera);
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

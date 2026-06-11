@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>水墨太极：滴水生波</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #e0e0e0; /* 宣纸底色 */
+            font-family: 'Georgia', 'KaiTi', serif; /* 楷体/衬线体 */
+            /* 核心：自定义毛笔光标 */
+            cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAALGPC/xhBQAAAQBJREFUWMPt1z0OAVEUx/H/WIlEqxONrQQSGxCxBhIrkFhLq0SisQOJVSixAolVqGg03uCTefNGM5OZ8xJvO828997f+828x5wq/lg17y8h4YUa6qihjWbQ12wnbHEF5zQyJdZRRxF5ZFHEA2JE0McQ6yjjgCg6iGGLJbZ+h7+wwxL7IK6wQh951FBFB3n0sMQ+iGss0ccIabSRRwV5bLDEPoibLLEO4gZLtJBHGXnUkUcLS+yDuMQSHeTRwhJ95JFHGYe/u4j8Is4f3+Fy58l+xO1y50t3h8v1zR/x4fL4zR/x6fL8zR/xc3n/5o/4w/L+zR/xl+Xzmyv2+QO24Vs0436YKAAAAABJRU5ErkJggg==') 0 32, auto;
+        }
+        canvas { display: block; }
+        
+        #ui {
+            position: absolute;
+            bottom: 30px; width: 100%;
+            text-align: center;
+            color: rgba(0, 0, 0, 0.6);
+            font-size: 16px;
+            letter-spacing: 10px;
+            pointer-events: none;
+            z-index: 10;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255,255,255,0.8);
+        }
+        
+        /* 宣纸纹理层 */
+        .paper-texture {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.4;
+            mix-blend-mode: multiply;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body>
+    <div class="paper-texture"></div>
+    <div id="ui">水墨 · 太极 · 涟漪</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- 1. 背景山水 Shader -->
+    <script type="x-shader/x-vertex" id="bgVertex">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="bgFragment">
+        uniform float uTime;
+        varying vec2 vUv;
+
+        // 简单的噪声函数
+        float random (in vec2 _st) {
+            return fract(sin(dot(_st.xy, vec2(12.9898,78.233)))*43758.5453123);
+        }
+        float noise (in vec2 _st) {
+            vec2 i = floor(_st);
+            vec2 f = fract(_st);
+            float a = random(i);
+            float b = random(i + vec2(1.0, 0.0));
+            float c = random(i + vec2(0.0, 1.0));
+            float d = random(i + vec2(1.0, 1.0));
+            vec2 u = f * f * (3.0 - 2.0 * f);
+            return mix(a, b, u.x) + (c - a)* u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+        }
+        float fbm ( in vec2 _st) {
+            float v = 0.0;
+            float a = 0.5;
+            mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.50));
+            for (int i = 0; i < 5; ++i) {
+                v += a * noise(_st);
+                _st = rot * _st * 2.0 + vec2(2.0);
+                a *= 0.5;
+            }
+            return v;
+        }
+
+        void main() {
+            vec2 st = vUv * 3.0;
+            // 缓慢流动的烟雾
+            float q = fbm(st + uTime * 0.05);
+            float r = fbm(st + q + uTime * 0.1);
+            
+            // 颜色映射：浅灰到深墨
+            vec3 colorBg = vec3(0.9, 0.9, 0.88); // 宣纸底
+            vec3 colorInk = vec3(0.1, 0.15, 0.2); // 墨色
+            
+            float inkFactor = smoothstep(0.2, 0.8, r);
+            vec3 finalColor = mix(colorBg, colorInk, inkFactor * 0.6); // 淡淡的水墨感
+            
+            // 边缘暗角
+            float vign = 1.0 - length(vUv - 0.5) * 1.2;
+            finalColor *= smoothstep(0.0, 1.0, vign);
+
+            gl_FragColor = vec4(finalColor, 1.0);
+        }
+    </script>
+
+    <!-- 2. 粒子 Shader -->
+    <script type="x-shader/x-vertex" id="vertexShader">
+        attribute float size;
+        attribute vec3 customColor;
+        varying vec3 vColor;
+        void main() {
+            vColor = customColor;
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = size * (300.0 / -mvPosition.z);
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        varying vec3 vColor;
+        void main() {
+            vec2 uv = gl_PointCoord - 0.5;
+            float dist = length(uv);
+            if (dist > 0.5) discard;
+            float alpha = 1.0 - smoothstep(0.2, 0.5, dist);
+            gl_FragColor = vec4(vColor, alpha);
+        }
+    </script>
+
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+        camera.position.set(0, 0, 130);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // --- 1. 背景：动态水墨烟云 ---
+        const bgGeo = new THREE.PlaneGeometry(300, 200);
+        const bgUniforms = { uTime: { value: 0.0 } };
+        const bgMat = new THREE.ShaderMaterial({
+            uniforms: bgUniforms,
+            vertexShader: document.getElementById('bgVertex').textContent,
+            fragmentShader: document.getElementById('bgFragment').textContent,
+            depthWrite: false
+        });
+        const bgMesh = new THREE.Mesh(bgGeo, bgMat);
+        bgMesh.position.z = -50; // 放在粒子后面
+        scene.add(bgMesh);
+
+        // --- 2. 太极系统 ---
+        class TaiChiSystem {
+            constructor() {
+                this.count = 180000;
+                this.geo = new THREE.BufferGeometry();
+                this.ripples = []; // 存储涟漪数据
+
+                const pos = new Float32Array(this.count * 3);
+                const col = new Float32Array(this.count * 3);
+                const size = new Float32Array(this.count);
+                this.particles = [];
+
+                const RADIUS = 35;
+
+                for(let i=0; i<this.count; i++) {
+                    // 形状生成逻辑
+                    let x, y;
+                    let valid = false;
+                    while(!valid) {
+                        x = (Math.random() - 0.5) * 2 * RADIUS;
+                        y = (Math.random() - 0.5) * 2 * RADIUS;
+                        if (x*x + y*y <= RADIUS*RADIUS) valid = true;
+                    }
+                    const z = (Math.random() - 0.5) * 1.5;
+
+                    // 阴阳逻辑
+                    let isYang = x > 0;
+                    const distTop = Math.sqrt(x*x + (y - RADIUS/2)**2);
+                    const distBot = Math.sqrt(x*x + (y + RADIUS/2)**2);
+                    if (distTop < RADIUS/2) isYang = true;
+                    if (distBot < RADIUS/2) isYang = false;
+                    if (distTop < RADIUS/6) isYang = false;
+                    if (distBot < RADIUS/6) isYang = true;
+
+                    // 颜色：配合水墨背景
+                    let r, g, b, s;
+                    if (isYang) {
+                        // 阳：纯白 (Ink White)
+                        r = 1.0; g = 1.0; b = 1.0;
+                        s = Math.random() * 1.5 + 0.5;
+                    } else {
+                        // 阴：浓墨 (Dark Ink)
+                        r = 0.05; g = 0.05; b = 0.05; 
+                        s = Math.random() * 1.8 + 0.8;
+                    }
+
+                    pos[i*3] = x; pos[i*3+1] = y; pos[i*3+2] = z;
+                    col[i*3] = r; col[i*3+1] = g; col[i*3+2] = b;
+                    size[i] = s;
+
+                    this.particles.push({
+                        x: x, y: y, z: z,
+                        ox: x, oy: y, oz: z,
+                        vx: 0, vy: 0, vz: 0,
+                        isYang: isYang
+                    });
+                }
+
+                this.geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                this.geo.setAttribute('customColor', new THREE.BufferAttribute(col, 3));
+                this.geo.setAttribute('size', new THREE.BufferAttribute(size, 1));
+
+                const mat = new THREE.ShaderMaterial({
+                    vertexShader: document.getElementById('vertexShader').textContent,
+                    fragmentShader: document.getElementById('fragmentShader').textContent,
+                    transparent: true,
+                    depthWrite: false,
+                    // 这里用 Normal 混合，为了让黑色显现出来
+                    // 如果想要发光，可以改 Additive，但水墨风格通常不发强光
+                    blending: THREE.NormalBlending 
+                });
+
+                this.mesh = new THREE.Points(this.geo, mat);
+                scene.add(this.mesh);
+            }
+
+            // 触发涟漪
+            addRipple(x, y) {
+                // 记录涟漪中心、产生时间、强度
+                this.ripples.push({ x: x, y: y, time: 0, strength: 1.0 });
+            }
+
+            update(time) {
+                const positions = this.geo.attributes.position.array;
+                
+                // 更新涟漪状态
+                for(let r=this.ripples.length-1; r>=0; r--) {
+                    this.ripples[r].time += 0.2; // 波浪扩散速度
+                    this.ripples[r].strength *= 0.95; // 衰减
+                    if(this.ripples[r].strength < 0.01) this.ripples.splice(r, 1);
+                }
+
+                // 旋转
+                const rotSpeed = 0.2;
+                const cosR = Math.cos(rotSpeed * 0.01);
+                const sinR = Math.sin(rotSpeed * 0.01);
+
+                for(let i=0; i<this.count; i++) {
+                    const p = this.particles[i];
+                    
+                    // 1. 整体旋转
+                    const nx = p.ox * cosR - p.oy * sinR;
+                    const ny = p.ox * sinR + p.oy * cosR;
+                    p.ox = nx; p.oy = ny;
+
+                    // 2. 归位力
+                    p.vx += (p.ox - p.x) * 0.03;
+                    p.vy += (p.oy - p.y) * 0.03;
+                    p.vz += (p.oz - p.z) * 0.03;
+
+                    // 3. 涟漪效果 (关键交互)
+                    // 遍历所有活跃的涟漪
+                    let waveHeight = 0;
+                    for(let r=0; r<this.ripples.length; r++) {
+                        const rip = this.ripples[r];
+                        const dx = p.x - rip.x;
+                        const dy = p.y - rip.y;
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        
+                        // 简单的波动方程：sin(距离 - 时间)
+                        // 只有波浪传导到的地方才动
+                        const waveFront = rip.time * 2.0; // 波前位置
+                        if (Math.abs(dist - waveFront) < 5.0) { // 波宽
+                            const angle = dist * 0.5 - rip.time;
+                            const amp = Math.sin(angle) * rip.strength * 3.0;
+                            
+                            // Z轴震荡
+                            waveHeight += amp;
+                            
+                            // XY轴推挤 (扩散感)
+                            const push = Math.cos(angle) * rip.strength * 0.1;
+                            p.vx += (dx/dist) * push;
+                            p.vy += (dy/dist) * push;
+                        }
+                    }
+                    
+                    // 物理积分
+                    p.vx *= 0.9;
+                    p.vy *= 0.9;
+                    p.vz *= 0.9;
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    // 叠加波浪高度到 Z 轴
+                    const finalZ = p.z + p.vz + waveHeight;
+
+                    positions[i*3] = p.x;
+                    positions[i*3+1] = p.y;
+                    positions[i*3+2] = finalZ;
+                }
+                
+                this.geo.attributes.position.needsUpdate = true;
+            }
+        }
+
+        const taichi = new TaiChiSystem();
+        const clock = new THREE.Clock();
+
+        // 鼠标交互
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('click', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // 计算点击在 Z=0 平面的位置
+            raycaster.setFromCamera(mouse, camera);
+            // 虚拟一个平面来接收点击
+            const targetZ = 0;
+            const vec = new THREE.Vector3();
+            raycaster.ray.at( (targetZ - raycaster.ray.origin.z) / raycaster.ray.direction.z, vec );
+            
+            // 触发涟漪
+            taichi.addRipple(vec.x, vec.y);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+            
+            bgUniforms.uTime.value = time; // 背景流动
+            taichi.update(time);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
