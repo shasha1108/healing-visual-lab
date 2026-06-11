@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宇宙回响 V78 (哲学终章)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050505;
+            font-family: "Songti SC", "Noto Serif SC", "SimSun", serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* 1. 3:4 黄金竖屏容器 */
+        #card-container {
+            position: relative;
+            width: 100%;
+            max-width: 540px;
+            aspect-ratio: 3 / 4;
+            max-height: 90vh;
+            background: #000;
+            box-shadow: 0 0 150px rgba(40, 80, 255, 0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #1a1a1a;
+        }
+
+        canvas { display: block; width: 100%; height: 100%; }
+
+        /* 2. 前段字幕 */
+        #subtitle-layer {
+            position: absolute;
+            top: 18%; width: 100%;
+            text-align: center;
+            pointer-events: none;
+            z-index: 20;
+        }
+        
+        .subtitle {
+            position: absolute; width: 100%;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 20px; font-weight: 600;
+            letter-spacing: 4px; line-height: 1.8;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            opacity: 0; transform: translateY(15px);
+            transition: all 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .subtitle.active { opacity: 1; transform: translateY(0); }
+        
+        .small-text { 
+            font-size: 13px; opacity: 0.7; display: block; margin-top: 10px; font-weight: 300;
+            color: #b0c4de;
+        }
+
+        /* 3. 终章字幕 (重新排版) */
+        #final-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 25;
+            opacity: 0; transition: opacity 3s ease;
+            display: flex; flex-direction: column;
+            justify-content: space-between; /* 上下分布 */
+            padding: 80px 0; /* 留出边距 */
+            box-sizing: border-box;
+        }
+
+        .final-top {
+            text-align: center;
+            font-size: 28px; color: #fff;
+            letter-spacing: 6px;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+        }
+        
+        .final-bottom {
+            text-align: center;
+        }
+
+        .golden-quote {
+            font-size: 18px; color: #ffd700;
+            letter-spacing: 3px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+            opacity: 0.9;
+        }
+        
+        .healing-text {
+            font-size: 14px; color: #aaddff;
+            letter-spacing: 2px; opacity: 0.7;
+        }
+
+        /* 4. 白闪 */
+        #flash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; opacity: 0; pointer-events: none; z-index: 50;
+            mix-blend-mode: screen;
+        }
+
+        /* 启动按钮 */
+        #start-btn {
+            position: absolute; bottom: 15%; left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 45px;
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 50px;
+            background: rgba(0,0,0,0.4);
+            color: #fff; font-size: 18px; letter-spacing: 6px;
+            cursor: pointer; z-index: 40;
+            transition: all 0.5s;
+            backdrop-filter: blur(10px);
+        }
+        #start-btn:hover {
+            background: rgba(255,255,255,0.1); 
+            box-shadow: 0 0 40px rgba(200, 220, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <div id="card-container">
+        <div id="flash"></div>
+        
+        <!-- 过程字幕 -->
+        <div id="subtitle-layer">
+            <div id="sub1" class="subtitle">
+                起初，世界是一片混沌<br>
+                <span class="small-text">我们在虚空中流浪</span>
+            </div>
+            <div id="sub2" class="subtitle">
+                所有的破碎与坍缩<br>
+                <span class="small-text">都是为了积蓄最后的光芒</span>
+            </div>
+        </div>
+
+        <!-- 终章字幕：上下布局，中间留给星系 -->
+        <div id="final-layer">
+            <div class="final-top">
+                万物皆有裂痕<br>
+                <span style="font-size: 16px; opacity: 0.7; letter-spacing: 4px;">那是光照进来的地方</span>
+            </div>
+            <div class="final-bottom">
+                <div class="golden-quote">你的每一次破碎</div>
+                <div class="healing-text">都是为了构建一个更宏大的宇宙</div>
+            </div>
+        </div>
+
+        <button id="start-btn">开启宇宙</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- 0. 场景设置 ---
+        const container = document.getElementById('card-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 4000);
+        camera.position.set(0, 0, 220);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        container.appendChild(renderer.domElement);
+
+        // --- 1. 材质 ---
+        function createGlowTex() {
+            const c = document.createElement('canvas');
+            c.width = 64; c.height = 64;
+            const ctx = c.getContext('2d');
+            const g = ctx.createRadialGradient(32,32,0, 32,32,32);
+            g.addColorStop(0, 'rgba(255,255,255,1)');
+            g.addColorStop(0.2, 'rgba(230,240,255,0.8)'); // 冷白光晕
+            g.addColorStop(0.5, 'rgba(100,150,255,0.2)'); // 蓝晕
+            g.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = g;
+            ctx.fillRect(0,0,64,64);
+            return new THREE.CanvasTexture(c);
+        }
+
+        // --- 2. 粒子系统 (6万) ---
+        const COUNT = 60000; 
+        const geo = new THREE.BufferGeometry();
+        const pos = new Float32Array(COUNT * 3);
+        const col = new Float32Array(COUNT * 3);
+        const size = new Float32Array(COUNT);
+        
+        const physics = []; 
+
+        for(let i=0; i<COUNT; i++) {
+            // A. 初始星云
+            const r = 150 + Math.random() * 200;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
+
+            pos[i*3] = x; pos[i*3+1] = y; pos[i*3+2] = z;
+            
+            // 初始色：冷蓝基调
+            const colorType = Math.random();
+            if(colorType < 0.3) { col[i*3]=0.1; col[i*3+1]=0.4; col[i*3+2]=1.0; } 
+            else if (colorType < 0.6) { col[i*3]=0.6; col[i*3+1]=0.2; col[i*3+2]=1.0; }
+            else { col[i*3]=0.9; col[i*3+1]=0.9; col[i*3+2]=1.0; }
+
+            size[i] = Math.random() * 2.0;
+
+            // B. 星系预计算 (螺旋参数)
+            const armIndex = i % 3; 
+            const galR = Math.pow(Math.random(), 1.5) * 300 + 10; // 稍微扩大范围
+            const spin = galR * 0.08; 
+            const baseAngle = (armIndex * (Math.PI * 2 / 3)) + spin;
+            
+            const spread = (300 - galR) * 0.25; 
+            const randomOffset = (Math.random() - 0.5) * spread;
+            // 扁平但有厚度
+            const verticalSpread = (Math.random() - 0.5) * (galR * 0.15 + 5);
+
+            physics.push({
+                sphereX: 35 * Math.sin(phi) * Math.cos(theta),
+                sphereY: 35 * Math.sin(phi) * Math.sin(theta),
+                sphereZ: 35 * Math.cos(phi),
+                
+                galR: galR + randomOffset,
+                galAngleBase: baseAngle,
+                galY: verticalSpread,
+                
+                // 差分旋转速度
+                orbitSpeed: 0.2 / (Math.sqrt(galR) + 1),
+                noise: Math.random() * 100,
+                isBg: Math.random() > 0.85 // 背景星尘
+            });
+        }
+
+        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+        geo.setAttribute('size', new THREE.BufferAttribute(size, 1));
+
+        const mat = new THREE.PointsMaterial({
+            map: createGlowTex(),
+            size: 1.0,
+            vertexColors: true,
+            transparent: true,
+            opacity: 1.0,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const system = new THREE.Points(geo, mat);
+        scene.add(system);
+
+        // --- 3. 导演脚本 ---
+        let state = 'idle';
+        let startTime = 0;
+        const btn = document.getElementById('start-btn');
+        const flash = document.getElementById('flash');
+        const finalLayer = document.getElementById('final-layer');
+
+        btn.addEventListener('click', () => {
+            btn.style.opacity = 0;
+            state = 'nebula';
+            startTime = performance.now() / 1000;
+        });
+
+        function setSub(id) {
+            document.querySelectorAll('.subtitle').forEach(el => el.classList.remove('active'));
+            if(id) document.getElementById(id).classList.add('active');
+        }
+
+        // --- 4. 动画循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if(state === 'idle') {
+                system.rotation.y += 0.001;
+                renderer.render(scene, camera);
+                return;
+            }
+
+            const now = performance.now() / 1000;
+            const t = now - startTime;
+
+            // === 剧本 ===
+            if (t < 4) setSub('sub1');
+            else if (t < 8) setSub('sub2');
+            else if (t < 9.2) setSub(null);
+            else finalLayer.style.opacity = 1; // 终章浮现
+
+            // === 状态机 ===
+
+            if (state === 'nebula') {
+                // 0-4s: 混沌
+                system.rotation.y = t * 0.05;
+                for(let i=0; i<COUNT; i++) {
+                    pos[i*3] += Math.sin(t + physics[i].noise) * 0.1;
+                }
+                if (t > 4) state = 'collapse';
+            }
+            
+            else if (state === 'collapse') {
+                // 4-9s: 坍缩 (保持不变，它是完美的铺垫)
+                const progress = (t - 4) / 4.5; 
+                
+                for(let i=0; i<COUNT; i++) {
+                    const p = physics[i];
+                    pos[i*3] += (p.sphereX - pos[i*3]) * 0.05 * (1 + progress*5);
+                    pos[i*3+1] += (p.sphereY - pos[i*3+1]) * 0.05 * (1 + progress*5);
+                    pos[i*3+2] += (p.sphereZ - pos[i*3+2]) * 0.05 * (1 + progress*5);
+
+                    col[i*3] = 1.0; 
+                    col[i*3+1] = 0.8 - progress * 0.5;
+                    col[i*3+2] = 0.2;
+                    size[i] = 2.0;
+                }
+                system.rotation.y += 0.1;
+                const shake = progress * 1.0;
+                system.position.set((Math.random()-0.5)*shake, (Math.random()-0.5)*shake, 0);
+
+                if (t > 9.0) {
+                    state = 'explode';
+                    flash.style.transition = "none";
+                    flash.style.opacity = 1;
+                    setTimeout(() => {
+                        flash.style.transition = "opacity 4s ease-out";
+                        flash.style.opacity = 0;
+                    }, 50);
+                }
+            }
+            
+            else if (state === 'explode') {
+                // 9s+: ★ 核心视觉修正 ★
+                setSub(null);
+                system.position.set(0,0,0);
+                
+                // 相机缓慢拉远，把星系看全
+                camera.position.z += (400 - camera.position.z) * 0.005;
+                
+                const galaxyTime = t - 9.0;
+                const expansion = 1.0 - Math.exp(-galaxyTime * 0.5); 
+
+                for(let i=0; i<COUNT; i++) {
+                    const p = physics[i];
+                    
+                    if (p.isBg) {
+                        // 背景微尘
+                        pos[i*3] += (p.galaxyX - pos[i*3]) * 0.02;
+                        pos[i*3+1] += (p.galaxyY - pos[i*3+1]) * 0.02;
+                        pos[i*3+2] += (p.galaxyZ - pos[i*3+2]) * 0.02;
+                        // 颜色：极淡的蓝白
+                        col[i*3] = 0.7; col[i*3+1] = 0.8; col[i*3+2] = 1.0;
+                        size[i] = 1.5;
+                        continue;
+                    }
+
+                    // --- 动态星系 ---
+                    const currentAngle = p.galAngleBase + galaxyTime * p.orbitSpeed;
+                    const targetX = p.galR * Math.cos(currentAngle);
+                    const targetZ = p.galR * Math.sin(currentAngle);
+                    const targetY = p.galY * expansion + Math.sin(galaxyTime * 1.5 + p.galR*0.1) * 5.0;
+
+                    // 缓动
+                    pos[i*3] += (targetX - pos[i*3]) * 0.04;
+                    pos[i*3+1] += (targetY - pos[i*3+1]) * 0.04;
+                    pos[i*3+2] += (targetZ - pos[i*3+2]) * 0.04;
+
+                    // ★ 颜色修正：哈勃深空调色 (Cool Tones) ★
+                    // 核心：亮银白 (White/Silver)
+                    // 内圈：电光青 (Electric Cyan)
+                    // 外圈：幻影紫 (Phantom Violet)
+                    const dist = p.galR;
+                    
+                    if (dist < 70) {
+                        // 核心亮白
+                        col[i*3] = 1.0; col[i*3+1] = 1.0; col[i*3+2] = 1.0;
+                        size[i] = 3.5;
+                    } else if (dist < 180) {
+                        // 中层青蓝
+                        col[i*3] = 0.0; col[i*3+1] = 0.8; col[i*3+2] = 1.0; 
+                        size[i] = 2.5;
+                    } else {
+                        // 外层深紫
+                        col[i*3] = 0.6; col[i*3+1] = 0.2; col[i*3+2] = 1.0;
+                        size[i] = 2.0;
+                    }
+                }
+                
+                // 整体缓慢俯仰，展示星系盘面
+                system.rotation.x = Math.sin(galaxyTime * 0.05) * 0.3;
+                system.rotation.z = Math.cos(galaxyTime * 0.05) * 0.1;
+            }
+
+            geo.attributes.position.needsUpdate = true;
+            geo.attributes.color.needsUpdate = true;
+            geo.attributes.size.needsUpdate = true;
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+</html>
