@@ -1,0 +1,33 @@
+{
+  "_meta": {
+    "description": "H5 作品中文标题 → 英文 slug 映射；由 h5-publish skill 自动维护",
+    "version": 1
+  },
+  "mappings": [
+    {
+      "title": "水墨太极：滴水生波",
+      "slug": "sumi-e-taichi",
+      "first_pushed": "2026-06-11"
+    },
+    {
+      "title": "墨池心境",
+      "slug": "inkmeditation",
+      "first_pushed": "2026-06-11"
+    },
+    {
+      "title": "宇宙回响 V78 (哲学终章)",
+      "slug": "cosmic-recollection",
+      "first_pushed": "2026-06-12"
+    },
+    {
+      "title": "青绿·层峦 (高密度分层版)",
+      "slug": "layered-mountains",
+      "first_pushed": "2026-06-12"
+    },
+    {
+      "title": "琉璃化雨 · 东方禅意疗愈",
+      "slug": "glass-rain",
+      "first_pushed": "2026-06-12"
+    }
+  ]
+}
