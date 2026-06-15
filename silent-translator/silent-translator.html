@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>无声的翻译官 | 躯体化便签</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: #050608; font-family: 'Noto Serif SC', serif; }
+
+        /* ================= 沉浸式入场 ================= */
+        #intro {
+            position: absolute; width: 100%; height: 100%; z-index: 999;
+            background: #050608; display: flex; justify-content: center; align-items: center;
+            transition: opacity 1.5s ease;
+        }
+        .btn-receive {
+            color: rgba(255,255,255,0.7); font-size: 14px; letter-spacing: 8px; font-weight: 300;
+            padding: 15px 30px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer;
+            transition: all 0.5s; text-indent: 8px;
+        }
+        .btn-receive:hover { color: #fff; border-color: rgba(255,255,255,0.6); box-shadow: 0 0 20px rgba(255,255,255,0.1); }
+
+        /* ================= 电影级虚空环境 ================= */
+        #scene {
+            position: absolute; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 30%, #151a22 0%, #050608 70%);
+            perspective: 1200px; 
+            overflow: hidden;
+            opacity: 0; transition: opacity 2s ease;
+        }
+
+        /* ================= 顶部：机器输出裂口 ================= */
+        .machine-port {
+            position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 4px; background: #fff;
+            box-shadow: 0 0 20px #fff, 0 0 40px #4a88ff, inset 0 0 10px #000;
+            border-radius: 50%; z-index: 10;
+        }
+        .machine-port::after {
+            content: ''; position: absolute; top: -10px; left: -20px; right: -20px; height: 24px;
+            border-top: 2px solid rgba(255,255,255,0.1); border-radius: 50%;
+        }
+
+        /* 倾泻的内耗情绪流 */
+        #symbol-stream {
+            position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 600px; z-index: 5; pointer-events: none;
+            overflow: hidden;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 80%);
+        }
+        .symbol {
+            position: absolute; 
+            color: rgba(140, 180, 255, 0.5); /* 微微的幽蓝色 */
+            font-family: 'Noto Serif SC', serif; /* 使用宋体，更具文学与情绪感 */
+            font-size: 14px; letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(140, 180, 255, 0.4); 
+            animation: fall linear forwards;
+            white-space: nowrap;
+        }
+        @keyframes fall {
+            0% { transform: translateY(0) scale(0.8); opacity: 1; filter: blur(0px); }
+            100% { transform: translateY(400px) scale(1.1) rotate(15deg); opacity: 0; filter: blur(4px); }
+        }
+
+        /* ================= 核心：3D 悬浮复古便签 ================= */
+        .memo-wrapper {
+            position: absolute; top: 15%; left: 50%; transform-style: preserve-3d;
+            width: 360px; height: 560px; margin-left: -180px; z-index: 20;
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotateX(15deg) rotateY(-5deg) rotateZ(2deg); }
+            50% { transform: translateY(-20px) rotateX(12deg) rotateY(-8deg) rotateZ(1deg); }
+        }
+
+        .memo-paper {
+            width: 100%; height: 100%; position: relative;
+            background-color: #E6DCC3; 
+            background-image: 
+                linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(0,0,0,0.05) 100%),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.25'/%3E%3C/svg%3E");
+            box-shadow: 
+                -20px 30px 50px rgba(0,0,0,0.6), 
+                inset 0 0 60px rgba(120, 90, 50, 0.3);
+            border-radius: 2px 4px 15px 2px;
+            overflow: hidden;
+        }
+
+        .memo-paper::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
+            background: linear-gradient(-45deg, transparent 4px, #E6DCC3 0), linear-gradient(45deg, transparent 4px, #E6DCC3 0);
+            background-size: 8px 8px;
+        }
+
+        .memo-header {
+            margin-top: 25px; text-align: center; font-family: monospace; font-size: 11px;
+            color: rgba(0,0,0,0.4); letter-spacing: 2px; border-bottom: 1px dashed rgba(0,0,0,0.2);
+            padding-bottom: 8px; width: 80%; margin-left: 10%;
+        }
+
+        #anatomy-canvas {
+            position: absolute; top: 60px; left: 0; width: 100%; height: 300px;
+            mix-blend-mode: multiply; 
+        }
+
+        .memo-footer {
+            position: absolute; bottom: 25px; left: 30px; right: 30px;
+            font-size: 13px; line-height: 1.6; color: #2C241B; letter-spacing: 1.5px; font-weight: 600;
+            text-shadow: 0px 0px 1px rgba(0,0,0,0.2); 
+        }
+        .red-mark { color: #A31111; font-weight: 900; }
+        .cursor { display: inline-block; width: 6px; height: 14px; background: #2C241B; animation: blink 0.8s infinite; vertical-align: middle; }
+        @keyframes blink { 0%, 100% {opacity: 1;} 50% {opacity: 0;} }
+
+    </style>
+</head>
+<body>
+
+    <div id="intro">
+        <div class="btn-receive" id="btn-start">提取身体翻译报告</div>
+    </div>
+
+    <div id="scene">
+        <div class="machine-port"></div>
+        <!-- 从机器裂口掉落内耗情绪 -->
+        <div id="symbol-stream"></div>
+
+        <div class="memo-wrapper">
+            <div class="memo-paper">
+                <div class="memo-header">SYS.TRANSLATOR_LOG // OUTPUT</div>
+                <canvas id="anatomy-canvas"></canvas>
+                <div class="memo-footer">
+                    <span id="typed-text"></span><span class="cursor"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= Web Audio API 纯净治愈引擎 =================
+        let audioCtx;
+        function initAudio() { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+        function playLofiVibe() {
+            if(!audioCtx) return;
+
+            // 1. 极其轻柔的空气感白噪音 (剔除了低频嗡嗡声)
+            let bufferSize = audioCtx.sampleRate * 2;
+            let buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            let data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+            
+            let noise = audioCtx.createBufferSource();
+            noise.buffer = buffer; noise.loop = true;
+            
+            // 使用高频带通滤波器，保留类似磁带和空气的“嘶嘶”声，没有任何压抑的轰鸣
+            let noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.frequency.value = 3000; 
+            
+            let noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            noiseGain.gain.linearRampToValueAtTime(0.015, audioCtx.currentTime + 3); // 音量极小
+            
+            noise.connect(noiseFilter); noiseFilter.connect(noiseGain); noiseGain.connect(audioCtx.destination);
+            noise.start();
+
+            // 2. 温暖的黑胶噼啪声 
+            setInterval(() => {
+                if(Math.random() > 0.3) return;
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(2000 + Math.random()*2000, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            }, 300);
+
+            // 3. 漂浮的纯净正弦波 (剔除了低频振荡，变成治愈的水下呼吸感)
+            // F4, A4, C5, E5 (Fmaj7和弦的高音域)
+            const freqs = [349.23, 440.00, 523.25, 659.25]; 
+            let chordGain = audioCtx.createGain();
+            chordGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            chordGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 4); 
+
+            freqs.forEach((freq, index) => {
+                let osc = audioCtx.createOscillator();
+                osc.type = 'sine'; // 纯净的正弦波，没有任何“嗡嗡”杂音
+                osc.frequency.value = freq;
+                
+                // 缓慢的音量呼吸感 (Tremolo)
+                let lfo = audioCtx.createOscillator();
+                lfo.type = 'sine';
+                lfo.frequency.value = 0.1 + index * 0.05; // 极其缓慢的起伏
+                
+                let lfoGain = audioCtx.createGain();
+                lfoGain.gain.value = 0.5; // 呼吸深度
+                
+                lfo.connect(lfoGain.gain);
+                lfo.start();
+
+                osc.connect(lfoGain);
+                lfoGain.connect(chordGain);
+                osc.start();
+            });
+            
+            chordGain.connect(audioCtx.destination);
+        }
+
+        // 打字机滴答声
+        function playTypeClick() {
+            if(!audioCtx) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'square'; osc.frequency.setValueAtTime(300 + Math.random()*200, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        // 警报刺痛声
+        function playPainSpike() {
+            if(!audioCtx) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+        }
+
+        // ================= 情绪倾泻系统 (Internal Friction Words) =================
+        const streamContainer = document.getElementById('symbol-stream');
+        // 将原先的病理符号替换为深层的心理内耗词汇
+        const emotionsPool = ['内耗', '痛苦', '压抑', '不开心', '委屈', '崩溃', '失眠', '焦虑', '疲惫', '无力', '心碎', '硬撑', '孤独', '绝望'];
+
+        function spawnSymbol() {
+            let sym = document.createElement('div');
+            sym.className = 'symbol';
+            sym.innerText = emotionsPool[Math.floor(Math.random() * emotionsPool.length)];
+            
+            // 随机大小，营造远近错落感
+            sym.style.fontSize = (12 + Math.random() * 6) + 'px';
+            sym.style.left = (Math.random() * 80 + 10) + '%';
+            
+            let duration = 2.0 + Math.random() * 2.0; // 飘落得更缓慢、更沉重
+            sym.style.animationDuration = duration + 's';
+            streamContainer.appendChild(sym);
+            setTimeout(() => { sym.remove(); }, duration * 1000);
+        }
+
+        // ================= 达芬奇解剖手绘引擎 =================
+        const canvas = document.getElementById('anatomy-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 360 * 2; canvas.height = 300 * 2;
+        ctx.scale(2, 2); 
+        
+        let drawPhase = 0; 
+        let sketchProgress = 0;
+
+        function sketchAnatomy() {
+            if(drawPhase === 0) return;
+            
+            ctx.clearRect(0, 0, 360, 300);
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            const cx = 180, cy = 120; 
+
+            if(drawPhase >= 1) {
+                let p1 = Math.min(sketchProgress / 0.3, 1.0);
+                ctx.lineWidth = 0.5; ctx.strokeStyle = `rgba(120, 90, 70, ${0.3 * p1})`; 
+                ctx.beginPath(); ctx.moveTo(cx, 20); ctx.lineTo(cx, 20 + 260*p1); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx - 150*p1, cy); ctx.lineTo(cx + 150*p1, cy); ctx.stroke();
+                ctx.beginPath(); ctx.arc(cx, cy - 40, 80*p1, 0, Math.PI*2); ctx.stroke();
+                
+                if(p1 > 0.8) {
+                    ctx.font = '8px monospace'; ctx.fillStyle = 'rgba(120,90,70,0.5)';
+                    ctx.fillText('FIG.1: CERVICAL & SHOULDER', cx - 70, 20);
+                }
+            }
+
+            if(drawPhase >= 2) {
+                let p2 = Math.min((sketchProgress - 0.3) / 0.4, 1.0);
+                ctx.lineWidth = 1.5; ctx.strokeStyle = `rgba(40, 30, 25, ${p2})`;
+
+                ctx.beginPath(); ctx.moveTo(cx, cy - 100); ctx.lineTo(cx, cy - 40); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx, cy - 40); ctx.quadraticCurveTo(cx - 50, cy - 60, cx - 110*p2, cy - 10*p2); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx, cy - 40); ctx.quadraticCurveTo(cx + 60, cy - 70, cx + 120*p2, cy); ctx.stroke();
+
+                if(p2 > 0.5) {
+                    let gP = (p2 - 0.5) * 2.0;
+                    ctx.lineWidth = 1; ctx.strokeStyle = `rgba(40, 30, 25, ${gP * 0.7})`;
+                    ctx.beginPath(); ctx.arc(cx + 70, cy - 30, 25, 0, Math.PI*2 * gP); ctx.stroke();
+                    for(let i=0; i<Math.PI*2*gP; i+=0.4) {
+                        ctx.beginPath(); 
+                        ctx.moveTo(cx+70 + Math.cos(i)*25, cy-30 + Math.sin(i)*25);
+                        ctx.lineTo(cx+70 + Math.cos(i)*32, cy-30 + Math.sin(i)*32);
+                        ctx.stroke();
+                    }
+                }
+
+                ctx.lineWidth = 0.5;
+                for(let i=0; i<20*p2; i++) {
+                    ctx.beginPath(); ctx.moveTo(cx + 40 + i*3, cy - 40 + i); ctx.lineTo(cx + 45 + i*3, cy - 20 + i); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(cx - 40 - i*3, cy - 40 + i); ctx.lineTo(cx - 45 - i*3, cy - 20 + i); ctx.stroke();
+                }
+            }
+
+            if(drawPhase >= 3) {
+                let p3 = Math.min((sketchProgress - 0.7) / 0.3, 1.0);
+                let painX = cx + 80, painY = cy - 20;
+
+                ctx.lineWidth = 1.2; ctx.strokeStyle = `rgba(163, 17, 17, ${p3*0.6})`;
+                ctx.beginPath(); ctx.moveTo(20, cy + 80);
+                for(let x=20; x<340*p3; x+=2) {
+                    let y = cy + 80;
+                    if(x > painX-40 && x < painX+40) y -= 50 * Math.sin((x-painX)*0.2) * Math.exp(-Math.abs(x-painX)*0.05);
+                    ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                ctx.beginPath(); ctx.arc(painX, painY, 12 * p3, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(163, 17, 17, ${0.85 * p3})`;
+                ctx.shadowColor = '#A31111'; ctx.shadowBlur = 15;
+                ctx.fill(); ctx.shadowBlur = 0;
+            }
+
+            sketchProgress += 0.005; 
+            
+            if(sketchProgress < 0.3) drawPhase = 1;
+            else if(sketchProgress < 0.7) drawPhase = 2;
+            else if(sketchProgress < 1.0 && drawPhase === 2) { 
+                drawPhase = 3; playPainSpike(); 
+            }
+            
+            if(sketchProgress <= 1.0) requestAnimationFrame(sketchAnatomy);
+        }
+
+        // ================= 最终确认文案与智能打字机系统 =================
+        const storyText = "录入：我真的撑不下去了。<br><br>正在匹配生理症状……<br>诊断结果：<span class='red-mark'>【肩颈肌肉重度劳损】</span><br><br>那些你说不出口的崩溃，<br>身体都只能用疼痛替你作答。<br><br>你所有的坚强，<br>都在以躯体的疼痛为代价。";
+        
+        let tokens = [];
+        let isTag = false;
+        let currentTag = "";
+        for(let i=0; i<storyText.length; i++) {
+            let char = storyText[i];
+            if(char === '<') {
+                isTag = true; currentTag = char;
+            } else if (char === '>') {
+                currentTag += char;
+                tokens.push({ type: 'tag', val: currentTag });
+                isTag = false;
+            } else if (isTag) {
+                currentTag += char;
+            } else {
+                tokens.push({ type: 'char', val: char });
+            }
+        }
+
+        let tokenIdx = 0;
+        let typedText = document.getElementById('typed-text');
+        
+        function typeWriter() {
+            if (tokenIdx < tokens.length) {
+                let t = tokens[tokenIdx];
+                typedText.innerHTML += t.val;
+                tokenIdx++;
+                
+                if(t.type === 'tag') {
+                    typeWriter(); 
+                } else {
+                    playTypeClick();
+                    let delay = Math.random() * 50 + 30; 
+                    if(t.val === '，' || t.val === '。' || t.val === '…') delay += 300;
+                    setTimeout(typeWriter, delay);
+                }
+            }
+        }
+
+        // ================= 启动逻辑 =================
+        document.getElementById('btn-start').addEventListener('click', () => {
+            document.getElementById('intro').style.opacity = '0';
+            setTimeout(() => { document.getElementById('intro').style.display = 'none'; }, 1500);
+            
+            initAudio();
+            playLofiVibe(); // 播放纯净治愈的 Lofi 氛围音
+
+            document.getElementById('scene').style.opacity = '1';
+
+            // 开始掉落内耗情绪词汇
+            setInterval(spawnSymbol, 120); // 稍微放慢掉落频率，增加忧郁感
+
+            setTimeout(() => {
+                drawPhase = 1;
+                sketchAnatomy();
+            }, 1000);
+
+            setTimeout(typeWriter, 4500);
+        });
+
+    </script>
+</body>
+</html>
