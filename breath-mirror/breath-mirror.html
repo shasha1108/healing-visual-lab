@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>息流 · 幻镜 | 东方数字疗愈</title>
+    <!-- 引入思源宋体：注入文学性与呼吸感 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * { user-select: none; -webkit-user-select: none; cursor: crosshair !important; }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background-color: #050A0F; /* 极暗的深渊蓝底色 */
+            font-family: 'Noto Serif SC', serif;
+            touch-action: none;
+        }
+
+        /* 沉浸式启动门 */
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #111A24 0%, #050A0F 100%);
+            z-index: 999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: rgba(255,255,255,0.7);
+            transition: opacity 2s ease-in-out;
+        }
+        .start-btn {
+            font-size: 16px; letter-spacing: 12px; text-indent: 12px; font-weight: 300;
+            padding: 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
+            background: rgba(0,0,0,0.3); transition: all 0.5s;
+        }
+        .start-btn:hover { background: rgba(255,255,255,0.05); color: #fff; border-color: rgba(255,255,255,0.3); }
+
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+
+        /* 极其克制的文学排版 */
+        .text-layer {
+            position: absolute; width: 100%; text-align: center;
+            z-index: 10; color: rgba(255, 255, 255, 0.85); pointer-events: none;
+            transition: opacity 3s ease-in-out;
+            text-shadow: 0 0 30px rgba(108, 164, 204, 0.6); /* 泛着微弱的冰蓝光 */
+        }
+        .title { font-size: 22px; font-weight: 300; letter-spacing: 15px; margin-bottom: 12px; margin-left: 15px; }
+        .subtitle { font-size: 13px; font-weight: 300; color: rgba(255, 255, 255, 0.5); letter-spacing: 10px; margin-left: 10px; }
+
+        #phase-1 { top: 25%; opacity: 0; }
+        #phase-2 { top: 50%; transform: translateY(-50%); opacity: 0; }
+        #webcam { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="start-screen">
+        <div class="start-btn" id="btn-enter">潜入虚空</div>
+    </div>
+
+    <video id="webcam" playsinline muted></video>
+    <div id="canvas-container"></div>
+
+    <div id="phase-1" class="text-layer">
+        <div class="title">这里没有深渊</div>
+        <div class="subtitle">也没有波澜</div>
+    </div>
+
+    <div id="phase-2" class="text-layer">
+        <div class="title">只有漫长的白噪音</div>
+        <div class="subtitle">和迟钝的回响</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- ==================== GPU：迟钝的烟雾流体解算 ==================== -->
+    <script type="x-shader/x-vertex" id="ortho-vs">
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = vec4(position, 1.0); }
+    </script>
+
+    <script type="x-shader/x-fragment" id="sim-fs">
+        uniform sampler2D tDiffuse;
+        uniform vec2 uMouse;
+        uniform vec2 uPrevMouse;
+        uniform float uAspect;
+        uniform float uIsDrawing;
+        uniform float uTime;
+        varying vec2 vUv;
+
+        // 3D 卷曲噪声引擎 (生成迟钝的云雾翻滚感)
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+        vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+        float snoise(vec3 v) {
+            const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+            vec3 i  = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx);
+            vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g;
+            vec3 i1 = min( g.xyz, l.zxy ); vec3 i2 = max( g.xyz, l.zxy );
+            vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + C.yyy; vec3 x3 = x0 - D.yyy;
+            i = mod289(i);
+            vec4 p = permute( permute( permute( i.z + vec4(0.0, i1.z, i2.z, 1.0 )) + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+            float n_ = 0.142857142857; vec3 ns = n_ * D.wyz - D.xzx;
+            vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+            vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_ );
+            vec4 x = x_ *ns.x + ns.yyyy; vec4 y = y_ *ns.x + ns.yyyy;
+            vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4( x.xy, y.xy ); vec4 b1 = vec4( x.zw, y.zw );
+            vec4 s0 = floor(b0)*2.0 + 1.0; vec4 s1 = floor(b1)*2.0 + 1.0; vec4 sh = -step(h, vec4(0.0));
+            vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ; vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+            vec3 p0 = vec3(a0.xy,h.x); vec3 p1 = vec3(a0.zw,h.y); vec3 p2 = vec3(a1.xy,h.z); vec3 p3 = vec3(a1.zw,h.w);
+            vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+            p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+            return 42.0 * dot( vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)), vec4(1.0) );
+        }
+
+        float line(vec2 p, vec2 a, vec2 b, float r) {
+            vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+            return smoothstep(r, r * 0.5, length(pa - ba * h));
+        }
+
+        void main() {
+            vec2 p = vUv; p.x *= uAspect;
+            vec2 m = uMouse; m.x *= uAspect; vec2 pm = uPrevMouse; pm.x *= uAspect;
+
+            // 读取上一帧的雾气密度与流动向量
+            vec4 state = texture2D(tDiffuse, vUv);
+            float fog = state.r; 
+            
+            // 加入极其迟钝的卷曲噪声推力
+            float noiseX = snoise(vec3(vUv * 3.0, uTime * 0.1));
+            float noiseY = snoise(vec3(vUv * 3.0 + 100.0, uTime * 0.1));
+            vec2 swirl = vec2(noiseX, noiseY) * 0.003;
+            
+            // 漂移采样：雾气缓慢流动
+            float driftedFog = texture2D(tDiffuse, vUv - swirl).r;
+
+            // 用户的手指像推开厚重的云雾
+            float brush = line(p, pm, m, 0.08) * uIsDrawing;
+            
+            // 密度计算：被推开的地方密度降为0，其他地方极其迟钝地恢复（0.005的恢复速度）
+            float newFog = mix(driftedFog, 1.0, 0.005);
+            newFog -= brush * 0.8; // 擦除雾气
+            newFog = clamp(newFog, 0.0, 1.0);
+
+            // G和B通道存储拨动产生的扭曲向量，用于后续折射
+            vec2 newDistortion = swirl * 100.0;
+            if(uIsDrawing > 0.5) {
+                vec2 dir = normalize(m - pm + 0.001);
+                newDistortion += dir * brush * 0.5;
+            }
+
+            gl_FragColor = vec4(newFog, newDistortion.x, newDistortion.y, 1.0);
+        }
+    </script>
+
+    <!-- ==================== GPU：神级渲染 (深蓝穹洞 + 幽灵AR倒影) ==================== -->
+    <script type="x-shader/x-fragment" id="render-fs">
+        uniform sampler2D tFluid;
+        uniform sampler2D tVideo; 
+        uniform float uTime;
+        uniform float uHasVideo;     
+        uniform float uVideoAspect;  
+        uniform float uScreenAspect; 
+        varying vec2 vUv;
+
+        // 构建深海穹顶与幽兰月光白
+        vec3 getCavern(vec2 uv) {
+            // 中心远方的微光
+            vec2 center = vec2(0.5, 0.65);
+            float dist = length(uv - center);
+            
+            vec3 darkAbyss = vec3(0.02, 0.04, 0.08); // 极深的渊蓝
+            vec3 iceWall   = vec3(0.15, 0.35, 0.55); // 两侧冰冷的水壁
+            vec3 amberGlow = vec3(0.5, 0.75, 0.95); // 幽兰月光白; 
+            
+            // 构建隧道纵深感
+            float tunnel = pow(abs(uv.x - 0.5), 1.5) * 4.0;
+            vec3 col = mix(darkAbyss, iceWall, tunnel);
+            
+            // 混合远方暖光
+            float glow = exp(-dist * 3.5);
+            col = mix(col, amberGlow, glow * 0.8);
+            return col;
+        }
+
+        void main() {
+            vec4 fluid = texture2D(tFluid, vUv);
+            float fogDensity = fluid.r; // 雾气厚度 (0被推开, 1浓厚)
+            vec2 distortion = fluid.gb; // 拨动产生的波纹向量
+
+            // 1. 生成底层绝美穹洞
+            vec2 bgUV = vUv + distortion * 0.05; // 被流体扭曲的背景
+            vec3 baseScene = getCavern(bgUV);
+
+            // 2. 幽灵 AR 镜像系统 (Ghostly Reflection)
+            vec3 ghostColor = vec3(0.0);
+            if (uHasVideo > 0.5) {
+                float ratio = uVideoAspect / uScreenAspect;
+                vec2 scale = vec2(1.0);
+                if (ratio > 1.0) scale.x = 1.0 / ratio; else scale.y = ratio;
+                vec2 vidUV = (vUv - 0.5) * scale + 0.5;
+                vidUV.x = 1.0 - vidUV.x; // 照镜子
+                
+                // 摄像头的画面被水波严重扭曲
+                vidUV += distortion * 0.1;
+
+                if(vidUV.x >= 0.0 && vidUV.x <= 1.0 && vidUV.y >= 0.0 && vidUV.y <= 1.0) {
+                    vec3 rawVideo = texture2D(tVideo, vidUV).rgb;
+                    
+                    // 核心艺术化：提取明度，舍弃现实色彩，变成幽蓝色水影
+                    float luminance = dot(rawVideo, vec3(0.299, 0.587, 0.114));
+                    // 提升对比度，只保留高光轮廓
+                    float mask = smoothstep(0.2, 0.8, luminance);
+                    
+                    // 幽灵的颜色：冰霜蓝发光体
+                    vec3 etherealCyan = vec3(0.4, 0.8, 0.9);
+                    ghostColor = etherealCyan * mask * 0.6; // 极其克制的透明度
+                }
+            }
+
+            // 3. 混合组装：
+            // 深洞底色 + 幽灵倒影 (Additively blended)
+            vec3 finalColor = baseScene + ghostColor;
+
+            // 覆盖上厚重的迟钝蓝雾
+            // 雾的颜色不是死白，而是有体积感的幽蓝
+            vec3 fogColor = mix(vec3(0.05, 0.15, 0.25), vec3(0.3, 0.5, 0.6), vUv.y);
+            
+            // 雾气透光：雾越厚越看不见背景
+            finalColor = mix(finalColor, fogColor, fogDensity * 0.92);
+
+            gl_FragColor = vec4(finalColor, 1.0);
+        }
+    </script>
+
+    <script>
+        // ================= 生成式白噪音引擎 (Brown Noise) =================
+        let audioCtx, noiseNode, filterNode, gainNode;
+        
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const bufferSize = audioCtx.sampleRate * 2; // 2秒循环
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = buffer.getChannelData(0);
+            
+            // 生成褐噪 (Brownian Noise) - 听感极度深沉治愈，类似子宫底噪或深海
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                let white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5; // 补偿音量
+            }
+
+            noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = buffer;
+            noiseNode.loop = true;
+
+            // 核心：动态低通滤波器，制造“迟钝的回响”
+            filterNode = audioCtx.createBiquadFilter();
+            filterNode.type = 'lowpass';
+            filterNode.frequency.value = 80; // 初始极度沉闷
+
+            gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0.0; // 初始静音，渐显
+
+            noiseNode.connect(filterNode);
+            filterNode.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            noiseNode.start(0);
+        }
+
+        // ================= WebGL 架构 =================
+        const container = document.getElementById('canvas-container');
+        const renderer = new THREE.WebGLRenderer({ antialias: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+        const scene = new THREE.Scene();
+        const geometry = new THREE.PlaneGeometry(2, 2);
+
+        // Ping-Pong FBO 用于流体解算
+        const fboConfig = {
+            width: 1024, height: 1024,
+            format: THREE.RGBAFormat, type: THREE.HalfFloatType, 
+            minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+            depthBuffer: false, stencilBuffer: false
+        };
+        let rtA = new THREE.WebGLRenderTarget(1024, 1024, fboConfig);
+        let rtB = new THREE.WebGLRenderTarget(1024, 1024, fboConfig);
+        
+        // 预填充初始浓雾 (R通道=1)
+        renderer.setRenderTarget(rtA);
+        renderer.clearColor(1.0, 0.0, 0.0, 1.0);
+        renderer.clear();
+        renderer.setRenderTarget(null);
+
+        const simMaterial = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('ortho-vs').textContent,
+            fragmentShader: document.getElementById('sim-fs').textContent,
+            uniforms: {
+                tDiffuse: { value: null }, uTime: { value: 0 },
+                uMouse: { value: new THREE.Vector2(-999, -999) }, uPrevMouse: { value: new THREE.Vector2(-999, -999) },
+                uAspect: { value: window.innerWidth / window.innerHeight }, uIsDrawing: { value: 0.0 }
+            }
+        });
+        const simScene = new THREE.Scene(); simScene.add(new THREE.Mesh(geometry, simMaterial));
+
+        const video = document.getElementById('webcam');
+        let videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter; videoTexture.magFilter = THREE.LinearFilter;
+
+        const renderMaterial = new THREE.ShaderMaterial({
+            vertexShader: document.getElementById('ortho-vs').textContent,
+            fragmentShader: document.getElementById('render-fs').textContent,
+            uniforms: {
+                tFluid: { value: null }, tVideo: { value: videoTexture }, 
+                uTime: { value: 0 }, uHasVideo: { value: 0.0 }, 
+                uVideoAspect: { value: 1.0 }, uScreenAspect: { value: window.innerWidth / window.innerHeight }
+            }
+        });
+        scene.add(new THREE.Mesh(geometry, renderMaterial));
+
+        // ================= 交互与心理流程 =================
+        const startScreen = document.getElementById('start-screen');
+        const phase1Text = document.getElementById('phase-1');
+        const phase2Text = document.getElementById('phase-2');
+
+        document.getElementById('btn-enter').addEventListener('click', async () => {
+            startScreen.style.opacity = '0';
+            setTimeout(() => { startScreen.style.display = 'none'; }, 2000);
+            
+            initAudio();
+            // 音频极度缓慢地包裹上来
+            gainNode.gain.setTargetAtTime(1.0, audioCtx.currentTime, 4.0);
+
+            setTimeout(() => { phase1Text.style.opacity = '1'; }, 1500);
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+                video.play();
+                video.addEventListener('playing', () => {
+                    renderMaterial.uniforms.uVideoAspect.value = video.videoWidth / video.videoHeight;
+                    renderMaterial.uniforms.uHasVideo.value = 1.0; 
+                });
+            } catch (err) { console.warn("无摄像头权限，回退纯水雾模式。"); }
+        });
+
+        const mouse = new THREE.Vector2(-999, -999);
+        const prevMouse = new THREE.Vector2(-999, -999);
+        let isDrawing = false;
+        let interactionTime = 0; 
+        let phaseChanged = false;
+        // 跟踪滑动速度，用于音频映射
+        let currentSpeed = 0;
+
+        function updateMouse(e) {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            prevMouse.copy(mouse);
+            mouse.set(clientX / window.innerWidth, 1.0 - (clientY / window.innerHeight));
+            
+            // 计算手指滑动速度
+            let dist = mouse.distanceTo(prevMouse);
+            currentSpeed = Math.min(dist * 50.0, 1.0);
+        }
+
+        window.addEventListener('mousedown', (e) => { if(startScreen.style.opacity==='0') { isDrawing = true; simMaterial.uniforms.uIsDrawing.value = 1.0; updateMouse(e); prevMouse.copy(mouse); }});
+        window.addEventListener('mousemove', (e) => { if (isDrawing) updateMouse(e); });
+        window.addEventListener('mouseup', () => { isDrawing = false; simMaterial.uniforms.uIsDrawing.value = 0.0; });
+        window.addEventListener('touchstart', (e) => { if(startScreen.style.opacity==='0') { isDrawing = true; simMaterial.uniforms.uIsDrawing.value = 1.0; updateMouse(e); prevMouse.copy(mouse); }}, {passive:false});
+        window.addEventListener('touchmove', (e) => { if (isDrawing) updateMouse(e); }, {passive:false});
+        window.addEventListener('touchend', () => { isDrawing = false; simMaterial.uniforms.uIsDrawing.value = 0.0; });
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            simMaterial.uniforms.uAspect.value = window.innerWidth / window.innerHeight;
+            renderMaterial.uniforms.uScreenAspect.value = window.innerWidth / window.innerHeight;
+        });
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            // --- 音频反馈逻辑 ---
+            if(filterNode) {
+                // 如果在划水，滤波器频段打开，声音变得清亮开阔；停止则跌回低沉底噪
+                let targetFreq = isDrawing ? 100 + currentSpeed * 800 : 80;
+                filterNode.frequency.value += (targetFreq - filterNode.frequency.value) * 0.05;
+                currentSpeed *= 0.9; // 速度自然衰减
+            }
+
+            // --- 心理疗愈文案流程 ---
+            if (isDrawing) interactionTime += delta;
+            if (interactionTime > 5.0 && !phaseChanged) {
+                phaseChanged = true;
+                phase1Text.style.opacity = '0'; 
+                setTimeout(() => { phase2Text.style.opacity = '1'; }, 3000);
+            }
+
+            // --- FBO 流体推演 ---
+            simMaterial.uniforms.uTime.value = time;
+            simMaterial.uniforms.uMouse.value.copy(mouse);
+            simMaterial.uniforms.uPrevMouse.value.copy(prevMouse);
+
+            simMaterial.uniforms.tDiffuse.value = rtA.texture;
+            renderer.setRenderTarget(rtB);
+            renderer.render(simScene, camera);
+
+            let temp = rtA; rtA = rtB; rtB = temp;
+            if(isDrawing) prevMouse.copy(mouse); 
+
+            // --- 最终画面 ---
+            renderMaterial.uniforms.tFluid.value = rtA.texture;
+            renderMaterial.uniforms.uTime.value = time;
+            renderer.setRenderTarget(null);
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
