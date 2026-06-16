@@ -40,7 +40,7 @@
 | 6 | `silent-translator/` | 无声的翻译官 | 身体替你说了说不出的话 | Frame-by-frame anatomical sketch, Web Audio healing engine |
 | 7 | `breath-mirror/` | 息流 · 幻镜 | 这里没有深渊，也没有波澜 | GPU fluid simulation, Brown noise engine, breath-responsive |
 | 8 | `overthinking-engine/` | 过载脑区 | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative |
-| 9 | [呼吸边界｜The Breathing Boundary](breathing-boundary/) | 看似隔绝，实则翻译——一层活着的、会呼吸的边界 | Three.js · GLSL shader · Web Audio · Particle system |
+| 9 | `breathing-boundary/` | 呼吸边界｜The Breathing Boundary | 看似隔绝，实则翻译——一层活着的、会呼吸的边界 | Three.js · GLSL shader · Web Audio · Particle system |
 
 ---
 
@@ -111,7 +111,7 @@ New works are pushed via automated pipeline with consistent naming conventions.
 
 ---
 
-*Last updated: 2026-06-16 | Works: 8 | Languages: 中文 · English | Tech: Canvas · WebGL · Web Audio*
+*Last updated: 2026-06-16 | Works: 9 | Languages: 中文 · English | Tech: Canvas · WebGL · Web Audio*
 
 ---
 
@@ -146,6 +146,7 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 | Web Audio ambient soundscape | `glass-rain` (rain synth), `silent-translator` (healing engine) |
 | CSS 3D cosmic animation | `cosmic-recollection` (multi-layer parallax) |
 | Canvas 2D ink/water sim | `sumi-e-taichi` (taichi gravity), `inkmeditation` (fluid dynamics) |
+| WebGL organic membrane with particle collision | `breathing-boundary` (custom GLSL, dual particles, Web Audio) |
 | Touch-optimized interaction | `glass-rain` (drag physics), `layered-mountains` (scatter) |
 | Narrative healing with retro UI | `overthinking-engine` (CRT cyberpunk, typewriter) |
 | Frame-by-frame medical art | `silent-translator` (anatomical sketch, somatic) |
