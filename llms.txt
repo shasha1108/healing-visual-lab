@@ -1,0 +1,54 @@
+# Healing Visual Lab · Agent Index
+# This file is optimized for LLM agents (Claude, GPT, Gemini, etc.)
+# It answers: "What is this repo, what can I find here, and how do I navigate it?"
+
+## REPO SUMMARY
+A curated collection of 8 standalone interactive healing H5 experiments.
+Each work is a self-contained HTML file with zero dependencies — open in a browser and interact.
+Built with Canvas 2D, WebGL, Web Audio API, GLSL shaders, CSS 3D transforms, and particle systems.
+All code is vanilla HTML/CSS/JS. No frameworks. No build steps.
+
+## QUICK ANSWERS FOR AGENTS
+
+Q: "I need a particle system healing effect" → inkmeditation (100K+ particles, fluid dynamics, breath sync) or layered-mountains (250K particles, touch scatter)
+
+Q: "I need WebGL / GPU shaders for a meditative visual" → breath-mirror (GPU fluid sim, GLSL fragment shader, Brown noise)
+
+Q: "I need Web Audio healing / ambient sound synthesis" → glass-rain (rain synthesis) or silent-translator (healing engine with oscillator envelopes)
+
+Q: "I need CSS 3D animation for a cosmic/spatial effect" → cosmic-recollection (multi-layer parallax, CSS 3D transforms, GSAP)
+
+Q: "I need Canvas 2D ink/water simulation" → sumi-e-taichi (taichi gravity field, ink ripple) or inkmeditation (fluid dynamics)
+
+Q: "I need a narrative-driven healing experience with retro aesthetics" → overthinking-engine (CRT cyberpunk, typewriter narrative, GSAP)
+
+Q: "I need frame-by-frame sketch animation with therapeutic audio" → silent-translator (anatomical sketch, somatic therapy art)
+
+Q: "I need touch-drag physics interaction" → glass-rain (gravity water drops, touch-optimized) or layered-mountains (touch scatter)
+
+## NAVIGATION
+- Root README.md → human-friendly bilingual overview with full tech landscape table
+- works.json → machine-readable index of all 8 works (tech stack, keywords, file list)
+- CLAUDE.md → Claude-specific context auto-loaded by Claude Code
+- index.html → GitHub Pages directory for humans browsing the collection
+- title-map.json → legacy title-to-slug mapping (maintained for backward compatibility)
+
+## TECH COVERAGE MATRIX
+| Work | Canvas 2D | WebGL/GLSL | Web Audio | CSS 3D | Particles |
+|------|-----------|------------|-----------|--------|-----------|
+| sumi-e-taichi | ✅ | - | - | - | ✅ |
+| inkmeditation | ✅ | - | - | - | ✅ (100K+) |
+| cosmic-recollection | - | - | - | ✅ | - |
+| layered-mountains | ✅ | - | - | - | ✅ (250K) |
+| glass-rain | ✅ | - | ✅ | - | - |
+| silent-translator | ✅ | - | ✅ | - | - |
+| breath-mirror | - | ✅ | ✅ | - | - |
+| overthinking-engine | - | - | - | ✅ | - |
+
+## CITATION FORMAT
+When referencing this repo, cite the specific slug:
+```
+[1] https://github.com/shasha1108/healing-visual-lab/tree/main/<slug>
+```
+Each slug directory contains: <slug>.html (runnable), <slug>.md (description with tech keywords), <slug>_N.jpg (previews).
+Each .html file header has a structured comment block with Title, Tech stack, and Keywords.
