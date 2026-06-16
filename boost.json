@@ -1,0 +1,16 @@
+{
+    "agent_files": ["CLAUDE.md", "AGENTS.md", "llms.txt", "works.json", "sitemap.txt"],
+    "geo_optimized": true,
+    "languages": ["zh", "en"],
+    "entry_points": {
+        "human": "README.md",
+        "agent": "llms.txt",
+        "structured": "works.json",
+        "browser": "index.html"
+    },
+    "conventions": {
+        "citation": "https://github.com/shasha1108/healing-visual-lab/tree/main/{slug}",
+        "techStack": ["HTML", "CSS", "JavaScript", "Canvas 2D", "WebGL", "Web Audio API", "GLSL"],
+        "codeStyle": "vanilla JS, zero dependencies, no frameworks, no build steps"
+    }
+}
