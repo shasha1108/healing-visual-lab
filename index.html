@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Interactive healing H5 experiments — Three.js · WebGL · Canvas particles · Web Audio API · digital therapeutic art collection by shasha1108">
+<meta name="keywords" content="threejs, webgl, canvas, particle-system, creative-coding, digital-healing, h5, interactive-art, web-audio, generative-art, glsl, emotional-design">
+<title>Healing Visual Lab · 视觉疗愈实验室</title>
+<style>
+  :root { --bg: #0d1117; --card: #161b22; --text: #c9d1d9; --muted: #8b949e; --accent: #e8a850; --border: #30363d; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family: "Noto Serif SC", "STSong", Georgia, serif; min-height:100dvh; padding: clamp(24px,5vw,60px) clamp(16px,4vw,40px); }
+  header { text-align:center; margin-bottom:clamp(40px,8vh,80px); }
+  h1 { font-size:clamp(22px,4vw,32px); font-weight:400; letter-spacing:6px; color:#fff; margin-bottom:8px; }
+  header p { font-size:13px; color:var(--muted); letter-spacing:2px; max-width:520px; margin:0 auto; line-height:1.7; }
+  header .tags { margin-top:16px; display:flex; flex-wrap:wrap; justify-content:center; gap:6px; }
+  header .tags span { font-size:10px; letter-spacing:1px; color:var(--muted); padding:3px 10px; border:0.5px solid var(--border); border-radius:12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(min(100%,280px),1fr)); gap:16px; max-width:960px; margin:0 auto; }
+  .card { background:var(--card); border:0.5px solid var(--border); border-radius:10px; padding:clamp(18px,3vw,24px); transition:border-color 0.2s; display:flex; flex-direction:column; gap:8px; }
+  .card:hover { border-color:var(--accent); }
+  .card .num { font-size:11px; color:var(--muted); letter-spacing:2px; }
+  .card h2 { font-size:16px; font-weight:400; color:#fff; letter-spacing:2px; }
+  .card .tagline { font-size:12px; color:var(--muted); line-height:1.6; flex:1; }
+  .card .tech { font-size:10px; color:var(--accent); letter-spacing:1px; opacity:0.7; }
+  .card a { color:inherit; text-decoration:none; display:contents; }
+  footer { text-align:center; margin-top:clamp(40px,8vh,80px); padding-top:24px; border-top:0.5px solid var(--border); }
+  footer p { font-size:11px; color:var(--muted); letter-spacing:2px; }
+  footer a { color:var(--accent); text-decoration:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Healing Visual Lab</h1>
+  <p>Interactive healing H5 experiments — particle systems, fluid simulation, Web Audio synthesis, and custom GLSL shaders for emotional design. Zero frameworks, zero dependencies. Open a page, touch, breathe.</p>
+  <div class="tags">
+    <span>Three.js</span><span>WebGL</span><span>Canvas 2D</span><span>GLSL</span><span>Web Audio</span><span>Creative Coding</span><span>Digital Healing</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <div class="card">
+    <a href="sumi-e-taichi/sumi-e-taichi.html">
+      <div class="num">01</div>
+      <h2>Sumi-e Taichi · 水墨太极</h2>
+      <div class="tagline">一滴墨落入宣纸的瞬间——既是破坏，也是开始。太极引力场中的粒子物理水墨。</div>
+      <div class="tech">Canvas 2D · Particle physics · Taichi gravity</div>
+    </a>
+  </div>
+
+  <div class="card">
+    <a href="inkmeditation/inkmeditation.html">
+      <div class="num">02</div>
+      <h2>Inkmeditation · 墨池心境</h2>
+      <div class="tagline">算法物理学 × 视觉设计 × 心理疗愈。十万粒子实时流体，随呼吸节律沉浮。</div>
+      <div class="tech">100K+ particles · Fluid dynamics · Breath sync</div>
+    </a>
+  </div>
+
+  <div class="card">
+    <a href="cosmic-recollection/cosmic-recollection.html">
+      <div class="num">03</div>
+      <h2>Cosmic Recollection · 宇宙回响</h2>
+      <div class="tagline">万物皆有裂痕——那是光照进来的地方。CSS 3D 宇宙演化时间线。</div>
+      <div class="tech">CSS 3D · Multi-layer parallax · Cosmic timeline</div>
+    </a>
+  </div>
+
+  <div class="card">
+    <a href="layered-mountains/layered-mountains.html">
+      <div class="num">04</div>
+      <h2>Layered Mountains · 青绿·层峦</h2>
+      <div class="tagline">触之即散，聚散随缘。25万粒子的千里江山图。</div>
+      <div class="tech">250K particles · Touch scatter · Chinese painting</div>
+    </a>
+  </div>
+
+  <div class="card">
+    <a href="glass-rain/glass-rain.html">
+      <div class="num">05</div>
+      <h2>Glass Rain · 琉璃化雨</h2>
+      <div class="tagline">眼泪落尽，便见晴空。触屏拖拽的真实重力水滴。</div>
+      <div class="tech">Touch-drag physics · Gravity drops · Web Audio rain</div>
+    </a>
+  </div>
+
+  <div class="card">
+    <a href="silent-translator/silent-translator.html">
+      <div class="num">06</div>
+      <h2>Silent Translator · 无声的翻译官</h2>
+      <div class="tagline">身体替你说了说不出的话。逐帧解剖素描 × 治愈音景。</div>
+      <div class="tech">Frame-by-frame sketch · Web Audio healing · Somatic art</div>
+    </a>
+  </div>
+
+  <div class="card">
+    <a href="breath-mirror/breath-mirror.html">
+      <div class="num">07</div>
+      <h2>Breath Mirror · 息流 · 幻镜</h2>
+      <div class="tagline">这里没有深渊，也没有波澜。GPU 流体模拟 × Brown 噪声引擎。</div>
+      <div class="tech">GPU fluid · GLSL shader · Brown noise · Breath-responsive</div>
+    </a>
+  </div>
+
+  <div class="card">
+    <a href="overthinking-engine/overthinking-engine.html">
+      <div class="num">08</div>
+      <h2>Overthinking Engine · 过载脑区</h2>
+      <div class="tagline">过度清醒地审视自己，正在毁掉我们的生活。CRT 赛博朋克打字机。</div>
+      <div class="tech">GSAP · CRT aesthetic · Typewriter narrative</div>
+    </a>
+  </div>
+
+</div>
+
+<footer>
+  <p><a href="https://github.com/shasha1108/healing-visual-lab">GitHub</a> · 8 works · Updated 2026-06-16 · Zero-dependency interactive healing art</p>
+</footer>
+
+</body>
+</html>
