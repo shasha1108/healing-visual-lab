@@ -1,5 +1,7 @@
 # Overthinking Engine · 过载脑区 | The Overthinking Engine
 
+> **Tech Keywords:** GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative, overthinking, visual therapy H5
+
 ![预览 1](overthinking-engine_1.jpg)
 
 > 过度清醒地审视自己，正在毁掉我们的生活。

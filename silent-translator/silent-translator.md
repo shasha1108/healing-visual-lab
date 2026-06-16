@@ -1,5 +1,7 @@
 # Silent Translator · 无声的翻译官 | 躯体化便签
 
+> **Tech Keywords:** frame-by-frame anatomical sketch, Web Audio healing engine, somatic therapy art, body-mind connection
+
 ![预览 1](silent-translator_1.png)
 
 > 那些你说不出口的崩溃，身体都只能用疼痛替你作答。

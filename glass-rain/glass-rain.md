@@ -1,5 +1,7 @@
 # Glass Rain · 琉璃化雨（Eastern Zen Healing）
 
+> **Tech Keywords:** touch-drag physics, realistic gravity water drops, Web Audio rain synthesis, Canvas 2D, eastern zen healing
+
 ![预览 1](glass-rain_1.jpg)
 ![预览 2](glass-rain_2.jpg)
 
