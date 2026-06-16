@@ -2,7 +2,7 @@
 
 > **Tech Keywords:** CSS 3D transforms, multi-layer parallax, cosmic timeline animation, GSAP, philosophical digital art
 
-![预览](cosmic-recollection.jpg)
+![Cosmic Recollection - CSS 3D multi-layer parallax cosmic timeline animation](cosmic-recollection.jpg)
 
 > 万物皆有裂痕——那是光照进来的地方。
 

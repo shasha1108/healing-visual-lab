@@ -2,8 +2,8 @@
 
 > **Tech Keywords:** touch-drag physics, realistic gravity water drops, Web Audio rain synthesis, Canvas 2D, eastern zen healing
 
-![预览 1](glass-rain_1.jpg)
-![预览 2](glass-rain_2.jpg)
+![Glass Rain - touch-drag gravity water drops with Web Audio rain synthesis](glass-rain_1.jpg)
+![Glass Rain - water drops detail view with eastern zen healing aesthetic](glass-rain_2.jpg)
 
 > Some emotions need to be seen — when tears have all fallen, the clear sky is finally revealed.
 

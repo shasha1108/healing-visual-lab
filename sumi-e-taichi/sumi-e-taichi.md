@@ -2,7 +2,7 @@
 
 > **Tech Keywords:** Canvas 2D, particle physics, taichi gravity field, ink ripple simulation, zen circle generative art
 
-![预览](sumi-e-taichi.jpg)
+![Sumi-e Taichi - Canvas 2D particle physics ink ripple with taichi gravity field](sumi-e-taichi.jpg)
 
 > 一滴墨落入宣纸的瞬间——既是破坏，也是开始。
 

@@ -2,7 +2,7 @@
 
 > **Tech Keywords:** GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative, overthinking, visual therapy H5
 
-![预览 1](overthinking-engine_1.jpg)
+![Overthinking Engine - CRT cyberpunk typewriter narrative GSAP animation](overthinking-engine_1.jpg)
 
 > 过度清醒地审视自己，正在毁掉我们的生活。
 

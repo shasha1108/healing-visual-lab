@@ -2,7 +2,7 @@
 
 > **Tech Keywords:** 250K particles, layered landscape rendering, touch scatter interaction, Chinese painting algorithmic art
 
-![预览](layered-mountains.jpg)
+![Layered Mountains - 250K particles Chinese painting touch-scatter interaction](layered-mountains.jpg)
 
 > 触之即散，聚散随缘。
 

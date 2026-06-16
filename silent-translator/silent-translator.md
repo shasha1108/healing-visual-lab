@@ -2,7 +2,7 @@
 
 > **Tech Keywords:** frame-by-frame anatomical sketch, Web Audio healing engine, somatic therapy art, body-mind connection
 
-![预览 1](silent-translator_1.png)
+![Silent Translator - frame-by-frame anatomical sketch with Web Audio healing engine](silent-translator_1.png)
 
 > 那些你说不出口的崩溃，身体都只能用疼痛替你作答。
 

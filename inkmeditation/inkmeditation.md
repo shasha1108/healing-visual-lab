@@ -2,7 +2,7 @@
 
 > **Tech Keywords:** 100K+ particles, real-time fluid dynamics, breath-cycle sync, ink wash simulation, meditative creative coding
 
-![预览](inkmeditation.jpg)
+![Inkmeditation - 100K fluid dynamics particles with breath-cycle sync meditative interaction](inkmeditation.jpg)
 
 > 算法物理学 × 视觉设计 × 心理疗愈——指尖之上的数字交互艺术品。
 

@@ -2,7 +2,7 @@
 
 > **Tech Keywords:** GPU fluid simulation, Brown noise engine, breath-responsive mirror, WebGL shader, digital zen, meditative interaction
 
-![预览 1](breath-mirror_1.png)
+![Breath Mirror - GPU fluid simulation with Brown noise and breath-responsive mirror shader](breath-mirror_1.png)
 
 > 这里没有深渊，也没有波澜。只有漫长的白噪音，和迟钝的回响。
 
