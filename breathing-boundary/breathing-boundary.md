@@ -1,0 +1,45 @@
+# Breathing Boundary · 呼吸边界｜The Breathing Boundary
+
+> **Tech Keywords:** threejs, webgl, custom glsl shader, particle system, web audio, binaural beats, organic membrane, touch interaction, breathing animation
+
+![Breathing Boundary - Three.js WebGL organic semi-permeable membrane with particle collision ripple effects](breathing-boundary_1.png)
+
+> 看似隔绝，实则翻译——这是一层活着的、会呼吸的边界。
+
+一件以"半透膜"为隐喻的 Three.js WebGL 交互疗愈作品。深色空间中悬浮着一层巨大的、有生命的半透膜结构——冷色粒子从外部飞来，触碰撞击的瞬间化作涟漪，转化为琥珀色暖光渗透进膜内。长按屏幕感受转化，松开释放温暖。
+
+---
+
+## ✨ 预览
+
+直接用浏览器打开 `breathing-boundary.html` 即可运行——Three.js + 自定义 GLSL 着色器 + Web Audio 音景。
+
+## 📂 文件说明
+
+| 文件 | 说明 |
+| --- | --- |
+| `breathing-boundary.html` | 完整可运行的 H5 互动作品，约 35KB |
+| `breathing-boundary_1.png` | 预览图：半透膜 + 粒子碰撞涟漪效果 |
+| `breathing-boundary.md` | 本说明文件 |
+
+## 🖱️ 交互
+
+- 呼吸引导环以 4-7-8 节律自动脉动
+- 长按屏幕 → 冷色粒子加速撞击膜面 → 转化为暖色光斑
+- 长按超过 2 秒后松开 → 触发高潮：暖光淹没画面，漫天琥珀光点涌出
+- 高潮后双击屏幕 → 保存 1080×1920 疗愈截图
+
+## 🛠️ 技术栈
+
+- Three.js r160 (importmap CDN)
+- 自定义 GLSL 顶点/片段着色器（4 层 FBM Simplex 噪声 + Fresnel 边缘光 + 简易次表面散射）
+- 冷/暖双粒子系统 + 碰撞检测 + 涟漪扩散
+- Web Audio API 双振荡器 Delta 波（58Hz+61Hz）+ 碰撞钵音合成
+- Canvas 2D 截图合成（WebGL 帧 + 宋体手动字间距排版）
+- 移动端优先的触屏交互
+
+## 🌱 创作背景
+
+「半透膜」这个概念触及了当代情绪的核心诉求：我们渴望连接（呼吸），又恐惧伤害（冲击）。膜不是墙——不挡住任何东西，只让穿过它的东西变了温度。冷的进来，暖的出去。
+
+视觉上对应 Pinterest 2026 Palette 的 Plum Noir × Persimmon 子色盘——深色背景中的琥珀暖光渗透。

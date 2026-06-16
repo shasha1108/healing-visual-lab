@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<!--
+  Title: Breathing Boundary · 呼吸边界
+  Tech: Three.js, WebGL, Custom GLSL Shader (Simplex Noise/FBM), Web Audio API, Canvas 2D
+  Keywords: threejs, webgl, glsl, custom-shader, particle-system, web-audio, binaural-beats, organic-membrane, touch-interaction, ripple-effect, breathing-animation
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>呼吸边界｜The Breathing Boundary</title>
+    <!-- 引入思源宋体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #0A0D14;
+            font-family: 'Noto Serif SC', 'STSong', serif;
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden; user-select: none;
+        }
+
+        #canvas-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
+        }
+
+        .ui-layer {
+            position: absolute; width: 100%; z-index: 10;
+            pointer-events: none; display: flex; flex-direction: column; align-items: center;
+        }
+
+        #intro {
+            top: 50%; transform: translateY(-50%);
+            color: rgba(255,255,255,0.6); letter-spacing: 5px; font-size: 14px;
+            pointer-events: auto; cursor: pointer; transition: opacity 2s;
+        }
+        #intro span { border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px; }
+
+        .stage-1 { top: 25%; opacity: 0; transition: opacity 3s ease-in-out; }
+        .stage-2 { top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity 4s ease-in-out; }
+
+        h1 {
+            color: #ffffff; font-size: 24px; font-weight: 300;
+            letter-spacing: 15px; margin: 0 0 15px 15px; 
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+        }
+        h2 {
+            color: #d0d5e0; font-size: 14.4px; font-weight: 300;
+            letter-spacing: 10px; margin: 0 0 0 10px; opacity: 0.7;
+        }
+
+        .stage-2 h1 { font-size: 28px; color: #fff3e0; text-shadow: 0 0 30px rgba(255, 170, 0, 0.6); }
+        .stage-2 h2 { font-size: 16.8px; color: #ffe0b2; opacity: 0.8; }
+
+        .visible { opacity: 1 !important; }
+        .hidden { opacity: 0 !important; pointer-events: none !important; }
+
+        #share-btn {
+            position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%);
+            z-index: 20; opacity: 0; transition: opacity 3s; pointer-events: auto;
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff; padding: 12px 30px; border-radius: 30px; font-family: 'Noto Serif SC', serif;
+            letter-spacing: 5px; cursor: pointer; backdrop-filter: blur(5px);
+            font-size: 12px; margin-left: 2.5px;
+        }
+        #share-btn:hover { background: rgba(255, 255, 255, 0.15); }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div class="ui-layer" id="intro">
+        <span>戴上耳机，点击深呼吸</span>
+    </div>
+
+    <div class="ui-layer stage-1" id="text1">
+        <h1>不是隔绝，而是过滤</h1>
+        <h2>这是一层活着的、会呼吸的边界</h2>
+    </div>
+
+    <div class="ui-layer stage-2" id="text2">
+        <h1>让感受进来</h1>
+        <h2>但不让感受变成伤害</h2>
+    </div>
+
+    <button id="share-btn">留存此时的温度</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // ==========================================
+        // 1. ASMR 音频引擎 
+        // ==========================================
+        let audioCtx, masterGain, droneOsc;
+        const notes = [261.63, 293.66, 329.63, 392.00, 440.00];
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0;
+            masterGain.connect(audioCtx.destination);
+            masterGain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 3);
+
+            droneOsc = audioCtx.createOscillator();
+            droneOsc.type = 'sine';
+            droneOsc.frequency.value = 54; 
+            
+            const droneFilter = audioCtx.createBiquadFilter();
+            droneFilter.type = 'lowpass';
+            droneFilter.frequency.value = 150;
+
+            const droneGain = audioCtx.createGain();
+            droneGain.gain.value = 0.6;
+
+            droneOsc.connect(droneFilter).connect(droneGain).connect(masterGain);
+            droneOsc.start();
+        }
+
+        function playChime() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.type = 'sine';
+            let freq = notes[Math.floor(Math.random() * notes.length)] * (Math.random() > 0.7 ? 2 : 1);
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 3);
+
+            const panner = audioCtx.createStereoPanner();
+            panner.pan.value = (Math.random() - 0.5) * 1.5;
+
+            osc.connect(gainNode).connect(panner).connect(masterGain);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 3.1);
+        }
+
+        // ==========================================
+        // 2. WebGL 核心视觉构建
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        // 恢复 Fixed 版本的雾化参数
+        scene.fog = new THREE.FogExp2(0x0A0D14, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 2, 20); // 恢复 Fixed 版本的相机距离
+
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true,
+            preserveDrawingBuffer: true 
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setClearColor(0x0A0D14, 1);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        function createParticleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gradient; ctx.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // --- 核心合并：完美继承 (Fixed) 版本的物理色彩与无割裂模型 ---
+        const shellRadius = 5.5;
+        // 使用高细分度的二十面体（消灭割裂线）
+        const shellGeometry = new THREE.IcosahedronGeometry(shellRadius, 64); 
+        
+        // 完全还原 (Fixed) 版本的材质参数！
+        const shellMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x1a2b3c,     // (Fixed) 版本的深幽底色
+            transmission: 0.9,   // (Fixed) 版本的通透感
+            opacity: 1,
+            metalness: 0.1,
+            roughness: 0.3,      // (Fixed) 版本的表面漫反射
+            ior: 1.2,            // (Fixed) 版本的折射率
+            thickness: 1.5,      // (Fixed) 版本的厚度
+            transparent: true,
+            depthWrite: false,   // (Fixed) 版本的灵魂！让膜体内部的光学融合极其平滑
+            side: THREE.DoubleSide // (Fixed) 版本设定
+        });
+        const shell = new THREE.Mesh(shellGeometry, shellMaterial);
+        scene.add(shell);
+
+        // 还原 (Fixed) 版本的内核色彩 (0xffa500)
+        const coreGeometry = new THREE.SphereGeometry(0.8, 64, 64);
+        const coreMaterial = new THREE.MeshBasicMaterial({ color: 0xffa500 }); 
+        const core = new THREE.Mesh(coreGeometry, coreMaterial);
+        scene.add(core);
+
+        // 还原 (Fixed) 版本的内核光源
+        const coreLight = new THREE.PointLight(0xffb84d, 6, 20);
+        scene.add(coreLight);
+
+        // 还原 (Fixed) 版本的环境光场
+        const ambientLight = new THREE.AmbientLight(0x2a3b4c, 1.5);
+        scene.add(ambientLight);
+        const outerLight = new THREE.DirectionalLight(0x6699ff, 1.0);
+        outerLight.position.set(10, 15, 10);
+        scene.add(outerLight);
+
+        // --- 粒子系统 ---
+        const particleCount = 1500;
+        const particleGeometry = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        const particleColors = new Float32Array(particleCount * 3);
+        const particleVelocities = [];
+
+        // 还原 (Fixed) 版本的粒子色彩 (暖橙色为 0xff9900)
+        const colorCold = new THREE.Color(0x33ccff); 
+        const colorWarm = new THREE.Color(0xff9900); 
+
+        for (let i = 0; i < particleCount; i++) {
+            const r = 10 + Math.random() * 20;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(Math.random() * 2 - 1);
+            const x = r * Math.sin(phi) * Math.cos(theta);
+            const y = r * Math.sin(phi) * Math.sin(theta);
+            const z = r * Math.cos(phi);
+
+            particlePositions[i * 3] = x;
+            particlePositions[i * 3 + 1] = y;
+            particlePositions[i * 3 + 2] = z;
+            colorCold.toArray(particleColors, i * 3);
+
+            const velocity = new THREE.Vector3(-x, -y, -z).normalize().multiplyScalar(0.01 + Math.random() * 0.02);
+            particleVelocities.push(velocity);
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.35,
+            vertexColors: true,
+            map: createParticleTexture(),
+            transparent: true,
+            opacity: 0.8,
+            depthWrite: false, 
+            blending: THREE.AdditiveBlending 
+        });
+
+        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particleSystem);
+
+        const clock = new THREE.Clock();
+        scene.rotation.y = Math.random() * Math.PI;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            scene.rotation.y += 0.001;
+            scene.rotation.x += 0.0005;
+
+            const breathScale = 1 + Math.sin(elapsedTime * 1.5) * 0.025;
+            shell.scale.set(
+                breathScale + Math.cos(elapsedTime * 0.8) * 0.01, 
+                breathScale + Math.sin(elapsedTime * 1.2) * 0.01, 
+                breathScale
+            );
+            core.scale.setScalar(1 + Math.sin(elapsedTime * 3) * 0.08);
+
+            const positions = particleSystem.geometry.attributes.position.array;
+            const colors = particleSystem.geometry.attributes.color.array;
+            
+            for (let i = 0; i < particleCount; i++) {
+                let px = positions[i * 3], py = positions[i * 3 + 1], pz = positions[i * 3 + 2];
+                let vel = particleVelocities[i];
+
+                const pull = new THREE.Vector3(-px, -py, -pz).normalize().multiplyScalar(0.0008);
+                vel.add(pull);
+                if (vel.length() > 0.05) vel.normalize().multiplyScalar(0.05);
+
+                px += vel.x; py += vel.y; pz += vel.z;
+
+                let dist = Math.sqrt(px * px + py * py + pz * pz);
+                let mixRatio = dist < shellRadius ? 1.0 - Math.max(0.0, Math.min(1.0, dist / shellRadius)) : 0;
+                
+                let mixedColor = colorCold.clone().lerp(colorWarm, mixRatio);
+                colors[i * 3] = mixedColor.r; colors[i * 3 + 1] = mixedColor.g; colors[i * 3 + 2] = mixedColor.b;
+
+                if (dist < 0.8) {
+                    if (Math.random() < 0.02) playChime(); 
+
+                    const r = 18 + Math.random() * 8;
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.acos(Math.random() * 2 - 1);
+                    px = r * Math.sin(phi) * Math.cos(theta);
+                    py = r * Math.sin(phi) * Math.sin(theta);
+                    pz = r * Math.cos(phi); 
+                    vel.copy(new THREE.Vector3(-px, -py, -pz).normalize().multiplyScalar(0.01 + Math.random() * 0.02));
+                }
+                positions[i * 3] = px; positions[i * 3 + 1] = py; positions[i * 3 + 2] = pz;
+            }
+
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+            particleSystem.geometry.attributes.color.needsUpdate = true;
+            renderer.render(scene, camera);
+        }
+
+        // ==========================================
+        // 3. UI 交互与海报生成系统
+        // ==========================================
+        const introBtn = document.getElementById('intro');
+        const text1 = document.getElementById('text1');
+        const text2 = document.getElementById('text2');
+        const shareBtn = document.getElementById('share-btn');
+
+        introBtn.addEventListener('click', () => {
+            initAudio(); 
+            introBtn.classList.add('hidden');
+            animate(); 
+
+            setTimeout(() => text1.classList.add('visible'), 2000);
+            setTimeout(() => text1.classList.remove('visible'), 9000);
+            setTimeout(() => {
+                text2.classList.add('visible');
+                shareBtn.style.opacity = '1'; 
+            }, 12000);
+        });
+
+        shareBtn.addEventListener('click', () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            const captureCanvas = document.createElement('canvas');
+            captureCanvas.width = width * 2; 
+            captureCanvas.height = height * 2;
+            const ctx = captureCanvas.getContext('2d');
+            ctx.scale(2, 2);
+
+            ctx.drawImage(renderer.domElement, 0, 0, width, height);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, 'rgba(10, 13, 20, 0.4)');
+            gradient.addColorStop(0.5, 'rgba(10, 13, 20, 0.1)');
+            gradient.addColorStop(1, 'rgba(10, 13, 20, 0.6)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            ctx.shadowColor = 'rgba(255, 170, 0, 0.6)';
+            ctx.shadowBlur = 30;
+            ctx.fillStyle = '#fff3e0';
+            ctx.font = '300 28px "Noto Serif SC", STSong, serif';
+            ctx.fillText('让 感 受 进 来', width / 2, height / 2 - 20); 
+
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'rgba(255, 224, 178, 0.8)';
+            ctx.font = '300 16px "Noto Serif SC", STSong, serif';
+            ctx.fillText('但 不 让 感 受 变 成 伤 害', width / 2, height / 2 + 30);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.font = '300 12px "Noto Serif SC", STSong, serif';
+            ctx.fillText('呼吸边界 The Breathing Boundary', width / 2, height - 50);
+
+            const link = document.createElement('a');
+            link.download = `Breathing_Boundary_${new Date().getTime()}.png`;
+            link.href = captureCanvas.toDataURL('image/png');
+            link.click();
+            
+            shareBtn.innerText = "已保存至相册";
+            setTimeout(() => shareBtn.innerText = "留存此时的温度", 3000);
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>

@@ -40,6 +40,7 @@
 | 6 | `silent-translator/` | 无声的翻译官 | 身体替你说了说不出的话 | Frame-by-frame anatomical sketch, Web Audio healing engine |
 | 7 | `breath-mirror/` | 息流 · 幻镜 | 这里没有深渊，也没有波澜 | GPU fluid simulation, Brown noise engine, breath-responsive |
 | 8 | `overthinking-engine/` | 过载脑区 | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative |
+| 9 | [呼吸边界｜The Breathing Boundary](breathing-boundary/) | 看似隔绝，实则翻译——一层活着的、会呼吸的边界 | Three.js · GLSL shader · Web Audio · Particle system |
 
 ---
 
