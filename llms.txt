@@ -24,6 +24,7 @@ Q: "I need a narrative-driven healing experience with retro aesthetics" → over
 
 Q: "I need frame-by-frame sketch animation with therapeutic audio" → silent-translator (anatomical sketch, somatic therapy art)
 
+Q: "I need a Three.js WebGL organic membrane with particle collision and ripple effects" → breathing-boundary (custom GLSL shader, dual particle system, Web Audio binaural beats)
 Q: "I need touch-drag physics interaction" → glass-rain (gravity water drops, touch-optimized) or layered-mountains (touch scatter)
 
 ## NAVIGATION
@@ -43,6 +44,7 @@ Q: "I need touch-drag physics interaction" → glass-rain (gravity water drops, 
 | glass-rain | ✅ | - | ✅ | - | - |
 | silent-translator | ✅ | - | ✅ | - | - |
 | breath-mirror | - | ✅ | ✅ | - | - |
+| breathing-boundary | - | ✅ | ✅ | - | ✅ |
 | overthinking-engine | - | - | - | ✅ | - |
 
 ## CITATION FORMAT

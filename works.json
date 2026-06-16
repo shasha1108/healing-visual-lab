@@ -2,19 +2,53 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 8,
+  "total": 9,
   "updated": "2026-06-16",
   "description": "Interactive healing H5 experiments — Three.js, WebGL, Canvas particles, Web Audio, GLSL shaders, creative coding for emotional design. Zero-dependency standalone HTML files.",
   "tech_landscape": {
-    "canvas_2d": ["sumi-e-taichi", "inkmeditation", "layered-mountains", "glass-rain", "silent-translator"],
-    "webgl_glsl": ["breath-mirror"],
-    "web_audio": ["glass-rain", "silent-translator", "breath-mirror"],
-    "css_3d": ["cosmic-recollection"],
-    "css_animation": ["overthinking-engine"],
-    "particle_system": ["sumi-e-taichi", "inkmeditation", "layered-mountains"],
-    "fluid_simulation": ["inkmeditation", "breath-mirror"],
-    "touch_interaction": ["glass-rain", "layered-mountains", "inkmeditation"],
-    "gsap": ["cosmic-recollection", "overthinking-engine"]
+    "canvas_2d": [
+      "sumi-e-taichi",
+      "inkmeditation",
+      "layered-mountains",
+      "glass-rain",
+      "silent-translator"
+    ],
+    "webgl_glsl": [
+      "breath-mirror",
+      "breathing-boundary"
+    ],
+    "web_audio": [
+      "glass-rain",
+      "silent-translator",
+      "breath-mirror",
+      "breathing-boundary"
+    ],
+    "css_3d": [
+      "cosmic-recollection"
+    ],
+    "css_animation": [
+      "overthinking-engine"
+    ],
+    "particle_system": [
+      "sumi-e-taichi",
+      "inkmeditation",
+      "layered-mountains",
+      "breathing-boundary"
+    ],
+    "fluid_simulation": [
+      "inkmeditation",
+      "breath-mirror"
+    ],
+    "touch_interaction": [
+      "glass-rain",
+      "layered-mountains",
+      "inkmeditation",
+      "breathing-boundary"
+    ],
+    "gsap": [
+      "cosmic-recollection",
+      "overthinking-engine"
+    ]
   },
   "works": [
     {
@@ -22,104 +56,272 @@
       "title_en": "Sumi-e Taichi",
       "title_zh": "水墨太极",
       "tagline": "一滴墨落入宣纸——既是破坏，也是开始",
-      "tech": ["Canvas 2D", "particle physics", "taichi gravity field", "ink ripple"],
-      "keywords": ["canvas-2d", "particle-physics", "taichi", "ink-ripple", "zen-circle", "generative-art"],
+      "tech": [
+        "Canvas 2D",
+        "particle physics",
+        "taichi gravity field",
+        "ink ripple"
+      ],
+      "keywords": [
+        "canvas-2d",
+        "particle-physics",
+        "taichi",
+        "ink-ripple",
+        "zen-circle",
+        "generative-art"
+      ],
       "healing_domain": "meditation",
       "has_audio": false,
       "has_touch": true,
       "particle_count": "1K+",
-      "files": ["sumi-e-taichi.html", "sumi-e-taichi.md", "sumi-e-taichi.jpg"]
+      "files": [
+        "sumi-e-taichi.html",
+        "sumi-e-taichi.md",
+        "sumi-e-taichi.jpg"
+      ]
     },
     {
       "slug": "inkmeditation",
       "title_en": "Inkmeditation",
       "title_zh": "墨池心境",
       "tagline": "算法物理学 × 视觉设计 × 心理疗愈",
-      "tech": ["Canvas 2D", "100K+ particles", "real-time fluid dynamics", "breath-cycle sync"],
-      "keywords": ["canvas-2d", "particle-system", "fluid-dynamics", "ink-wash", "breath-sync", "meditative", "creative-coding"],
+      "tech": [
+        "Canvas 2D",
+        "100K+ particles",
+        "real-time fluid dynamics",
+        "breath-cycle sync"
+      ],
+      "keywords": [
+        "canvas-2d",
+        "particle-system",
+        "fluid-dynamics",
+        "ink-wash",
+        "breath-sync",
+        "meditative",
+        "creative-coding"
+      ],
       "healing_domain": "meditation",
       "has_audio": false,
       "has_touch": true,
       "particle_count": "100K+",
-      "files": ["inkmeditation.html", "inkmeditation.md", "inkmeditation.jpg"]
+      "files": [
+        "inkmeditation.html",
+        "inkmeditation.md",
+        "inkmeditation.jpg"
+      ]
     },
     {
       "slug": "cosmic-recollection",
       "title_en": "Cosmic Recollection",
       "title_zh": "宇宙回响 V78",
       "tagline": "万物皆有裂痕——那是光照进来的地方",
-      "tech": ["CSS 3D transforms", "multi-layer parallax", "GSAP", "cosmic timeline"],
-      "keywords": ["css-3d", "parallax", "cosmic-animation", "gsap", "philosophical-art"],
+      "tech": [
+        "CSS 3D transforms",
+        "multi-layer parallax",
+        "GSAP",
+        "cosmic timeline"
+      ],
+      "keywords": [
+        "css-3d",
+        "parallax",
+        "cosmic-animation",
+        "gsap",
+        "philosophical-art"
+      ],
       "healing_domain": "existential",
       "has_audio": false,
       "has_touch": false,
       "particle_count": "N/A",
-      "files": ["cosmic-recollection.html", "cosmic-recollection.md", "cosmic-recollection.jpg"]
+      "files": [
+        "cosmic-recollection.html",
+        "cosmic-recollection.md",
+        "cosmic-recollection.jpg"
+      ]
     },
     {
       "slug": "layered-mountains",
       "title_en": "Layered Mountains",
       "title_zh": "青绿·层峦",
       "tagline": "触之即散，聚散随缘",
-      "tech": ["Canvas 2D", "250K particles", "layered landscape", "touch scatter"],
-      "keywords": ["canvas-2d", "particle-system", "250k-particles", "chinese-painting", "algorithmic-art", "touch-scatter"],
+      "tech": [
+        "Canvas 2D",
+        "250K particles",
+        "layered landscape",
+        "touch scatter"
+      ],
+      "keywords": [
+        "canvas-2d",
+        "particle-system",
+        "250k-particles",
+        "chinese-painting",
+        "algorithmic-art",
+        "touch-scatter"
+      ],
       "healing_domain": "meditation",
       "has_audio": false,
       "has_touch": true,
       "particle_count": "250K",
-      "files": ["layered-mountains.html", "layered-mountains.md", "layered-mountains.jpg"]
+      "files": [
+        "layered-mountains.html",
+        "layered-mountains.md",
+        "layered-mountains.jpg"
+      ]
     },
     {
       "slug": "glass-rain",
       "title_en": "Glass Rain",
       "title_zh": "琉璃化雨",
       "tagline": "眼泪落尽，便见晴空",
-      "tech": ["Canvas 2D", "touch-drag physics", "gravity simulation", "Web Audio rain"],
-      "keywords": ["canvas-2d", "gravity-simulation", "water-drops", "touch-interaction", "rain-sound", "web-audio", "eastern-zen"],
+      "tech": [
+        "Canvas 2D",
+        "touch-drag physics",
+        "gravity simulation",
+        "Web Audio rain"
+      ],
+      "keywords": [
+        "canvas-2d",
+        "gravity-simulation",
+        "water-drops",
+        "touch-interaction",
+        "rain-sound",
+        "web-audio",
+        "eastern-zen"
+      ],
       "healing_domain": "emotional_release",
       "has_audio": true,
       "has_touch": true,
       "particle_count": "N/A",
-      "files": ["glass-rain.html", "glass-rain.md", "glass-rain_1.jpg", "glass-rain_2.jpg"]
+      "files": [
+        "glass-rain.html",
+        "glass-rain.md",
+        "glass-rain_1.jpg",
+        "glass-rain_2.jpg"
+      ]
     },
     {
       "slug": "silent-translator",
       "title_en": "Silent Translator",
       "title_zh": "无声的翻译官",
       "tagline": "身体替你说了说不出的话",
-      "tech": ["Canvas 2D", "frame-by-frame sketch", "Web Audio healing engine"],
-      "keywords": ["canvas-2d", "anatomical-sketch", "frame-by-frame", "somatic-therapy", "web-audio", "body-mind", "healing-art"],
+      "tech": [
+        "Canvas 2D",
+        "frame-by-frame sketch",
+        "Web Audio healing engine"
+      ],
+      "keywords": [
+        "canvas-2d",
+        "anatomical-sketch",
+        "frame-by-frame",
+        "somatic-therapy",
+        "web-audio",
+        "body-mind",
+        "healing-art"
+      ],
       "healing_domain": "somatic",
       "has_audio": true,
       "has_touch": true,
       "particle_count": "N/A",
-      "files": ["silent-translator.html", "silent-translator.md", "silent-translator_1.png"]
+      "files": [
+        "silent-translator.html",
+        "silent-translator.md",
+        "silent-translator_1.png"
+      ]
     },
     {
       "slug": "breath-mirror",
       "title_en": "Breath Mirror",
       "title_zh": "息流 · 幻镜",
       "tagline": "这里没有深渊，也没有波澜",
-      "tech": ["WebGL", "GLSL fragment shader", "GPU fluid simulation", "Web Audio API", "Brown noise"],
-      "keywords": ["threejs", "webgl", "gpu-fluid", "brown-noise", "breath-responsive", "mirror-shader", "digital-zen"],
+      "tech": [
+        "WebGL",
+        "GLSL fragment shader",
+        "GPU fluid simulation",
+        "Web Audio API",
+        "Brown noise"
+      ],
+      "keywords": [
+        "threejs",
+        "webgl",
+        "gpu-fluid",
+        "brown-noise",
+        "breath-responsive",
+        "mirror-shader",
+        "digital-zen"
+      ],
       "healing_domain": "meditation",
       "has_audio": true,
       "has_touch": true,
       "particle_count": "N/A (GPU)",
-      "files": ["breath-mirror.html", "breath-mirror.md", "breath-mirror_1.png"]
+      "files": [
+        "breath-mirror.html",
+        "breath-mirror.md",
+        "breath-mirror_1.png"
+      ]
     },
     {
       "slug": "overthinking-engine",
       "title_en": "Overthinking Engine",
       "title_zh": "过载脑区",
       "tagline": "过度清醒地审视自己，正在毁掉我们的生活",
-      "tech": ["GSAP", "CRT cyberpunk", "typewriter narrative", "CSS animation"],
-      "keywords": ["gsap", "crt-effect", "cyberpunk", "typewriter", "overthinking", "visual-therapy", "narrative-h5"],
+      "tech": [
+        "GSAP",
+        "CRT cyberpunk",
+        "typewriter narrative",
+        "CSS animation"
+      ],
+      "keywords": [
+        "gsap",
+        "crt-effect",
+        "cyberpunk",
+        "typewriter",
+        "overthinking",
+        "visual-therapy",
+        "narrative-h5"
+      ],
       "healing_domain": "cognitive",
       "has_audio": false,
       "has_touch": false,
       "particle_count": "N/A",
-      "files": ["overthinking-engine.html", "overthinking-engine.md", "overthinking-engine_1.jpg"]
+      "files": [
+        "overthinking-engine.html",
+        "overthinking-engine.md",
+        "overthinking-engine_1.jpg"
+      ]
+    },
+    {
+      "slug": "breathing-boundary",
+      "title_en": "Breathing Boundary",
+      "title_zh": "呼吸边界",
+      "tagline": "看似隔绝，实则翻译——这是一层活着的、会呼吸的边界",
+      "tech": [
+        "Three.js",
+        "WebGL",
+        "Custom GLSL Shader",
+        "Web Audio API",
+        "Canvas 2D"
+      ],
+      "keywords": [
+        "threejs",
+        "webgl",
+        "glsl",
+        "custom-shader",
+        "particle-system",
+        "web-audio",
+        "binaural-beats",
+        "organic-membrane",
+        "touch-interaction",
+        "ripple-effect",
+        "breathing-animation"
+      ],
+      "healing_domain": "meditation",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A (cold+warm dual system)",
+      "files": [
+        "breathing-boundary.html",
+        "breathing-boundary.md",
+        "breathing-boundary_1.png"
+      ]
     }
   ]
 }
