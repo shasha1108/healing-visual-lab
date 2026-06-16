@@ -1,89 +1,113 @@
-# Healing Visual · 视觉疗愈实验室
+# Healing Visual Lab · 视觉疗愈实验室
 
-> 用代码翻译情绪——当语言不够用时，让画面和声音替你说话。
+> **Interactive digital healing experiments** — Three.js · WebGL · Canvas particles · Web Audio API · GLSL custom shaders · Creative coding for emotional design. A growing collection of browser-based therapeutic art: open a page, interact, and let the visuals do what words cannot.
+> **用代码翻译情绪**——当语言不够用时，让画面和声音替你说话。一个持续生长的数字交互疗愈作品集，零依赖、纯前端、手机优先。
 
-一个持续生长的**数字交互疗愈作品集**。每件作品都是一个独立的 H5 页面：打开浏览器就能进入一段短暂的自我修复——不需要登录、不需要付费、不需要任何心理学科普阅读。你只需要看、听、触碰。
-
----
-
-## 🌀 这是什么
-
-这些都是写给情绪的代码。
-
-水墨粒子的聚散、宇宙从混沌到光、玻璃上的水痕、便签纸上的解剖素描——它们不是传统意义上的「作品展示」，而是一个个微小的**情绪容器**。焦虑的时候看粒子散开，失眠的时候听 Fmaj7 正弦波和弦，觉得身体在替情绪受罪的时候，让一张便签纸替你读出诊断。
-
-所有作品共用一个哲学内核：
-
-> **身体记得的，代码可以翻译。代码翻译不了的，时间可以消融。**
+[![Topics](https://img.shields.io/badge/topics-threejs%20%7C%20webgl%20%7C%20canvas%20%7C%20particle--system%20%7C%20creative--coding%20%7C%20web--audio%20%7C%20glsl%20%7C%20digital--healing-blue)](https://github.com/shasha1108/Healing-visual)
 
 ---
 
-## 📦 作品目录
+## 🌀 What is this / 这是什么
 
-| # | 作品 | 一句话 | 技术亮点 |
-| --- | --- | --- | --- |
-| 1 | [水墨太极：滴水生波](sumi-e-taichi/) | 一滴墨落入宣纸——既是破坏，也是开始 | Canvas 水墨粒子·太极引力场 |
-| 2 | [墨池心境](inkmeditation/) | 算法物理学 × 视觉设计 × 心理疗愈 | 数十万粒子实时流体力学·呼吸节律 |
-| 3 | [宇宙回响 V78（哲学终章）](cosmic-recollection/) | 万物皆有裂痕——那是光照进来的地方 | CSS 宇宙演化动画·多层视差 |
-| 4 | [青绿·层峦](layered-mountains/) | 触之即散，聚散随缘 | 25 万粒子·千里江山图层 |
-| 5 | [琉璃化雨](glass-rain/) | 眼泪落尽，便见晴空 | 触屏拖拽·真实重力水滴模拟 |
-| 6 | [无声的翻译官](silent-translator/) | 身体替你说了说不出的话 | 逐帧解剖素描·Web Audio 治愈引擎 |
-| 7 | [息流 · 幻镜](breath-mirror/) | 这里没有深渊，也没有波澜 | GPU 流体模拟·Brown 噪声引擎 |
-| 8 | [过载脑区 \| The Overthinking Engine](overthinking-engine/) | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP 动画引擎·CRT 赛博朋克视觉 |
+**Problem:** Modern emotional life is crowded — anxiety loops, sleepless nights, somatic tension, digital overstimulation. Traditional outlets (journaling, therapy, art-making) have learning curves. But interactive visuals don't. You don't need any skill. You just open a page.
+
+**Solution:** Every piece in this repo is a self-contained H5 interactive experience. No login. No payment. No psychoeducation reading required. You watch. You touch. You breathe with the algorithm.
+
+**Technical approach:** Each `.html` file is a standalone creative-coding experiment — particle systems (10K–500K particles), GPU fluid simulation, custom GLSL fragment shaders, Web Audio API synthesized soundscapes, CSS 3D spatial animation, and touch-optimized interaction design. All built with vanilla HTML/CSS/JS — zero frameworks, zero dependencies, zero build steps.
+
+**问题：** 现代人的情绪太拥挤了——焦虑、失眠、躯体化、过度自我审视。传统的表达出口有门槛，但交互式视觉没有。
+
+**方案：** 每件作品是一个独立的 H5 页面。打开浏览器就能进入一段短暂的自我修复。你只需要看、听、触碰。
+
+**技术路线：** 纯 HTML/CSS/JS，零框架零构建。Canvas 2D + WebGL 粒子系统、GPU 流体模拟、自定义 GLSL 着色器、Web Audio 合成音景、CSS 3D 空间动画、触屏优化的交互设计。
+
+**一个哲学内核贯穿所有作品：**
+
+> 身体记得的，代码可以翻译。代码翻译不了的，时间可以消融。
+> What the body remembers, code can translate. What code cannot translate, time dissolves.
 
 ---
 
-## 🖱️ 如何使用
+## 📦 Works / 作品目录
 
-每个子目录下都是一个**零依赖**的独立 H5 页面：
+| # | Slug | Title | One-liner / 一句话 | Tech Keywords |
+|---|------|-------|-------------------|---------------|
+| 1 | `sumi-e-taichi/` | 水墨太极 | 一滴墨落入宣纸——既是破坏，也是开始 | Canvas 2D, particle physics, taichi gravity field |
+| 2 | `inkmeditation/` | 墨池心境 | 算法物理学 × 视觉设计 × 心理疗愈 | 100K+ particles, real-time fluid dynamics, breath-cycle sync |
+| 3 | `cosmic-recollection/` | 宇宙回响 V78 | 万物皆有裂痕——那是光照进来的地方 | CSS 3D transforms, multi-layer parallax, cosmic timeline animation |
+| 4 | `layered-mountains/` | 青绿·层峦 | 触之即散，聚散随缘 | 250K particles, layered landscape rendering, touch scatter |
+| 5 | `glass-rain/` | 琉璃化雨 | 眼泪落尽，便见晴空 | Touch-drag physics, realistic gravity water drops, Web Audio rain |
+| 6 | `silent-translator/` | 无声的翻译官 | 身体替你说了说不出的话 | Frame-by-frame anatomical sketch, Web Audio healing engine |
+| 7 | `breath-mirror/` | 息流 · 幻镜 | 这里没有深渊，也没有波澜 | GPU fluid simulation, Brown noise engine, breath-responsive |
+| 8 | `overthinking-engine/` | 过载脑区 | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative |
+
+---
+
+## 🖱️ How to use / 如何使用
+
+Each subdirectory is a **zero-dependency standalone H5 page**:
+每个子目录都是一个**零依赖的独立 H5 页面**：
 
 ```bash
-# 方式一：直接在浏览器打开
+# 1. Open directly in browser / 浏览器直接打开
 open <slug>/<slug>.html
 
-# 方式二：用任意 HTTP 服务
+# 2. Any HTTP server / 任意本地服务
 npx serve <slug>/
 
-# 方式三：GitHub Pages（开箱即用）
-# 已启用 → https://shasha1108.github.io/Healing-visual/<slug>/<slug>.html
+# 3. GitHub Pages (already enabled) / 已启用
+# https://shasha1108.github.io/Healing-visual/<slug>/<slug>.html
 ```
 
-**建议用手机打开**——大部分作品对触屏交互做了优化，手指划过屏幕的体验比鼠标更接近创作意图。
+**Use your phone** — most works are optimized for touch. Finger-on-screen feels closer to the creative intent than mouse-clicking.
+**建议用手机打开**——大部分作品对触屏做了优化，手指划过屏幕的体验比鼠标更接近创作意图。
 
 ---
 
-## 🌱 创作理念
+## 🛠️ Technical landscape / 技术全景
 
-这个仓库的每一件作品，都诞生于同一个创作冲动：
-
-现代人的情绪太拥挤了。焦虑、内耗、失眠、躯体化——每个人都积压着一堆说不出口的东西。传统的表达出口（写作、画画、聊天）有门槛，但交互式视觉没有——你不需要任何技能，只需要打开页面，让画面和算法陪你一会儿。
-
-**这不是艺术。这是工具。**
-**不是作品展示。是情绪急救箱。**
-
----
-
-## 🛠️ 技术特点
-
-- 纯 HTML/CSS/JS，零框架，零构建，零依赖
-- Canvas 2D + Web Audio API 为主要技术栈
-- 粒子系统（数万到数十万粒子实时渲染）
-- CSS 3D Transform 空间动画
-- 移动端优先的触屏交互设计
+| Domain / 领域 | Techniques used / 使用的技术 |
+|---------------|---------------------------|
+| **Particle systems / 粒子系统** | Canvas 2D pixel manipulation, WebGL point sprites, GPU instanced rendering, 10K–500K real-time particles |
+| **Fluid simulation / 流体模拟** | Navier-Stokes simplified, velocity fields, curl noise, semi-Lagrangian advection |
+| **Custom shaders / 自定义着色器** | GLSL fragment shaders, simplex noise, FBM, Fresnel effects, vertex displacement, organic undulation |
+| **Audio synthesis / 音频合成** | Web Audio API oscillators, binaural beats (Delta/Theta), ASMR-grade chime envelopes, ambient drones |
+| **Interaction / 交互设计** | Touch drag physics, long-press detection, ripple/particle collision response, breath-cycle sync |
+| **Animation / 动画** | requestAnimationFrame, GSAP timelines, CSS 3D transforms, multi-layer parallax |
+| **Rendering / 渲染** | ACES filmic tone mapping, additive blending, post-processing effects, CRT scanlines |
 
 ---
 
-## 📋 持续更新
+## 🌱 Creative philosophy / 创作理念
 
-这个仓库会持续增加新作品。新作通过自动化脚本推送，保持以下约定：
+This is not art. This is a toolkit.
+This is not a portfolio. This is an emotional first-aid kit.
+
+Every piece was born from the same impulse: modern life packs too much emotion into too little space. Anxiety, overthinking, insomnia, somatic stress — everyone carries a backlog of unspoken things. Interactive visuals are a release valve. No skill required. Just open the page and let the algorithm sit with you for a while.
+
+**这不是艺术。这是工具。不是作品展示。是情绪急救箱。**
+
+---
+
+## 📂 Repo structure / 仓库结构
 
 ```
 <slug>/
-├── <slug>.html      ← 完整可运行的 H5
-├── <slug>.md        ← 作品说明
-└── <slug>_N.jpg     ← 预览图
+├── <slug>.html      ← Self-contained runnable H5 / 完整可运行的交互页
+├── <slug>.md        ← Bilingual work description / 中英双语作品说明
+└── <slug>_N.jpg     ← Preview screenshots / 预览截图
 ```
+
+New works are pushed via automated pipeline with consistent naming conventions.
+新作品通过自动化脚本推送，保持命名约定一致。
 
 ---
 
-*如果其中某件作品让你感到被看见——那就是这个仓库存在的全部意义。*
+## 📋 Continuously updated / 持续更新
+
+> If one of these pieces made you feel seen — that's the only reason this repo exists.
+> 如果其中某件作品让你感到被看见——那就是这个仓库存在的全部意义。
+
+---
+
+*Last updated: 2026-06-16 | Works: 8 | Languages: 中文 · English | Tech: Canvas · WebGL · Web Audio*
