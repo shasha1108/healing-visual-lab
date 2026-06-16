@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>过载脑区 | The Overthinking Engine</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #020202; 
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace; /* 赛博朋克机器码字体 */
+            user-select: none; 
+            -webkit-user-select: none;
+            touch-action: none; 
+        }
+
+        .art-frame {
+            position: relative; width: 100%; max-width: 540px; 
+            aspect-ratio: 3 / 4; 
+            background-color: #000;
+            box-shadow: 0 0 80px rgba(0,0,0,1);
+            border-radius: 4px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        /* 1. 底图层：自带 CRT 电视机的闪烁与高反差 */
+        #base-image {
+            position: absolute; top: -5%; left: -5%; width: 110%; height: 110%;
+            object-fit: cover;
+            filter: brightness(0.8) contrast(1.2) saturate(1.2);
+            /* 电视机的轻微呼吸缩放 */
+            animation: breathe 8s ease-in-out infinite alternate;
+            z-index: 1;
+        }
+
+        /* 模拟电视机忽明忽暗的闪烁 Bug */
+        .art-frame:not(.is-holding) #base-image {
+            animation: breathe 8s infinite alternate, flicker 0.15s infinite;
+        }
+
+        @keyframes breathe {
+            0% { transform: scale(1.02); }
+            100% { transform: scale(1.06); }
+        }
+        @keyframes flicker {
+            0% { filter: brightness(0.8) contrast(1.2) hue-rotate(0deg); }
+            50% { filter: brightness(0.9) contrast(1.5) hue-rotate(2deg); }
+            100% { filter: brightness(0.7) contrast(1.1) hue-rotate(-1deg); }
+        }
+
+        /* 2. 老电视的扫描线遮罩 (CRT Scanlines) */
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            z-index: 5; pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* 3. 弹幕层：自我分析的噪音框 */
+        #thoughts-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+        }
+
+        .thought-box {
+            position: absolute;
+            background: rgba(0, 20, 25, 0.7);
+            border: 1px solid #00e5ff; /* 赛博青色 */
+            color: #00e5ff;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.4), inset 0 0 5px rgba(0, 229, 255, 0.2);
+            text-shadow: 0 0 5px #00e5ff;
+            backdrop-filter: blur(2px);
+            white-space: nowrap;
+            /* 叠加发光 */
+            mix-blend-mode: screen; 
+            transform-origin: center;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; /* 中文更清晰 */
+        }
+
+        /* 红色警告弹窗，代表极度焦虑 */
+        .thought-box.warning {
+            border-color: #ff3333; color: #ff3333;
+            box-shadow: 0 0 10px rgba(255, 51, 51, 0.5), inset 0 0 5px rgba(255, 51, 51, 0.2);
+            text-shadow: 0 0 5px #ff3333;
+            background: rgba(25, 0, 0, 0.8);
+        }
+
+        /* 4. 治愈文案层 */
+        .healing-container {
+            position: absolute; top: 50%; left: 0; width: 100%;
+            text-align: center; z-index: 20; opacity: 0;
+            transform: translateY(-50%); pointer-events: none;
+        }
+
+        .healing-text {
+            font-family: 'Noto Serif SC', 'Songti SC', serif;
+            color: #ffffff; font-size: 20px; font-weight: bold; letter-spacing: 4px; line-height: 2;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.9), 0 0 30px rgba(0, 255, 255, 0.6);
+        }
+
+        /* 5. 交互提示 */
+        .hint-text {
+            position: absolute; bottom: 8%; left: 0; width: 100%;
+            text-align: center; color: rgba(255,255,255,0.5); z-index: 20;
+            font-size: 12px; letter-spacing: 3px; pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        .art-frame.is-holding .hint-text { opacity: 0; }
+
+        /* 压暗边缘 */
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            box-shadow: inset 0 0 150px rgba(0,0,0,0.9);
+            z-index: 15; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="art-frame" id="frame">
+        <img src="prison.png" id="base-image" alt="Panopticon">
+        <div class="scanlines"></div>
+        
+        <!-- 存放无尽的自我分析弹窗 -->
+        <div id="thoughts-container"></div>
+        
+        <div class="vignette"></div>
+
+        <div class="healing-container" id="healing">
+            <div class="healing-text" style="font-size: 18px; line-height: 2.2;">
+                过度清醒的审视自己，正在毁掉我们的生活...<br>
+                <span style="font-size: 16px; color: #a8ffef; font-weight: normal;">你一定，很累了吧。</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const frame = document.getElementById('frame');
+        const container = document.getElementById('thoughts-container');
+        let width = frame.clientWidth;
+        let height = frame.clientHeight;
+        let isHolding = false;
+        let thoughtInterval;
+
+        // 【唯一修改处】：全部替换为扎心且极具代入感的中文文案
+        const phrases = [
+            "正在分析对方微表情...",
+            "ERR: 心率异常飙升",
+            "警告：防御伪装正在剥落...",
+            "所有人都在向前走，除了你。",
+            "ERR_404: 找不到被爱的证据",
+            "正在第 134 次重播昨天的蠢话...",
+            "他们根本不在我，只是在忍受我。",
+            "预测结论：最后还是只剩你自己。",
+            "[能量告罄] 连假装正常都觉得好累",
+            "过度解析：你正在毁掉每一个当下",
+            "我清醒地看着自己搞砸一切。",
+            "System.Log: 假装合群模块已崩溃",
+            "为什么无论怎么做都不够好？",
+            "正在分析对方微表情...",
+            "ERR: 心率异常飙升",
+            "他们听出我声音发抖了。",
+            "体态检测：极度不自然",
+            "警告：自我意识严重过载",
+            "我刚才是不是说错话了？",
+            "[自我批判循环_已启动]",
+            "为什么避开我的视线？",
+            "风险预警：他们迟早会看穿你的无能",
+            "今天也没有变成更好的人。",
+            "警告：检测到情感解离。"
+        ];
+
+        // ==========================================
+        // 1. 制造焦虑噪音：不断生成分析弹窗
+        // ==========================================
+        function spawnThought() {
+            if (isHolding) return; // 如果被按住（释放状态），停止生成
+
+            const box = document.createElement('div');
+            box.className = 'thought-box';
+            // 20% 概率生成红色警告弹窗
+            if (Math.random() < 0.2) box.classList.add('warning'); 
+            
+            box.innerText = phrases[Math.floor(Math.random() * phrases.length)];
+            
+            // 随机位置，避开边缘
+            const posX = 5 + Math.random() * 60; // 5% 到 65%
+            const posY = 10 + Math.random() * 80; // 10% 到 90%
+            box.style.left = `${posX}%`;
+            box.style.top = `${posY}%`;
+
+            container.appendChild(box);
+
+            // 弹窗出现的“数字微震”动画
+            gsap.fromTo(box, 
+                { opacity: 0, scale: 0.8, y: 10 }, 
+                { opacity: Math.random() * 0.5 + 0.5, scale: 1, y: 0, duration: 0.2, ease: "back.out(1.5)" }
+            );
+
+            // 让过多的弹窗定期自我清理，防止卡顿，但保持屏幕极其混乱的状态
+            if (container.children.length > 45) {
+                container.removeChild(container.firstChild);
+            }
+        }
+
+        // 启动焦虑引擎：每 120 毫秒生成一个弹窗，越来越密集
+        thoughtInterval = setInterval(spawnThought, 120);
+
+        // ==========================================
+  // 2. 核心叙事：10秒后自动清空大脑缓存
+        // ==========================================
+        function triggerHealing() {
+            isHolding = true; // 让系统知道释放了，停止生成新的弹窗
+            frame.classList.add('is-holding');
+
+            // 魔法 A：将所有密密麻麻的弹窗炸碎
+            const thoughts = document.querySelectorAll('.thought-box');
+            gsap.to(thoughts, {
+                opacity: 0,
+                scale: 2.5, 
+                filter: "blur(15px)", 
+                y: () => (Math.random() - 0.5) * 200, 
+                x: () => (Math.random() - 0.5) * 200,
+                duration: 0.6,
+                stagger: 0.005, 
+                ease: "power3.out",
+                onComplete: () => { container.innerHTML = ''; } 
+            });
+
+            // 魔法 B：底图失去焦躁的失真闪烁，变得清晰宁静
+            gsap.to("#base-image", {
+                filter: "brightness(1) contrast(1) saturate(1)",
+                duration: 1.5,
+                ease: "power2.out"
+            });
+
+            // 魔法 C：极其缓慢地浮现治愈箴言
+            gsap.to("#healing", { opacity: 1, duration: 2, delay: 0.5, ease: "sine.inOut" });
+        }
+
+        // 核心指令：页面加载后，倒计时 10000 毫秒（10秒）自动执行治愈特效
+        setTimeout(triggerHealing, 10000);
+
+
+        // 绑定事件
+        frame.addEventListener('mousedown', handlePress);
+        frame.addEventListener('touchstart', handlePress, {passive: true});
+        window.addEventListener('mouseup', handleRelease);
+        window.addEventListener('mouseleave', handleRelease);
+        window.addEventListener('touchend', handleRelease);
+
+        // 窗口大小适配
+        window.addEventListener('resize', () => {
+            width = frame.clientWidth;
+            height = frame.clientHeight;
+        });
+    </script>
+</body>
+</html>

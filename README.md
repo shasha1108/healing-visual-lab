@@ -29,6 +29,7 @@
 | 5 | [琉璃化雨](glass-rain/) | 眼泪落尽，便见晴空 | 触屏拖拽·真实重力水滴模拟 |
 | 6 | [无声的翻译官](silent-translator/) | 身体替你说了说不出的话 | 逐帧解剖素描·Web Audio 治愈引擎 |
 | 7 | [息流 · 幻镜](breath-mirror/) | 这里没有深渊，也没有波澜 | GPU 流体模拟·Brown 噪声引擎 |
+| 8 | [过载脑区 \| The Overthinking Engine](overthinking-engine/) | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP 动画引擎·CRT 赛博朋克视觉 |
 
 ---
 
