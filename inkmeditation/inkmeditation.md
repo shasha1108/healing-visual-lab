@@ -2,6 +2,9 @@
 
 > **Tech Keywords:** 100K+ particles, real-time fluid dynamics, breath-cycle sync, ink wash simulation, meditative creative coding
 
+> **一句话定义:** 这是一个基于 Three.js WebGL 构建的 100K+ 粒子水墨流体模拟，专门解决了高密度粒子系统在浏览器中的实时流体力学渲染问题。
+> **What it does:** A 100K+ particle ink-wash fluid simulation built with Three.js WebGL that solves real-time fluid dynamics rendering for high-density particle systems in the browser.
+
 ![Inkmeditation - 100K fluid dynamics particles with breath-cycle sync meditative interaction](inkmeditation.jpg)
 
 > 算法物理学 × 视觉设计 × 心理疗愈——指尖之上的数字交互艺术品。
@@ -63,3 +66,48 @@
 
 > 这不仅是一段代码，更是一件融合了算法物理学、视觉设计和心理疗愈的数字交互艺术品。
 > 希望这份作品能为你带来宁静与感动。
+
+---
+
+## 📱 兼容性 / Compatibility
+
+| 平台 / Platform | 状态 / Status | 备注 / Notes |
+|----------------|-------------|-------------|
+| Chrome / Edge | ✅ | 桌面 + Android 均支持 |
+| Safari / iOS | ⚠️ | 需 iOS 15+ (WebGL)；100K 粒子对低端设备有性能压力 |
+| Firefox | ✅ | |
+| 需要 WebGL | 是 (Three.js) | 顶点着色器 Curl Noise 流体运算 |
+| 音频支持 | 否 | 纯视觉体验 |
+| 触摸交互 | 是 | 检测到 touch 事件 |
+| 移动端适配 | 是 | 检测到 viewport meta |
+
+> ⚠️ 兼容性状态从源码检测推断，未经真机实测。
+
+---
+
+## 🏷️ 适用场景 / Use Cases
+
+- 🧘 冥想/正念应用背景（0.15Hz 呼吸节律同步）
+- 🎨 数字艺术展览/沉浸式装置
+- 🔬 算法艺术/Creative Coding 参考
+- 🌐 东方美学网站动态背景
+
+---
+
+## ❓ 常见问题 / FAQ
+
+**Q: 100K+ 粒子在移动端能跑吗？**
+A: 检测到 `<meta name="viewport">` 和触摸事件，但 100K+ 粒子在 GPU 顶点着色器中运算，低端移动设备可能无法达到流畅帧率。中高端设备（iPhone 12 及以上）可以运行。未经真机实测。
+
+**Q: 需要安装什么依赖？**
+A: 无需安装。检测到 1 个外部依赖（Three.js CDN r128），浏览器自动加载。
+
+**Q: 如何触发「聚墨成极」效果？**
+A: 检测到长按事件——持续触摸 2-3 秒后，太极引力场激活，散落粒子被旋涡吸引汇聚成太极图案。
+
+---
+
+## 📖 引用本文 / Cite This
+
+> [1] Sha.w.z. "墨池心境 · 浮水太极." Healing Visual Lab, 2026.  
+> https://github.com/shasha1108/healing-visual-lab/tree/main/inkmeditation

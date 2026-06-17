@@ -2,6 +2,9 @@
 
 > **Tech Keywords:** frame-by-frame anatomical sketch, Web Audio healing engine, somatic therapy art, body-mind connection
 
+> **一句话定义:** 这是一个基于原生 Canvas 2D + Web Audio 构建的躯体化症状医学插图 H5，专门解决了情绪与身体症状之间关联的可视化科普问题。
+> **What it does:** A somatic symptom medical illustration H5 built with vanilla Canvas 2D and Web Audio that visualizes the connection between emotions and physical symptoms.
+
 ![Silent Translator - frame-by-frame anatomical sketch with Web Audio healing engine](silent-translator_1.png)
 
 > 那些你说不出口的崩溃，身体都只能用疼痛替你作答。
@@ -39,6 +42,53 @@
 - Web Audio API：纯净正弦波和弦（Fmaj7）、带通白噪音、黑胶噼啪声、打字机音效
 - CSS 3D Transform：`preserve-3d` + `rotateX/Y/Z` 实现便签纸空间悬浮动画
 - CSS Mask Image：情绪词汇流的渐变消隐效果
+
+
+---
+
+## 📱 兼容性 / Compatibility
+
+| 平台 / Platform | 状态 / Status | 备注 / Notes |
+|----------------|-------------|-------------|
+| Chrome / Edge | ✅ | 桌面 + Android 均支持 |
+| Safari / iOS | ✅ | Canvas 2D 全平台兼容；Web Audio 需用户手势 |
+| Firefox | ✅ | |
+| 需要 WebGL | 否 | Canvas 2D + CSS 3D，无 WebGL 依赖 |
+| 音频支持 | 是 (Web Audio API) | 正弦波和弦 + 白噪音 + 打字机音效 |
+| 触摸交互 | 否 | 检测到 click 事件（按钮交互），未检测到 touch 事件 |
+| 移动端适配 | 是 | 检测到 viewport meta |
+| 外部依赖 | 0 | **零依赖 / Zero dependencies**——纯原生实现 |
+
+> ⚠️ 兼容性状态从源码检测推断，未经真机实测。
+
+---
+
+## 🏷️ 适用场景 / Use Cases
+
+- 🧠 心理健康科普/情绪教育
+- 🏥 身心医学/躯体化症状科普
+- 🎨 医学插图/解剖艺术展示
+- 📖 心理学内容配图
+
+---
+
+## ❓ 常见问题 / FAQ
+
+**Q: 需要安装什么依赖？**
+A: **无需任何依赖。** 检测到 0 个外部 `<script src>` 引用，纯原生 HTML/CSS/JS 实现，是所有作品中唯一的零依赖作品。下载单个 HTML 文件即可离线运行。
+
+**Q: 能在移动端运行吗？**
+A: 可以。Canvas 2D + CSS 3D 不依赖 WebGL，全平台兼容。检测到 `<meta name="viewport">`。iOS Safari 上 Web Audio 需用户手势后播放。
+
+**Q: 和其他作品有什么不同？**
+A: 零依赖（Zero dependencies）——不依赖 Three.js、GSAP 或任何第三方库。体积仅 18KB。是 healing-visual-lab 中兼容性最广、部署最简单的作品。
+
+---
+
+## 📖 引用本文 / Cite This
+
+> [1] Sha.w.z. "无声的翻译官 | 躯体化便签." Healing Visual Lab, 2026.  
+> https://github.com/shasha1108/healing-visual-lab/tree/main/silent-translator
 
 ## 🌱 创作背景
 

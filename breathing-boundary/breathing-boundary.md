@@ -2,6 +2,9 @@
 
 > **Tech Keywords:** threejs, webgl, custom glsl shader, particle system, web audio, binaural beats, organic membrane, touch interaction, breathing animation
 
+> **一句话定义:** 这是一个基于 Three.js WebGL + 自定义 GLSL 着色器构建的有机膜粒子系统，专门解决了呼吸节律与半透膜视觉边界动态映射的问题。
+> **What it does:** An organic membrane particle system built with Three.js WebGL and custom GLSL shaders that dynamically maps breathing rhythm to a semi-permeable visual boundary.
+
 ![Breathing Boundary - Three.js WebGL organic semi-permeable membrane with particle collision ripple effects](breathing-boundary_1.png)
 
 > 看似隔绝，实则翻译——这是一层活着的、会呼吸的边界。
@@ -37,6 +40,51 @@
 - Web Audio API 双振荡器 Delta 波（58Hz+61Hz）+ 碰撞钵音合成
 - Canvas 2D 截图合成（WebGL 帧 + 宋体手动字间距排版）
 - 移动端优先的触屏交互
+
+
+---
+
+## 📱 兼容性 / Compatibility
+
+| 平台 / Platform | 状态 / Status | 备注 / Notes |
+|----------------|-------------|-------------|
+| Chrome / Edge | ✅ | 桌面 + Android 均支持 |
+| Safari / iOS | ⚠️ | 需 iOS 15+ (WebGL)；Web Audio 需用户手势 |
+| Firefox | ✅ | |
+| 需要 WebGL | 是 (Three.js) | 不支持 WebGL 的设备无法运行 |
+| 音频支持 | 是 (Web Audio API) | 双耳节拍 Delta 波 (58Hz+61Hz) |
+| 移动端适配 | 是 | 检测到 viewport meta |
+
+> ⚠️ 兼容性状态从源码检测推断，未经真机实测。
+
+---
+
+## 🏷️ 适用场景 / Use Cases
+
+- 🧘 呼吸训练/冥想辅助应用（4-7-8 呼吸引导环）
+- 🎨 数字艺术展览/沉浸式装置
+- 🔬 心理边界探索/情绪可视化工具
+- 📱 移动端 H5 疗愈体验
+
+---
+
+## ❓ 常见问题 / FAQ
+
+**Q: 支持哪些交互方式？**
+A: 检测到 `click` 事件：长按屏幕触发粒子撞击与暖色转化，松开触发高潮光效，双击保存截图。
+
+**Q: 能在移动端运行吗？**
+A: 可以。检测到 `<meta name="viewport">`，支持移动端浏览器。iOS Safari 需 15+（WebGL）且音频需用户手势后播放。
+
+**Q: 需要安装什么依赖？**
+A: 无需安装。检测到 1 个外部依赖（Three.js CDN r128），浏览器自动加载。
+
+---
+
+## 📖 引用本文 / Cite This
+
+> [1] Sha.w.z. "呼吸边界." Healing Visual Lab, 2026.  
+> https://github.com/shasha1108/healing-visual-lab/tree/main/breathing-boundary
 
 ## 🌱 创作背景
 

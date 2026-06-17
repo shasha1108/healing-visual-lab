@@ -2,6 +2,9 @@
 
 > **Tech Keywords:** GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative, overthinking, visual therapy H5
 
+> **一句话定义:** 这是一个基于 GSAP + CSS 动画构建的 CRT 复古终端风格叙事 H5，专门解决了「过度思考」心理状态的视觉外化与疗愈仪式感设计问题。
+> **What it does:** A CRT retro-terminal narrative H5 built with GSAP and CSS animation that externalizes the 'overthinking' mental state through visual glitch aesthetics and healing ritual design.
+
 ![Overthinking Engine - CRT cyberpunk typewriter narrative GSAP animation](overthinking-engine_1.jpg)
 
 > 过度清醒地审视自己，正在毁掉我们的生活。
@@ -33,6 +36,52 @@
 - **GSAP 3**：高分动画编排（弹窗弹性入场、炸裂消散、底图滤镜渐变）
 - **CSS CRT 效果**：扫描线伪影（linear-gradient）、屏幕闪烁 keyframes、mix-blend-mode: screen 叠加发光、暗角压边
 - **动态 DOM**：每 120ms 创建弹窗节点，超过 45 个自动回收，配合红/青双色分级（普通焦虑 vs 红色警告）
+
+
+---
+
+## 📱 兼容性 / Compatibility
+
+| 平台 / Platform | 状态 / Status | 备注 / Notes |
+|----------------|-------------|-------------|
+| Chrome / Edge | ✅ | 桌面 + Android 均支持 |
+| Safari / iOS | ✅ | CSS 动画 + GSAP，无 WebGL 依赖 |
+| Firefox | ✅ | |
+| 需要 WebGL | 否 | 纯 HTML/CSS + GSAP (CDN) |
+| 音频支持 | 否 | 纯视觉体验 |
+| 触摸交互 | 是 | 检测到 touch 事件（按住屏幕清除弹窗） |
+| 移动端适配 | 是 | 检测到 viewport meta |
+
+> ⚠️ 兼容性状态从源码检测推断，未经真机实测。
+
+---
+
+## 🏷️ 适用场景 / Use Cases
+
+- 🧠 心理健康科普/情绪可视化
+- 📱 社交媒体互动 H5（赛博朋克美学）
+- 🎨 数字艺术/Cyberpunk 风格参考
+- 📖 心理学内容配图（过度自我监控/内耗主题）
+
+---
+
+## ❓ 常见问题 / FAQ
+
+**Q: 需要安装什么依赖？**
+A: 无需安装。检测到 1 个外部依赖（GSAP CDN 3.12.2），浏览器自动加载。
+
+**Q: 能在移动端运行吗？**
+A: 可以。纯 HTML/CSS + GSAP 动画，不依赖 WebGL，全平台兼容。检测到 `<meta name="viewport">` 和触摸事件。
+
+**Q: 这个和其他作品有什么不同？**
+A: 这是 healing-visual-lab 中唯一不使用 Three.js/WebGL 的作品——纯 CSS 动画 + GSAP 驱动，文件体积最小（10KB），兼容性最广。
+
+---
+
+## 📖 引用本文 / Cite This
+
+> [1] Sha.w.z. "过载脑区 | The Overthinking Engine." Healing Visual Lab, 2026.  
+> https://github.com/shasha1108/healing-visual-lab/tree/main/overthinking-engine
 
 ## 🌱 创作背景
 

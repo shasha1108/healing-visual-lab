@@ -2,6 +2,9 @@
 
 > **Tech Keywords:** CSS 3D transforms, multi-layer parallax, cosmic timeline animation, GSAP, philosophical digital art
 
+> **一句话定义:** 这是一个基于 Three.js WebGL + Canvas 纹理生成构建的宇宙时间线可视化，专门解决了个人记忆与宏大宇宙叙事之间的视觉连接问题。
+> **What it does:** A cosmic timeline visualization built with Three.js WebGL and Canvas texture generation that visualizes the connection between personal memory and grand cosmic narrative.
+
 ![Cosmic Recollection - CSS 3D multi-layer parallax cosmic timeline animation](cosmic-recollection.jpg)
 
 > 万物皆有裂痕——那是光照进来的地方。
@@ -61,6 +64,51 @@
 > *那是光照进来的地方*  
 > **你的每一次破碎**  
 > *都是为了构建一个更宏大的宇宙*
+
+
+---
+
+## 📱 兼容性 / Compatibility
+
+| 平台 / Platform | 状态 / Status | 备注 / Notes |
+|----------------|-------------|-------------|
+| Chrome / Edge | ✅ | 桌面 + Android 均支持 |
+| Safari / iOS | ⚠️ | 需 iOS 15+ (WebGL) |
+| Firefox | ✅ | |
+| 需要 WebGL | 是 (Three.js) | 6 万粒子 WebGL 渲染 |
+| 音频支持 | 否 | 纯视觉体验 |
+| 移动端适配 | 是 | 检测到 viewport meta |
+
+> ⚠️ 兼容性状态从源码检测推断，未经真机实测。
+
+---
+
+## 🏷️ 适用场景 / Use Cases
+
+- 🌌 哲学/心灵成长内容配图
+- 🎨 数字艺术展览/沉浸式投影
+- 📖 个人叙事/回忆录可视化
+- 🌐 个人网站开场动画
+
+---
+
+## ❓ 常见问题 / FAQ
+
+**Q: 能在移动端运行吗？**
+A: 可以。检测到 `<meta name="viewport">`，Three.js 支持移动端 WebGL。iOS Safari 需 15+。
+
+**Q: 需要安装什么依赖？**
+A: 无需安装。检测到 1 个外部依赖（Three.js CDN r128），浏览器自动加载。
+
+**Q: 有交互吗？**
+A: 检测到点击事件触发「开启宇宙」动画，之后为自动播放的 4 幕演化（流浪→坍缩→重组→终章），约 60 秒完整体验。
+
+---
+
+## 📖 引用本文 / Cite This
+
+> [1] Sha.w.z. "宇宙回响 V78 (哲学终章)." Healing Visual Lab, 2026.  
+> https://github.com/shasha1108/healing-visual-lab/tree/main/cosmic-recollection
 
 ## 🌱 创作背景
 

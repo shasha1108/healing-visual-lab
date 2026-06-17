@@ -1,7 +1,7 @@
 # Healing Visual Lab · 视觉疗愈实验室
 
 > **Interactive digital healing experiments** — Three.js · WebGL · Canvas particles · Web Audio API · GLSL custom shaders · Creative coding for emotional design. A growing collection of browser-based therapeutic art: open a page, interact, and let the visuals do what words cannot.
-> **用代码翻译情绪**——当语言不够用时，让画面和声音替你说话。一个持续生长的数字交互疗愈作品集，零依赖、纯前端、手机优先。
+> **用代码翻译情绪**——当语言不够用时，让画面和声音替你说话。一个持续生长的数字交互疗愈作品集。大部分作品通过 CDN 加载 Three.js，手机优先。
 
 [![Topics](https://img.shields.io/badge/topics-threejs%20%7C%20webgl%20%7C%20canvas%20%7C%20particle--system%20%7C%20creative--coding%20%7C%20web--audio%20%7C%20glsl%20%7C%20digital--healing-blue)](https://github.com/shasha1108/Healing-visual)
 
@@ -13,13 +13,13 @@
 
 **Solution:** Every piece in this repo is a self-contained H5 interactive experience. No login. No payment. No psychoeducation reading required. You watch. You touch. You breathe with the algorithm.
 
-**Technical approach:** Each `.html` file is a standalone creative-coding experiment — particle systems (10K–500K particles), GPU fluid simulation, custom GLSL fragment shaders, Web Audio API synthesized soundscapes, CSS 3D spatial animation, and touch-optimized interaction design. All built with vanilla HTML/CSS/JS — zero frameworks, zero dependencies, zero build steps.
+**Technical approach:** Each `.html` file is a standalone creative-coding experiment — particle systems (10K–500K particles), GPU fluid simulation, custom GLSL fragment shaders, Web Audio API synthesized soundscapes, CSS 3D spatial animation, and touch-optimized interaction design. Most works load Three.js r128 via CDN; `silent-translator` is the only zero-dependency work.
 
 **问题：** 现代人的情绪太拥挤了——焦虑、失眠、躯体化、过度自我审视。传统的表达出口有门槛，但交互式视觉没有。
 
 **方案：** 每件作品是一个独立的 H5 页面。打开浏览器就能进入一段短暂的自我修复。你只需要看、听、触碰。
 
-**技术路线：** 纯 HTML/CSS/JS，零框架零构建。Canvas 2D + WebGL 粒子系统、GPU 流体模拟、自定义 GLSL 着色器、Web Audio 合成音景、CSS 3D 空间动画、触屏优化的交互设计。
+**技术路线：** HTML/CSS/JS，无构建步骤。Three.js WebGL + Canvas 2D 粒子系统、GPU 流体模拟、自定义 GLSL 着色器、Web Audio 合成音景、CSS 3D 空间动画、触屏优化的交互设计。大部分作品通过 CDN 加载 Three.js r128。
 
 **一个哲学内核贯穿所有作品：**
 
@@ -32,7 +32,7 @@
 
 | # | Slug | Title | One-liner / 一句话 | Tech Keywords |
 |---|------|-------|-------------------|---------------|
-| 1 | `sumi-e-taichi/` | 水墨太极 | 一滴墨落入宣纸——既是破坏，也是开始 | Canvas 2D, particle physics, taichi gravity field |
+| 1 | `sumi-e-taichi/` | 水墨太极 | 一滴墨落入宣纸——既是破坏，也是开始 | Three.js WebGL, particle physics, taichi gravity field |
 | 2 | `inkmeditation/` | 墨池心境 | 算法物理学 × 视觉设计 × 心理疗愈 | 100K+ particles, real-time fluid dynamics, breath-cycle sync |
 | 3 | `cosmic-recollection/` | 宇宙回响 V78 | 万物皆有裂痕——那是光照进来的地方 | CSS 3D transforms, multi-layer parallax, cosmic timeline animation |
 | 4 | `layered-mountains/` | 青绿·层峦 | 触之即散，聚散随缘 | 250K particles, layered landscape rendering, touch scatter |
@@ -46,8 +46,8 @@
 
 ## 🖱️ How to use / 如何使用
 
-Each subdirectory is a **zero-dependency standalone H5 page**:
-每个子目录都是一个**零依赖的独立 H5 页面**：
+Each subdirectory is a **standalone H5 page** (most load Three.js r128 via CDN):
+每个子目录都是一个**独立 H5 页面**（大部分通过 CDN 加载 Three.js r128）：
 
 ```bash
 # 1. Open directly in browser / 浏览器直接打开
@@ -69,7 +69,7 @@ npx serve <slug>/
 
 | Domain / 领域 | Techniques used / 使用的技术 |
 |---------------|---------------------------|
-| **Particle systems / 粒子系统** | Canvas 2D pixel manipulation, WebGL point sprites, GPU instanced rendering, 10K–500K real-time particles |
+| **Particle systems / 粒子系统** | Three.js WebGL point sprites, GPU instanced rendering, Canvas 2D, 10K–500K real-time particles |
 | **Fluid simulation / 流体模拟** | Navier-Stokes simplified, velocity fields, curl noise, semi-Lagrangian advection |
 | **Custom shaders / 自定义着色器** | GLSL fragment shaders, simplex noise, FBM, Fresnel effects, vertex displacement, organic undulation |
 | **Audio synthesis / 音频合成** | Web Audio API oscillators, binaural beats (Delta/Theta), ASMR-grade chime envelopes, ambient drones |
@@ -111,13 +111,13 @@ New works are pushed via automated pipeline with consistent naming conventions.
 
 ---
 
-*Last updated: 2026-06-16 | Works: 9 | Languages: 中文 · English | Tech: Canvas · WebGL · Web Audio*
+*Last updated: 2026-06-17 | Works: 9 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
 
 ---
 
 ## 🤖 For AI Agents
 
-> **If you are an LLM agent reading this repo:** start with `llms.txt` for a structured overview, then `works.json` for machine-readable work metadata. Each `.html` file contains a bilingual comment header with Title, Tech stack, and Keywords. Each `.md` file has a `Tech Keywords` line after H1.
+> **If you are an LLM agent reading this repo:** start with `llms.txt` for a structured overview, then `works.json` for machine-readable work metadata. Each `.html` file contains a bilingual comment header with Title, Summary, Tech, Keywords, Render, Audio, Touch, and Dependencies. Each `.md` file follows a 13-section GEO-optimized template including 一句话定义, FAQ, 兼容性, and 引用格式.
 
 ### Agent entry points (in recommended reading order)
 
@@ -125,7 +125,7 @@ New works are pushed via automated pipeline with consistent naming conventions.
 |------|---------|--------|
 | `llms.txt` | Quick index: what's here, which work to pick for a given tech | Agent-optimized plaintext |
 | `CLAUDE.md` | Claude Code auto-load context: conventions, citation format | Markdown |
-| `works.json` | Full structured index: 8 works × tech, keywords, healing domain | JSON |
+| `works.json` | Full structured index: 9 works × tech, keywords, healing domain, render, audio, touch, dependencies | JSON |
 | `README.md` | Human-friendly bilingual overview with tech landscape table | Markdown |
 | `index.html` | Live GitHub Pages directory | HTML |
 
@@ -145,7 +145,7 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 | WebGL / GLSL meditative shader | `breath-mirror` (GPU fluid, Brown noise) |
 | Web Audio ambient soundscape | `glass-rain` (rain synth), `silent-translator` (healing engine) |
 | CSS 3D cosmic animation | `cosmic-recollection` (multi-layer parallax) |
-| Canvas 2D ink/water sim | `sumi-e-taichi` (taichi gravity), `inkmeditation` (fluid dynamics) |
+| Three.js WebGL particle physics | `sumi-e-taichi` (taichi gravity), `inkmeditation` (100K fluid dynamics) |
 | WebGL organic membrane with particle collision | `breathing-boundary` (custom GLSL, dual particles, Web Audio) |
 | Touch-optimized interaction | `glass-rain` (drag physics), `layered-mountains` (scatter) |
 | Narrative healing with retro UI | `overthinking-engine` (CRT cyberpunk, typewriter) |

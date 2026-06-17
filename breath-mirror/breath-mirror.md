@@ -2,6 +2,9 @@
 
 > **Tech Keywords:** GPU fluid simulation, Brown noise engine, breath-responsive mirror, WebGL shader, digital zen, meditative interaction
 
+> **一句话定义:** 这是一个基于 Three.js WebGL + GLSL 片段着色器构建的 GPU 流体模拟实验，专门解决了呼吸节奏与视觉反馈实时同步的问题。
+> **What it does:** A GPU fluid simulation built with Three.js WebGL and GLSL fragment shaders that synchronizes breath rhythm with real-time visual feedback.
+
 ![Breath Mirror - GPU fluid simulation with Brown noise and breath-responsive mirror shader](breath-mirror_1.png)
 
 > 这里没有深渊，也没有波澜。只有漫长的白噪音，和迟钝的回响。
@@ -41,6 +44,52 @@
 - Web Audio API：生成式 Brown 噪声 + 动态低通滤波器（频率随交互速度实时变化）
 - WebRTC（getUserMedia）：摄像头 → VideoTexture → 明度提取 → 冰蓝幽灵轮廓
 - 思源宋体（Noto Serif SC）排版：极低信息密度，克制的文字渐现节奏
+
+
+---
+
+## 📱 兼容性 / Compatibility
+
+| 平台 / Platform | 状态 / Status | 备注 / Notes |
+|----------------|-------------|-------------|
+| Chrome / Edge | ✅ | 桌面 + Android 均支持 |
+| Safari / iOS | ⚠️ | 需 iOS 15+ (WebGL)；摄像头权限需 HTTPS |
+| Firefox | ✅ | |
+| 需要 WebGL | 是 (Three.js) | 不支持 WebGL 的设备无法运行 |
+| 音频支持 | 是 (Web Audio API) | iOS 需用户手势后播放 |
+| 触摸交互 | 是 | 支持 touch 拖拽推雾 |
+| 移动端适配 | 是 | 检测到 viewport meta |
+
+> ⚠️ 兼容性状态从源码检测推断，未经真机实测。
+
+---
+
+## 🏷️ 适用场景 / Use Cases
+
+- 🧘 冥想/正念应用背景（Brown 噪声 + 呼吸交互）
+- 🌊 声音疗愈/白噪音场景（生成式 Brown 噪声引擎）
+- 🎨 数字艺术展览/沉浸式装置
+- 📱 移动端 H5 互动页面
+
+---
+
+## ❓ 常见问题 / FAQ
+
+**Q: 需要摄像头权限吗？**
+A: 不需要。检测到源码中 getUserMedia 为可选功能——无摄像头时自动回退为纯水雾模式，所有交互仍可正常使用。
+
+**Q: 能在移动端运行吗？**
+A: 可以。检测到 `<meta name="viewport">` 和 `touchstart`/`touchmove` 事件，支持移动端浏览器。iOS Safari 需 15+（WebGL 要求）。
+
+**Q: 需要安装什么依赖？**
+A: 无需安装。检测到 1 个外部依赖（Three.js CDN r128），浏览器自动加载。
+
+---
+
+## 📖 引用本文 / Cite This
+
+> [1] Sha.w.z. "息流 · 幻镜." Healing Visual Lab, 2026.  
+> https://github.com/shasha1108/healing-visual-lab/tree/main/breath-mirror
 
 ## 🌱 创作背景
 

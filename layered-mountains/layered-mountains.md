@@ -2,6 +2,9 @@
 
 > **Tech Keywords:** 250K particles, layered landscape rendering, touch scatter interaction, Chinese painting algorithmic art
 
+> **一句话定义:** 这是一个基于 Three.js WebGL 构建的 250K+ 粒子中国山水画渲染实验，专门解决了海量粒子构成传统青绿山水意境的可视化问题。
+> **What it does:** A 250K+ particle Chinese landscape painting rendering experiment built with Three.js WebGL that visualizes traditional blue-green shanshui aesthetics through massive particle systems.
+
 ![Layered Mountains - 250K particles Chinese painting touch-scatter interaction](layered-mountains.jpg)
 
 > 触之即散，聚散随缘。
@@ -68,6 +71,52 @@
 - 形态：`sin(x*0.02)*30 + sin(x*0.05)*10`（平缓连绵）
 - 颜色：单一石绿
 - 行为：极缓横向云气
+
+
+---
+
+## 📱 兼容性 / Compatibility
+
+| 平台 / Platform | 状态 / Status | 备注 / Notes |
+|----------------|-------------|-------------|
+| Chrome / Edge | ✅ | 桌面 + Android 均支持 |
+| Safari / iOS | ⚠️ | 需 iOS 15+ (WebGL)；250K 粒子对低端设备有性能压力 |
+| Firefox | ✅ | |
+| 需要 WebGL | 是 (Three.js) | 250,000 粒子 WebGL 渲染 |
+| 音频支持 | 否 | 纯视觉体验 |
+| 触摸交互 | 否 | 检测到 `mousemove` 事件（桌面端交互），未检测到 touch 事件 |
+| 移动端适配 | 是 | 检测到 viewport meta |
+
+> ⚠️ 兼容性状态从源码检测推断，未经真机实测。
+
+---
+
+## 🏷️ 适用场景 / Use Cases
+
+- 🎨 数字艺术展览/中国风视觉装置
+- 🌐 东方美学网站/博客背景
+- 🏔️ 传统文化数字化展示
+- 🔬 算法艺术/Creative Coding 参考（粒子山水画技法）
+
+---
+
+## ❓ 常见问题 / FAQ
+
+**Q: 250K 粒子能在移动端跑吗？**
+A: 检测到 `<meta name="viewport">`，但源码中仅检测到 `mousemove` 事件（未检测到 touch 事件），且 250K 粒子在顶点着色器中运算对移动端 GPU 有较高要求。中高端设备可以运行。未经真机实测。
+
+**Q: 需要安装什么依赖？**
+A: 无需安装。检测到 1 个外部依赖（Three.js CDN r128），浏览器自动加载。
+
+**Q: 如何修改配色？**
+A: 源码中检测到中国传统色四阶配色（墨色 `#1B3242`、黛蓝 `#2B5F75`、石青 `#40826D`、石绿 `#8AB898`），搜索这些色值即可替换。
+
+---
+
+## 📖 引用本文 / Cite This
+
+> [1] Sha.w.z. "青绿 · 层峦 (高密度分层版)." Healing Visual Lab, 2026.  
+> https://github.com/shasha1108/healing-visual-lab/tree/main/layered-mountains
 
 ## 🌱 创作背景
 
