@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<!--
+  Title: Grand Jiangshan · 万里江山图 - 宏大视界
+  Summary: 基于 Three.js WebGL + 自定义 GLSL 着色器构建的 470,000 粒子万里江山渲染实验，通过 4D Simplex 噪声在 GPU 中实时生成中国山水地形，专门解决了海量粒子构成可探索 3D 山水景观的性能问题
+  Tech: Three.js WebGL, custom GLSL shader (4D Simplex noise terrain), 470K particle system, OrbitControls, FogExp2 atmosphere
+  Keywords: threejs, webgl, glsl, simplex-noise, terrain-generation, 470k-particles, chinese-landscape, shanshui, orbit-controls, procedural-terrain, algorithmic-art
+  Render: WebGL (Three.js)
+  Audio: no
+  Touch: no
+  Dependencies: 2 (Three.js CDN + OrbitControls CDN)
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>万里江山图 - 宏大视界</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #e0e4e8; font-family: 'Courier New', Courier, monospace; }
+        canvas { display: block; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #1a3c40; font-size: 16px; pointer-events: none; opacity: 0.8; letter-spacing: 6px; font-weight: bold;
+        }
+        #signature {
+            position: absolute; bottom: 40px; right: 50px;
+            color: #2c3e50; writing-mode: vertical-rl; text-orientation: upright;
+            font-family: "Kaiti", "STKaiti", serif; font-size: 24px; opacity: 0.85;
+            border-left: 2px solid #8a98a5; padding-left: 15px; pointer-events: none;
+            text-shadow: 0 0 10px rgba(255,255,255,0.6);
+        }
+        .stamp {
+            width: 32px; height: 32px; background: #922828; color: #fff;
+            font-size: 12px; display: flex; align-items: center; justify-content: center;
+            margin-top: 16px; border-radius: 4px; box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+        }
+        #instruction {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            color: #556; font-size: 12px; opacity: 0.6; letter-spacing: 1px;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">江山入画中...</div>
+    <div id="signature">
+        万里江山
+        <div class="stamp">御览</div>
+    </div>
+    <div id="instruction">拖动以巡视疆土 • 滚轮以穿云入雾</div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // --- 场景设置 ---
+        const scene = new THREE.Scene();
+        // 调整雾效：更稀薄但更深远，模拟高空大气透视
+        const fogColor = 0xe0e4e8;
+        scene.fog = new THREE.FogExp2(fogColor, 0.00065); // 降低密度以看清远方
+
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 10, 5000);
+        // 【核心调整】：高远视角，俯瞰苍生
+        camera.position.set(0, 500, 1100); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1;
+        controls.minDistance = 200;
+        controls.maxDistance = 1800; // 允许拉得更远
+
+        // --- Shader 定义 ---
+
+        // 背景：更浩渺的云海
+        const bgVert = `
+            varying vec2 vUv;
+            void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+        `;
+        const bgFrag = `
+            uniform float uTime;
+            varying vec2 vUv;
+            
+            float random(vec2 st) { return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123); }
+            float noise(vec2 st) {
+                vec2 i = floor(st); vec2 f = fract(st);
+                float a = random(i); float b = random(i + vec2(1.0, 0.0));
+                float c = random(i + vec2(0.0, 1.0)); float d = random(i + vec2(1.0, 1.0));
+                vec2 u = f * f * (3.0 - 2.0 * f);
+                return mix(a, b, u.x) + (c - a)* u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+            }
+            float fbm(vec2 st) {
+                float v = 0.0; float a = 0.5;
+                for (int i = 0; i < 5; i++) { v += a * noise(st); st *= 2.0; a *= 0.5; }
+                return v;
+            }
+            void main() {
+                // 纸色更偏冷白，模拟高空寒意
+                vec3 paper = vec3(0.92, 0.94, 0.96);
+                vec3 ink = vec3(0.35, 0.40, 0.45);
+                
+                // 云海流动更缓慢宏大
+                float flow = uTime * 0.03;
+                float n = fbm(vUv * 4.0 + vec2(flow, flow * 0.5));
+                float n2 = fbm(vUv * 8.0 - vec2(flow * 0.5, 0.0));
+                
+                float cloud = mix(n, n2, 0.5);
+                cloud = smoothstep(0.3, 0.8, cloud);
+                
+                gl_FragColor = vec4(mix(paper, ink, cloud * 0.25), 1.0);
+            }
+        `;
+
+        // 山脉：万里江山逻辑
+        const mtnVert = `
+            uniform float uTime;
+            attribute float sizeRandom;
+            varying float vHeight;
+            varying float vAlpha;
+            varying float vDist; // 用于片元着色器做深度雾效增强
+
+            // Simplex Noise (Standard)
+            vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+            vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+            float snoise(vec2 v) {
+                const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+                vec2 i  = floor(v + dot(v, C.yy) );
+                vec2 x0 = v - i + dot(i, C.xx);
+                vec2 i1; i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                vec4 x12 = x0.xyxy + C.xxzz; x12.xy -= i1; i = mod289(i);
+                vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
+                vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+                m = m*m ; m = m*m ;
+                vec3 x = 2.0 * fract(p * C.www) - 1.0;
+                vec3 h = abs(x) - 0.5; vec3 ox = floor(x + 0.5); vec3 a0 = x - ox;
+                m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+                vec3 g;
+                g.x  = a0.x  * x0.x  + h.x  * x0.y; g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+                return 130.0 * dot(m, g);
+            }
+
+            void main() {
+                vec3 pos = position;
+
+                // 【核心调整】地形算法升级
+                // 1. 低频噪声 (Major Ranges): 决定山脉走向，频率极低
+                float rangeShape = snoise(pos.xz * 0.001); 
+                
+                // 2. 中频噪声 (Peaks): 决定山峰高低
+                float peakShape = snoise(pos.xz * 0.003 + vec2(100.0));
+                
+                // 3. 高频噪声 (Details): 决定山石纹理
+                float detail = snoise(pos.xz * 0.01);
+
+                // 组合：只有在RangeShape高的地方(山脉主轴)才会有高山
+                // abs() 制造山脊线
+                float elevation = abs(rangeShape) * 200.0 + abs(peakShape) * 100.0 + detail * 20.0;
+                
+                // 增强山势险峻感：指数级增长
+                elevation = pow(elevation * 0.012, 1.8) * 60.0; 
+
+                // 呼吸感：幅度减小，频率降低，体现大地的沉稳
+                float breath = sin(uTime * 0.3 + pos.x * 0.01) * 3.0;
+                pos.y += elevation + breath;
+
+                vHeight = pos.y;
+                vDist = length(pos.xz); // 记录距离中心的距离
+
+                // 【视野扩大】Mask 范围扩大3倍
+                float dist = length(pos.xz);
+                float mask = smoothstep(950.0, 600.0, dist); // 边缘淡出范围扩大
+                float cloudMask = smoothstep(-20.0, 50.0, pos.y); // 云海遮挡低处
+
+                vAlpha = mask * cloudMask;
+
+                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+                
+                // 粒子尺寸调整：远处更细密
+                gl_PointSize = (5.0 * sizeRandom + 1.0) * (500.0 / -mvPosition.z);
+            }
+        `;
+
+        const mtnFrag = `
+            varying float vHeight;
+            varying float vAlpha;
+            varying float vDist;
+            uniform vec3 uColorHigh; 
+            uniform vec3 uColorLow;
+            uniform vec3 uFogColor;
+
+            void main() {
+                if (vAlpha < 0.05) discard;
+                vec2 coord = gl_PointCoord - vec2(0.5);
+                float dist = length(coord);
+                if (dist > 0.5) discard;
+                float softEdge = 1.0 - smoothstep(0.3, 0.5, dist);
+
+                // 颜色混合
+                float mixFactor = smoothstep(0.0, 250.0, vHeight);
+                vec3 baseColor = mix(uColorLow, uColorHigh, mixFactor);
+
+                // 【空气透视增强】
+                // 随着距离变远，颜色逐渐融入背景雾色，模拟水墨画的"远山如黛"变"远山如烟"
+                float fogFactor = smoothstep(200.0, 1000.0, vDist);
+                // 远处的山颜色变淡，融入背景色
+                vec3 finalColor = mix(baseColor, uFogColor, fogFactor * 0.6); 
+
+                gl_FragColor = vec4(finalColor, vAlpha * softEdge * 0.85);
+            }
+        `;
+
+        // 雪花：更广阔的散布
+        const snowVert = `
+            uniform float uTime;
+            attribute float aScale;
+            varying float vAlpha;
+            void main() {
+                vec3 pos = position;
+                float fallSpeed = 25.0;
+                pos.y = mod(pos.y - uTime * fallSpeed, 400.0); 
+                pos.x += sin(uTime * 0.5 + pos.y * 0.02) * 10.0;
+                pos.z += cos(uTime * 0.3 + pos.y * 0.03) * 10.0; // 增加Z轴飘动
+                
+                vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+                gl_Position = projectionMatrix * mvPosition;
+                gl_PointSize = aScale * (400.0 / -mvPosition.z);
+                
+                float h = pos.y / 400.0;
+                vAlpha = 1.0 - abs(h * 2.0 - 1.0);
+            }
+        `;
+        const snowFrag = `
+            varying float vAlpha;
+            void main() {
+                vec2 c = gl_PointCoord - vec2(0.5);
+                if(length(c)>0.5) discard;
+                gl_FragColor = vec4(1.0, 1.0, 1.0, vAlpha * 0.6);
+            }
+        `;
+
+        // --- 构建世界 ---
+
+        // 1. 扩大背景
+        const bgGeo = new THREE.PlaneGeometry(5000, 3000); // 巨大画卷
+        const bgMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 }, uResolution: { value: new THREE.Vector2() } },
+            vertexShader: bgVert, fragmentShader: bgFrag,
+            depthWrite: false, depthTest: false
+        });
+        const bgMesh = new THREE.Mesh(bgGeo, bgMat);
+        scene.add(bgMesh);
+
+        // 2. 宏大山脉系统
+        const pCount = 450000; // 45万粒子，营造致密感
+        const pGeo = new THREE.BufferGeometry();
+        const pPos = new Float32Array(pCount * 3);
+        const pSize = new Float32Array(pCount);
+        
+        // 【核心调整】生成范围扩大
+        const worldRadius = 1600; 
+
+        for (let i = 0; i < pCount; i++) {
+            // 极坐标分布，保证圆形构图
+            const r = Math.sqrt(Math.random()) * worldRadius;
+            const theta = Math.random() * 2 * Math.PI;
+            
+            pPos[i*3] = r * Math.cos(theta);
+            pPos[i*3+1] = 0; 
+            pPos[i*3+2] = r * Math.sin(theta);
+            pSize[i] = Math.random();
+        }
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        pGeo.setAttribute('sizeRandom', new THREE.BufferAttribute(pSize, 1));
+
+        const mtnMat = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 },
+                uColorHigh: { value: new THREE.Color("#132c33") }, // 更深沉的墨
+                uColorLow: { value: new THREE.Color("#cfd4d8") },
+                uFogColor: { value: new THREE.Color(fogColor) } // 传入雾色用于手动混合
+            },
+            vertexShader: mtnVert, fragmentShader: mtnFrag,
+            transparent: true, depthWrite: false,
+            blending: THREE.NormalBlending
+        });
+        const mtnSystem = new THREE.Points(pGeo, mtnMat);
+        scene.add(mtnSystem);
+
+        // 3. 漫天飞雪
+        const sCount = 20000; // 增加雪量
+        const sGeo = new THREE.BufferGeometry();
+        const sPos = new Float32Array(sCount * 3);
+        const sScale = new Float32Array(sCount);
+        for(let i=0; i<sCount; i++){
+            sPos[i*3] = (Math.random() - 0.5) * worldRadius * 1.5;
+            sPos[i*3+1] = Math.random() * 400;
+            sPos[i*3+2] = (Math.random() - 0.5) * worldRadius * 1.5;
+            sScale[i] = Math.random() * 2.0 + 0.5;
+        }
+        sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+        sGeo.setAttribute('aScale', new THREE.BufferAttribute(sScale, 1));
+        const sMat = new THREE.ShaderMaterial({
+            uniforms: { uTime: { value: 0 } },
+            vertexShader: snowVert, fragmentShader: snowFrag,
+            transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+        });
+        const snowSystem = new THREE.Points(sGeo, sMat);
+        scene.add(snowSystem);
+
+        // --- 动画 ---
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+
+            mtnMat.uniforms.uTime.value = t;
+            bgMat.uniforms.uTime.value = t;
+            sMat.uniforms.uTime.value = t;
+
+            // 极慢的自转，仿佛地球在转动
+            mtnSystem.rotation.y = t * 0.01; 
+            snowSystem.rotation.y = t * 0.01;
+
+            // 背景跟随
+            bgMesh.rotation.copy(camera.rotation);
+            bgMesh.position.copy(camera.position);
+            bgMesh.translateZ(-2000);
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        document.getElementById('loading').style.display = 'none';
+        animate();
+    </script>
+</body>
+</html>

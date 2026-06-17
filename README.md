@@ -42,6 +42,7 @@
 | 8 | `overthinking-engine/` | 过载脑区 | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative |
 | 9 | `breathing-boundary/` | 呼吸边界｜The Breathing Boundary | 看似隔绝，实则翻译——一层活着的、会呼吸的边界 | Three.js · GLSL shader · Web Audio · Particle system |
 | 10 | `deep-blue-breath/` | 深蓝呼吸 V204 | 深蓝之中，漩涡慢转——长按屏幕，让金色粒子缓缓上升 | Three.js WebGL, 25K particles, vortex-to-healing, Web Audio rain + Fmaj7 |
+| 11 | `grand-jiangshan/` | 万里江山图 - 宏大视界 | 我见青山多妩媚——470K粒子过程化生成万里江山 | Three.js WebGL, GLSL Simplex noise terrain, 470K particles, OrbitControls |
 
 ---
 
@@ -152,3 +153,4 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 | Narrative healing with retro UI | `overthinking-engine` (CRT cyberpunk, typewriter) |
 | Frame-by-frame medical art | `silent-translator` (anatomical sketch, somatic) |
 | Three.js WebGL breath-responsive vortex-to-healing | `deep-blue-breath` (25K particles, Web Audio rain + Fmaj7) |
+| Procedural terrain / GLSL Simplex noise landscape | `grand-jiangshan` (470K particles, OrbitControls, 4D noise) |

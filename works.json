@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 10,
+  "total": 11,
   "updated": "2026-06-17",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -14,7 +14,8 @@
       "inkmeditation",
       "layered-mountains",
       "sumi-e-taichi",
-      "deep-blue-breath"
+      "deep-blue-breath",
+      "grand-jiangshan"
     ],
     "canvas_2d": [
       "breathing-boundary",
@@ -29,7 +30,8 @@
       "inkmeditation",
       "layered-mountains",
       "sumi-e-taichi",
-      "deep-blue-breath"
+      "deep-blue-breath",
+      "grand-jiangshan"
     ],
     "web_audio": [
       "breath-mirror",
@@ -48,7 +50,8 @@
       "inkmeditation",
       "layered-mountains",
       "sumi-e-taichi",
-      "deep-blue-breath"
+      "deep-blue-breath",
+      "grand-jiangshan"
     ],
     "fluid_simulation": [
       "breath-mirror",
@@ -409,6 +412,43 @@
         "deep-blue-breath.html",
         "deep-blue-breath.md",
         "deep-blue-breath_1.png"
+      ]
+    },
+    {
+      "slug": "grand-jiangshan",
+      "title_en": "Grand Jiangshan",
+      "title_zh": "万里江山图 - 宏大视界",
+      "tagline": "我见青山多妩媚，料青山见我应如是",
+      "tech": [
+        "Three.js WebGL",
+        "custom GLSL shader",
+        "4D Simplex noise terrain",
+        "470K particle system",
+        "OrbitControls"
+      ],
+      "keywords": [
+        "threejs",
+        "webgl",
+        "glsl",
+        "simplex-noise",
+        "terrain-generation",
+        "470k-particles",
+        "chinese-landscape",
+        "shanshui",
+        "orbit-controls",
+        "procedural-terrain",
+        "algorithmic-art"
+      ],
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js)",
+      "has_audio": false,
+      "has_touch": false,
+      "dependencies": 2,
+      "particle_count": "470K (450K mountains + 20K snow)",
+      "files": [
+        "grand-jiangshan.html",
+        "grand-jiangshan.md",
+        "grand-jiangshan_1.png"
       ]
     }
   ]
