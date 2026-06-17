@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 9,
+  "total": 10,
   "updated": "2026-06-17",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -13,7 +13,8 @@
       "glass-rain",
       "inkmeditation",
       "layered-mountains",
-      "sumi-e-taichi"
+      "sumi-e-taichi",
+      "deep-blue-breath"
     ],
     "canvas_2d": [
       "breathing-boundary",
@@ -27,12 +28,14 @@
       "glass-rain",
       "inkmeditation",
       "layered-mountains",
-      "sumi-e-taichi"
+      "sumi-e-taichi",
+      "deep-blue-breath"
     ],
     "web_audio": [
       "breath-mirror",
       "breathing-boundary",
-      "silent-translator"
+      "silent-translator",
+      "deep-blue-breath"
     ],
     "css_3d_gsap": [
       "cosmic-recollection",
@@ -44,7 +47,8 @@
       "cosmic-recollection",
       "inkmeditation",
       "layered-mountains",
-      "sumi-e-taichi"
+      "sumi-e-taichi",
+      "deep-blue-breath"
     ],
     "fluid_simulation": [
       "breath-mirror",
@@ -55,7 +59,8 @@
       "breath-mirror",
       "glass-rain",
       "inkmeditation",
-      "overthinking-engine"
+      "overthinking-engine",
+      "deep-blue-breath"
     ],
     "zero_dependency": [
       "silent-translator"
@@ -368,6 +373,42 @@
         "breathing-boundary.html",
         "breathing-boundary.md",
         "breathing-boundary_1.png"
+      ]
+    },
+    {
+      "slug": "deep-blue-breath",
+      "title_en": "Deep Blue Breath",
+      "title_zh": "深蓝呼吸 V204",
+      "tagline": "深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升",
+      "tech": [
+        "Three.js WebGL",
+        "25K particle system",
+        "vortex-to-healing transition",
+        "Web Audio API (rain noise + Fmaj7 chords)"
+      ],
+      "keywords": [
+        "threejs",
+        "webgl",
+        "particle-system",
+        "25k-particles",
+        "deep-blue",
+        "breath-responsive",
+        "vortex-to-healing",
+        "web-audio",
+        "fmaj7-chords",
+        "rain-noise",
+        "immersive-h5"
+      ],
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "25K",
+      "files": [
+        "deep-blue-breath.html",
+        "deep-blue-breath.md",
+        "deep-blue-breath_1.png"
       ]
     }
   ]

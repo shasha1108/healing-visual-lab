@@ -41,6 +41,7 @@
 | 7 | `breath-mirror/` | 息流 · 幻镜 | 这里没有深渊，也没有波澜 | GPU fluid simulation, Brown noise engine, breath-responsive |
 | 8 | `overthinking-engine/` | 过载脑区 | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative |
 | 9 | `breathing-boundary/` | 呼吸边界｜The Breathing Boundary | 看似隔绝，实则翻译——一层活着的、会呼吸的边界 | Three.js · GLSL shader · Web Audio · Particle system |
+| 10 | `deep-blue-breath/` | 深蓝呼吸 V204 | 深蓝之中，漩涡慢转——长按屏幕，让金色粒子缓缓上升 | Three.js WebGL, 25K particles, vortex-to-healing, Web Audio rain + Fmaj7 |
 
 ---
 
@@ -150,3 +151,4 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 | Touch-optimized interaction | `glass-rain` (drag physics), `layered-mountains` (scatter) |
 | Narrative healing with retro UI | `overthinking-engine` (CRT cyberpunk, typewriter) |
 | Frame-by-frame medical art | `silent-translator` (anatomical sketch, somatic) |
+| Three.js WebGL breath-responsive vortex-to-healing | `deep-blue-breath` (25K particles, Web Audio rain + Fmaj7) |

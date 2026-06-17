@@ -26,6 +26,9 @@ Q: "I need touch-optimized interactive design" → glass-rain (touch-drag FBO fl
 
 Q: "I need a zero-dependency H5 reference" → silent-translator (0 external scripts, vanilla Canvas 2D + Web Audio + CSS 3D)
 
+
+Q: "I need a breath-responsive vortex-to-healing particle effect with ambient audio" → deep-blue-breath (25K particles, press-and-hold progress, Web Audio rain + Fmaj7 chords, blue→gold color Lerp transition)
+
 Q: "I need a Chinese ink-wash / shanshui aesthetic effect" → inkmeditation (ink fluid dynamics, taichi attractor) or layered-mountains (250K particle landscape, 3-layer shanshui) or sumi-e-taichi (taichi gravity field, ink ripple)
 
 ## NAVIGATION
@@ -49,6 +52,7 @@ Q: "I need a Chinese ink-wash / shanshui aesthetic effect" → inkmeditation (in
 | overthinking-engine | - | - | - | - | ✅ | ✅ | - |
 | silent-translator | - | ✅ | - | ✅ | ✅ | - | - |
 | sumi-e-taichi | ✅ | - | - | - | - | - | ✅ |
+| deep-blue-breath | ✅ | - | - | ✅ | - | ✅ | ✅ (25K) |
 
 Note: All works with Three.js load it via CDN (r128). overthinking-engine loads GSAP via CDN. silent-translator has zero external dependencies.
 
