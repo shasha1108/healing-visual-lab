@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+
+<!--
+  Title: Time Particle Clock · 时间流转 - 粒子时钟
+  Summary: 基于 Three.js WebGL + 自定义 ShaderMaterial 构建的 200,000 粒子模拟时钟实验，通过时针/分针/秒针三套粒子系统将时间可视化，专门解决了拖拽交互驱动粒子时钟加速/减速时粒子流体消散感与指针结构保持之间的平衡问题
+  Tech: Three.js WebGL, custom ShaderMaterial, 200K particle system, analog clock algorithm, Web Audio tick synthesis, mouse-drag physics
+  Keywords: threejs, webgl, shader-material, 200k-particles, analog-clock, particle-clock, time-visualization, mouse-drag, web-audio-tick, fluid-dissipation, creative-coding
+  Render: WebGL (Three.js)
+  Audio: yes
+  Touch: no
+  Dependencies: 1 (Three.js CDN)
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间流转 - 粒子时钟</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #050508; /* 更深邃的宇宙夜空黑 */
+            background: radial-gradient(circle at 50% 50%, #111822 0%, #020205 100%);
+            font-family: 'Georgia', serif;
+            user-select: none;
+        }
+        canvas { display: block; }
+        
+        #ui {
+            position: absolute;
+            bottom: 40px; width: 100%;
+            text-align: center;
+            color: rgba(200, 220, 255, 0.6);
+            font-size: 14px;
+            letter-spacing: 6px;
+            pointer-events: none;
+            z-index: 10;
+            text-transform: uppercase;
+        }
+
+        #hint {
+            position: absolute;
+            top: 40px; width: 100%;
+            text-align: center;
+            color: rgba(212, 175, 55, 0.7);
+            font-size: 12px;
+            letter-spacing: 4px;
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.8;
+            transition: opacity 1s;
+        }
+        
+        /* 宣纸/星尘噪点滤镜，保留质感 */
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.08;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    <div id="hint">CLICK & DRAG TO MANIPULATE TIME ( SOUND ON )</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Shader: 柔和发光粒子 -->
+    <script type="x-shader/x-vertex" id="vertexShader">
+        attribute float size;
+        attribute vec3 customColor;
+        varying vec3 vColor;
+        void main() {
+            vColor = customColor;
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            // 距离摄像机越近，粒子越大
+            gl_PointSize = size * (350.0 / -mvPosition.z);
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        varying vec3 vColor;
+        void main() {
+            vec2 uv = gl_PointCoord - 0.5;
+            float dist = length(uv);
+            if (dist > 0.5) discard;
+            
+            // 柔和边缘，中心高亮
+            float alpha = 1.0 - smoothstep(0.2, 0.5, dist);
+            gl_FragColor = vec4(vColor, alpha); 
+        }
+    </script>
+
+    <script>
+        // --- Web Audio API (合成滴答声) ---
+        let audioCtx;
+        let audioInitialized = false;
+
+        function initAudio() {
+            if (!audioInitialized) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioInitialized = true;
+                document.getElementById('hint').style.opacity = '0.2'; // 弱化提示
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        // 播放合成音效
+        function playTick(isTock, fastForwardRate) {
+            if (!audioCtx || audioCtx.state !== 'running') return;
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // 如果处于时间快进/倒流状态，声音变得尖锐且急促；正常状态下是沉稳的滴答声
+            let isFast = fastForwardRate > 1.5;
+            osc.type = isFast ? 'triangle' : 'sine';
+            
+            let baseFreq = isTock ? 700 : 1000;
+            if (isFast) baseFreq = 1500 + Math.min(fastForwardRate * 10, 1000); // 速度越快音调越高
+
+            osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+            
+            gainNode.gain.setValueAtTime(isFast ? 0.05 : 0.3, audioCtx.currentTime); // 快进时声音变小，避免吵闹
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        // --- Three.js 初始化 ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+        camera.position.set(0, 0, 110);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // --- 粒子时钟系统 ---
+        class ParticleClock {
+            constructor() {
+                this.count = 200000;
+                this.geo = new THREE.BufferGeometry();
+                
+                const pos = new Float32Array(this.count * 3);
+                const col = new Float32Array(this.count * 3);
+                const size = new Float32Array(this.count);
+                
+                this.particles = [];
+
+                for(let i = 0; i < this.count; i++) {
+                    let type, r, theta, cr, cg, cb, s, k;
+                    let rand = Math.random();
+
+                    if (rand < 0.45) {
+                        // 1. 表盘光环与刻度 (45%)
+                        type = 0;
+                        k = 0.08; // 表盘引力很强，不易打散
+                        
+                        if (Math.random() < 0.12) {
+                            // 时钟刻度 (12个点)
+                            let tickIndex = Math.floor(Math.random() * 12);
+                            theta = tickIndex * (Math.PI / 6) + (Math.random() - 0.5) * 0.03;
+                            r = 30 + Math.random() * 6;
+                            cr = 1.0; cg = 0.85; cb = 0.5; // 明亮暗金
+                            s = Math.random() * 1.5 + 0.8;
+                        } else {
+                            // 边缘散发的光环
+                            theta = Math.random() * Math.PI * 2;
+                            r = 34 + Math.random() * 2.5;
+                            cr = 0.6; cg = 0.5; cb = 0.3; // 偏暗的星空金
+                            s = Math.random() * 1.0 + 0.3;
+                        }
+                    } 
+                    else if (rand < 0.70) {
+                        // 2. 分针 (25%)
+                        type = 2;
+                        k = 0.03; // 引力适中，拖拽有流体感
+                        r = Math.random() * 26;
+                        // 越往外越尖锐的柳叶形
+                        let width = (26 - r) * 0.012; 
+                        theta = (Math.random() - 0.5) * width;
+                        cr = 0.2; cg = 0.8; cb = 1.0; // 冰蓝色
+                        s = Math.random() * 1.2 + 0.5;
+                    } 
+                    else if (rand < 0.90) {
+                        // 3. 时针 (20%)
+                        type = 1;
+                        k = 0.02; // 引力较弱，显得厚重
+                        r = Math.random() * 16;
+                        let width = (16 - r) * 0.025; 
+                        theta = (Math.random() - 0.5) * width;
+                        cr = 0.4; cg = 0.6; cb = 1.0; // 深一点的幽蓝色
+                        s = Math.random() * 1.6 + 0.8;
+                    } 
+                    else {
+                        // 4. 秒针 (10%)
+                        type = 3;
+                        k = 0.06; // 引力强，走动干脆利落
+                        r = Math.random() * 32;
+                        // 极细的线，带一点点尾部配重
+                        if (Math.random() < 0.15) r = -Math.random() * 6; 
+                        let width = (32 - Math.abs(r)) * 0.003; 
+                        theta = (Math.random() - 0.5) * width;
+                        cr = 1.0; cg = 0.2; cb = 0.1; // 亮赤红色
+                        s = Math.random() * 2.0 + 0.8; // 最大最亮
+                    }
+
+                    // 初始位置设定在原点，稍后在update中展开
+                    pos[i*3] = 0; pos[i*3+1] = 0; pos[i*3+2] = (Math.random()-0.5)*3;
+                    col[i*3] = cr; col[i*3+1] = cg; col[i*3+2] = cb;
+                    size[i] = s;
+
+                    this.particles.push({
+                        r: r, theta: theta, type: type, k: k,
+                        x: pos[i*3], y: pos[i*3+1], z: pos[i*3+2],
+                        vx: 0, vy: 0, vz: 0
+                    });
+                }
+
+                this.geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                this.geo.setAttribute('customColor', new THREE.BufferAttribute(col, 3));
+                this.geo.setAttribute('size', new THREE.BufferAttribute(size, 1));
+
+                const mat = new THREE.ShaderMaterial({
+                    vertexShader: document.getElementById('vertexShader').textContent,
+                    fragmentShader: document.getElementById('fragmentShader').textContent,
+                    transparent: true,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending // 叠加发光
+                });
+
+                this.mesh = new THREE.Points(this.geo, mat);
+                scene.add(this.mesh);
+            }
+
+            update(time, mouse, timeState) {
+                const positions = this.geo.attributes.position.array;
+                
+                // 1. 获取包含时间偏差的虚拟时间
+                let currentSeconds = timeState.virtualTime;
+                
+                // 计算当前时间的三针角度 (0度在三点钟方向，12点钟是 PI/2)
+                const PI2 = Math.PI * 2;
+                // 秒针平滑扫过
+                const secAngle = Math.PI/2 - (currentSeconds % 60) / 60 * PI2;
+                // 分针平滑
+                const minAngle = Math.PI/2 - ((currentSeconds / 60) % 60) / 60 * PI2;
+                // 时针平滑
+                const hourAngle = Math.PI/2 - ((currentSeconds / 3600) % 12) / 12 * PI2;
+
+                // 2. 计算速度倍率 (用于扰乱粒子)
+                const speedMultiplier = Math.min(Math.abs(timeState.timeVelocity) / 2, 8);
+
+                for(let i=0; i<this.count; i++) {
+                    const p = this.particles[i];
+                    
+                    // 确定该粒子的目标角度
+                    let targetAngle = p.theta; 
+                    if (p.type === 1) targetAngle += hourAngle;
+                    else if (p.type === 2) targetAngle += minAngle;
+                    else if (p.type === 3) targetAngle += secAngle;
+
+                    // 计算目标坐标
+                    let tx = p.r * Math.cos(targetAngle);
+                    let ty = p.r * Math.sin(targetAngle);
+                    let tz = 0;
+
+                    // 扰动噪音 (加入时间流动感)
+                    const scale = 0.08;
+                    const noiseX = Math.sin(p.y * scale + time) * 0.5;
+                    const noiseY = Math.cos(p.x * scale + time) * 0.5;
+                    
+                    // 动态活跃度：快进时间时，指针粒子会产生剧烈的流体消散感
+                    let activity = (p.type === 0) ? 0.005 : 0.02;
+                    activity *= (1 + speedMultiplier);
+
+                    p.vx += noiseX * activity;
+                    p.vy += noiseY * activity;
+
+                    // 鼠标物理推开逻辑 (保留原版的太极搅动感)
+                    if(mouse.active) {
+                        const dx = p.x - mouse.x;
+                        const dy = p.y - mouse.y;
+                        const d2 = dx*dx + dy*dy;
+                        if(d2 < 1200) { 
+                            const force = (34 - Math.sqrt(d2)) * 0.025;
+                            p.vx += dx * force; 
+                            p.vy += dy * force;
+                        }
+                    }
+
+                    // 归位力 (弹簧物理)
+                    // 当时间被疯狂拨动时，tx和ty会快速旋转，粒子会被弹簧力拖拽，形成绚丽尾迹
+                    p.vx += (tx - p.x) * p.k;
+                    p.vy += (ty - p.y) * p.k;
+                    p.vz += (tz - p.z) * p.k;
+
+                    // 阻力/摩擦力
+                    p.vx *= 0.93;
+                    p.vy *= 0.93;
+                    p.vz *= 0.93;
+
+                    // 更新坐标
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.z += p.vz;
+
+                    positions[i*3] = p.x;
+                    positions[i*3+1] = p.y;
+                    positions[i*3+2] = p.z;
+                }
+                
+                this.geo.attributes.position.needsUpdate = true;
+            }
+        }
+
+        // --- 核心逻辑与事件 ---
+        const clockSys = new ParticleClock();
+        const clock = new THREE.Clock();
+
+        // 交互状态
+        const mouse = { x: 0, y: 0, active: false };
+        const dragState = {
+            isDragging: false,
+            lastScreenX: 0,
+            offsetSeconds: 0 // 时间偏差量
+        };
+
+        // 时间状态管理器
+        const timeState = {
+            virtualTime: 0,
+            timeVelocity: 0,
+            lastIntSecond: -1
+        };
+
+        // 鼠标/触摸事件追踪
+        window.addEventListener('mousedown', (e) => {
+            initAudio(); // 用户首次点击激活声音
+            dragState.isDragging = true;
+            dragState.lastScreenX = e.clientX;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            // 物理搅动坐标映射
+            const vec = new THREE.Vector3(
+                (e.clientX / window.innerWidth) * 2 - 1,
+                -(e.clientY / window.innerHeight) * 2 + 1, 0.5
+            );
+            vec.unproject(camera);
+            vec.sub(camera.position).normalize();
+            const dist = -camera.position.z / vec.z;
+            const pos = camera.position.clone().add(vec.multiplyScalar(dist));
+            mouse.x = pos.x; mouse.y = pos.y; mouse.active = true;
+
+            // 拖拽拨动时间逻辑
+            if (dragState.isDragging) {
+                const deltaX = e.clientX - dragState.lastScreenX;
+                dragState.offsetSeconds += deltaX * 15; // 灵敏度：1像素 = 15秒
+                dragState.lastScreenX = e.clientX;
+            }
+        });
+
+        window.addEventListener('mouseup', () => dragState.isDragging = false);
+        window.addEventListener('mouseleave', () => dragState.isDragging = false);
+
+        let timer;
+        window.addEventListener('mousemove', () => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { mouse.active = false; }, 100);
+        });
+
+        // 动画主循环
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // 1. 时间逻辑更新
+            const realSeconds = Date.now() / 1000;
+            
+            // 如果松开鼠标，时间偏差以弹性阻尼平滑归零 (视觉上的“时光复原”)
+            if (!dragState.isDragging) {
+                dragState.offsetSeconds *= 0.94; 
+            }
+
+            const currentVirtualTime = realSeconds + dragState.offsetSeconds;
+            timeState.timeVelocity = currentVirtualTime - timeState.virtualTime; 
+            timeState.virtualTime = currentVirtualTime;
+
+            // 2. 音效触发逻辑
+            const currentIntSecond = Math.floor(currentVirtualTime);
+            if (currentIntSecond !== timeState.lastIntSecond) {
+                const diff = Math.abs(currentIntSecond - timeState.lastIntSecond);
+                if (diff > 0) {
+                    const isTock = currentIntSecond % 2 === 0;
+                    playTick(isTock, diff); // 传入速度，如果是快进，声音会变化
+                }
+                timeState.lastIntSecond = currentIntSecond;
+            }
+
+            // 3. 渲染
+            clockSys.update(time, mouse, timeState);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>

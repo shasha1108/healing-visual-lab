@@ -27,6 +27,8 @@ Q: "I need touch-optimized interactive design" → glass-rain (touch-drag FBO fl
 Q: "I need a zero-dependency H5 reference" → silent-translator (0 external scripts, vanilla Canvas 2D + Web Audio + CSS 3D)
 
 
+Q: "I need a particle analog clock / time visualization with ShaderMaterial" → time-particle-clock (200K particles, hour/minute/second hands, mouse-drag time control, Web Audio ticks)
+
 Q: "I need procedural terrain / GLSL noise-generated Chinese landscape" → grand-jiangshan (470K particles, 4D Simplex noise, OrbitControls 3D exploration, 14KB single file)
 
 Q: "I need a breath-responsive vortex-to-healing particle effect with ambient audio" → deep-blue-breath (25K particles, press-and-hold progress, Web Audio rain + Fmaj7 chords, blue→gold color Lerp transition)
@@ -56,6 +58,7 @@ Q: "I need a Chinese ink-wash / shanshui aesthetic effect" → inkmeditation (in
 | sumi-e-taichi | ✅ | - | - | - | - | - | ✅ |
 | deep-blue-breath | ✅ | - | - | ✅ | - | ✅ | ✅ (25K) |
 | grand-jiangshan | ✅ | - | ✅ | - | - | - | ✅ (470K) |
+| time-particle-clock | ✅ | - | ✅ | ✅ | - | - | ✅ (200K) |
 
 Note: All works with Three.js load it via CDN (r128). overthinking-engine loads GSAP via CDN. silent-translator has zero external dependencies.
 
