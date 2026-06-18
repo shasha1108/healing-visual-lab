@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 12,
-  "updated": "2026-06-17",
+  "total": 13,
+  "updated": "2026-06-18",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -16,7 +16,8 @@
       "sumi-e-taichi",
       "deep-blue-breath",
       "grand-jiangshan",
-      "time-particle-clock"
+      "time-particle-clock",
+      "unbound-mind"
     ],
     "canvas_2d": [
       "breathing-boundary",
@@ -33,14 +34,16 @@
       "sumi-e-taichi",
       "deep-blue-breath",
       "grand-jiangshan",
-      "time-particle-clock"
+      "time-particle-clock",
+      "unbound-mind"
     ],
     "web_audio": [
       "breath-mirror",
       "breathing-boundary",
       "silent-translator",
       "deep-blue-breath",
-      "time-particle-clock"
+      "time-particle-clock",
+      "unbound-mind"
     ],
     "css_3d_gsap": [
       "cosmic-recollection",
@@ -55,7 +58,8 @@
       "sumi-e-taichi",
       "deep-blue-breath",
       "grand-jiangshan",
-      "time-particle-clock"
+      "time-particle-clock",
+      "unbound-mind"
     ],
     "fluid_simulation": [
       "breath-mirror",
@@ -67,7 +71,8 @@
       "glass-rain",
       "inkmeditation",
       "overthinking-engine",
-      "deep-blue-breath"
+      "deep-blue-breath",
+      "unbound-mind"
     ],
     "zero_dependency": [
       "silent-translator"
@@ -491,6 +496,47 @@
         "time-particle-clock.html",
         "time-particle-clock.md",
         "time-particle-clock_1.png"
+      ]
+    },
+    {
+      "slug": "unbound-mind",
+      "title_en": "Unbound Mind",
+      "title_zh": "释·茧",
+      "tagline": "这团乱麻，是你此刻的思绪吗？试着长按屏幕，慢慢抚平它们...",
+      "tech": [
+        "Three.js WebGL",
+        "Custom GLSL Shaders",
+        "150K particle system",
+        "Web Audio API",
+        "spring-damper physics",
+        "4-7-8 breathing rhythm"
+      ],
+      "keywords": [
+        "webgl",
+        "threejs",
+        "particle-system",
+        "healing",
+        "meditation",
+        "breathing",
+        "glsl",
+        "audio-visual",
+        "interactive-art",
+        "emotion-regulation",
+        "spring-physics",
+        "smoothstep"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "WebGL (Three.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "150K",
+      "files": [
+        "unbound-mind.html",
+        "unbound-mind.md",
+        "unbound-mind_1.png",
+        "unbound-mind_2.png",
+        "unbound-mind_3.png"
       ]
     }
   ]

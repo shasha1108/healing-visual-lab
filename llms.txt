@@ -3,18 +3,18 @@
 # It answers: "What is this repo, what can I find here, and how do I navigate it?"
 
 ## REPO SUMMARY
-A curated collection of 9 standalone interactive healing H5 experiments.
+A curated collection of 13 standalone interactive healing H5 experiments.
 Each work is a self-contained HTML file — open in a browser and interact.
 Tech stack spans Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio API, CSS 3D, GSAP, and particle systems.
 Most works load Three.js via CDN (r128); silent-translator is the only zero-dependency work.
 
 ## QUICK ANSWERS FOR AGENTS
 
-Q: "I need a particle system healing effect" → inkmeditation (100K+ particles, GPU fluid dynamics, breath sync) or layered-mountains (250K particles, raycaster scatter)
+Q: "I need a particle system healing effect" → inkmeditation (100K+ particles, GPU fluid dynamics, breath sync) or layered-mountains (250K particles, raycaster scatter) or unbound-mind (150K particles, spring-damper physics, 4-7-8 breathing)
 
 Q: "I need WebGL / GPU shaders for a meditative visual" → breath-mirror (GPU fluid sim, GLSL fragment shader, Brown noise, camera AR mirror)
 
-Q: "I need Web Audio healing / ambient sound synthesis" → breathing-boundary (binaural beats, delta wave 58Hz+61Hz) or silent-translator (Fmaj7 chords, white noise, typewriter ASMR)
+Q: "I need Web Audio healing / ambient sound synthesis" → breathing-boundary (binaural beats, delta wave 58Hz+61Hz) or silent-translator (Fmaj7 chords, white noise, typewriter ASMR) or unbound-mind (432Hz singing bowl, brown noise ocean, 4-7-8 breathing cycle)
 
 Q: "I need CSS 3D / GSAP animation (no WebGL)" → overthinking-engine (CRT cyberpunk, typewriter narrative, GSAP) or cosmic-recollection (Three.js + Canvas textures + CSS 3D multilayers)
 
@@ -22,10 +22,9 @@ Q: "I need Canvas 2D creative coding (no Three.js)" → silent-translator (frame
 
 Q: "I need a narrative-driven healing experience with retro aesthetics" → overthinking-engine (CRT terminal, glitch aesthetics, automatic 10s healing ritual)
 
-Q: "I need touch-optimized interactive design" → glass-rain (touch-drag FBO fluid perturbation) or breath-mirror (touch-push fog with GPU fluid)
+Q: "I need touch-optimized interactive design" → glass-rain (touch-drag FBO fluid perturbation) or breath-mirror (touch-push fog with GPU fluid) or unbound-mind (touch-drag particle calming with emotion regulation state machine)
 
 Q: "I need a zero-dependency H5 reference" → silent-translator (0 external scripts, vanilla Canvas 2D + Web Audio + CSS 3D)
-
 
 Q: "I need a particle analog clock / time visualization with ShaderMaterial" → time-particle-clock (200K particles, hour/minute/second hands, mouse-drag time control, Web Audio ticks)
 
@@ -35,9 +34,11 @@ Q: "I need a breath-responsive vortex-to-healing particle effect with ambient au
 
 Q: "I need a Chinese ink-wash / shanshui aesthetic effect" → inkmeditation (ink fluid dynamics, taichi attractor) or layered-mountains (250K particle landscape, 3-layer shanshui) or sumi-e-taichi (taichi gravity field, ink ripple)
 
+Q: "I need a WebGL particle healing with breathing rhythm and touch-based emotion regulation" → unbound-mind (150K particles, smoothstep anxiety→calm transition, spring-damper physics, 432Hz singing bowl, 4-7-8 breathing UI guide)
+
 ## NAVIGATION
 - llms.txt → this file, agent-first index
-- works.json → machine-readable index of all 9 works (tech stack, keywords, healing domain, particle count)
+- works.json → machine-readable index of all 13 works (tech stack, keywords, healing domain, particle count)
 - CLAUDE.md → Claude Code auto-load context
 - README.md → human-friendly bilingual overview with tech landscape table
 - index.html → GitHub Pages directory browser
@@ -59,6 +60,7 @@ Q: "I need a Chinese ink-wash / shanshui aesthetic effect" → inkmeditation (in
 | deep-blue-breath | ✅ | - | - | ✅ | - | ✅ | ✅ (25K) |
 | grand-jiangshan | ✅ | - | ✅ | - | - | - | ✅ (470K) |
 | time-particle-clock | ✅ | - | ✅ | ✅ | - | - | ✅ (200K) |
+| unbound-mind | ✅ | - | ✅ | ✅ | - | ✅ | ✅ (150K) |
 
 Note: All works with Three.js load it via CDN (r128). overthinking-engine loads GSAP via CDN. silent-translator has zero external dependencies.
 

@@ -44,6 +44,7 @@
 | 10 | `deep-blue-breath/` | 深蓝呼吸 V204 | 深蓝之中，漩涡慢转——长按屏幕，让金色粒子缓缓上升 | Three.js WebGL, 25K particles, vortex-to-healing, Web Audio rain + Fmaj7 |
 | 11 | `grand-jiangshan/` | 万里江山图 - 宏大视界 | 我见青山多妩媚——470K粒子过程化生成万里江山 | Three.js WebGL, GLSL Simplex noise terrain, 470K particles, OrbitControls |
 | 12 | `time-particle-clock/` | 时间流转 - 粒子时钟 | 时间是流动的粒子——200K粒子时钟，拖拽加速，松开即止 | Three.js WebGL, ShaderMaterial, 200K particles, analog clock, Web Audio ticks |
+| 13 | `unbound-mind/` | 释·茧 \| Unbound Mind | 这团乱麻，是你此刻的思绪吗？试着长按屏幕，慢慢抚平它们 | Three.js WebGL, 150K particles, Custom GLSL, Web Audio, 4-7-8 breathing |
 
 ---
 
@@ -114,7 +115,7 @@ New works are pushed via automated pipeline with consistent naming conventions.
 
 ---
 
-*Last updated: 2026-06-17 | Works: 9 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
+*Last updated: 2026-06-18 | Works: 13 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
 
 ---
 
@@ -128,7 +129,7 @@ New works are pushed via automated pipeline with consistent naming conventions.
 |------|---------|--------|
 | `llms.txt` | Quick index: what's here, which work to pick for a given tech | Agent-optimized plaintext |
 | `CLAUDE.md` | Claude Code auto-load context: conventions, citation format | Markdown |
-| `works.json` | Full structured index: 9 works × tech, keywords, healing domain, render, audio, touch, dependencies | JSON |
+| `works.json` | Full structured index: 13 works × tech, keywords, healing domain, render, audio, touch, dependencies | JSON |
 | `README.md` | Human-friendly bilingual overview with tech landscape table | Markdown |
 | `index.html` | Live GitHub Pages directory | HTML |
 
@@ -155,5 +156,5 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 | Frame-by-frame medical art | `silent-translator` (anatomical sketch, somatic) |
 | Three.js WebGL breath-responsive vortex-to-healing | `deep-blue-breath` (25K particles, Web Audio rain + Fmaj7) |
 | Procedural terrain / GLSL Simplex noise landscape | `grand-jiangshan` (470K particles, OrbitControls, 4D noise) |
-| Procedural terrain / GLSL Simplex noise landscape | `grand-jiangshan` (470K particles, OrbitControls, 4D noise) |
 | Particle clock / time visualization with ShaderMaterial | `time-particle-clock` (200K particles, analog clock, mouse-drag time control) |
+| WebGL particle healing with breathing rhythm & audio | `unbound-mind` (150K particles, spring-damper physics, 4-7-8 breathing, 432Hz singing bowl) |

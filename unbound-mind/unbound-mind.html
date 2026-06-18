@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<!--
+  Title: Unbound Mind · 释·茧
+  Summary: A WebGL particle healing experience built with Three.js, using 150K particles and 4-7-8 breathing rhythm to transform anxious thought patterns into calm galaxy formations.
+  Tech: Three.js, WebGL, Custom GLSL Shaders, Web Audio API, ShaderMaterial
+  Keywords: webgl, threejs, particle-system, healing, meditation, breathing, glsl, audio-visual, interactive-art, emotion-regulation
+  Render: WebGL
+  Audio: yes
+  Touch: yes
+  Dependencies: 1
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>释·茧 | Unbound Mind</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #030305;
+            background: radial-gradient(circle at 50% 50%, #0a0a12 0%, #000000 100%);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas { display: block; }
+        
+        /* 宣纸噪点滤镜，增加物理质感 */
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.1;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+        }
+
+        /* UI 与 文本交互系统 */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        .text-line {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 18px;
+            letter-spacing: 8px;
+            font-weight: 300;
+            opacity: 0;
+            transition: opacity 2s ease, transform 2s ease;
+            transform: translateY(10px);
+            /* 优化点：增加黑色的文字阴影，保证在最亮的粒子背景上依然清晰 */
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.6);
+            margin: 10px 0;
+        }
+
+        .text-line.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #start-btn {
+            pointer-events: auto;
+            margin-top: 40px;
+            padding: 12px 40px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: transparent;
+            color: #fff;
+            font-size: 14px;
+            letter-spacing: 8px;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: all 0.5s;
+        }
+        #start-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.8);
+        }
+
+        #progress-ring {
+            position: absolute;
+            width: 40px; height: 40px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            top: 50px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        
+        /* 优化点：呼吸提示居中、放大、增强对比度 */
+        #breathe-hint {
+            position: absolute;
+            bottom: 15%; 
+            width: 100%;
+            text-align: center;
+            font-size: 22px;
+            letter-spacing: 16px;
+            color: #ffffff;
+            font-weight: 300;
+            text-shadow: 0 4px 15px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,0.8);
+            opacity: 0;
+            pointer-events: none;
+            /* 取消 transition，因为现在会在 JS 中实时控制它的缩放和透明度以跟随呼吸 */
+        }
+    </style>
+</head>
+<body>
+    <div class="noise-overlay"></div>
+    <div id="ui-layer">
+        <div id="msg-0" class="text-line active">这团乱麻，是你此刻的思绪吗？</div>
+        <div id="msg-1" class="text-line">试着长按屏幕，慢慢抚平它们...</div>
+        
+        <!-- 优化点：主文案错开最亮的中心点，并添加极强的背景阴影 -->
+        <div id="msg-2" class="text-line" style="font-size: 26px; color: #ffffff; font-weight: 400; text-shadow: 0 4px 15px rgba(0,0,0,1), 0 0 30px rgba(0,0,0,1), 0 0 50px rgba(0,0,0,0.8); margin-top: -60px;">世界很宽，你可以慢慢来。</div>
+        
+        <button id="start-btn">释放情绪</button>
+    </div>
+    <div id="progress-ring"></div>
+    <div id="breathe-hint">吸气 ···</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Shader：处理颜色渐变与呼吸发光 -->
+    <script type="x-shader/x-vertex" id="vertexShader">
+        attribute vec3 anxColor;
+        attribute vec3 healColor;
+        attribute float size;
+        
+        uniform float u_transition; 
+        uniform float u_breathe;    
+        
+        varying vec3 vColor;
+        varying float vAlpha;
+
+        void main() {
+            vColor = mix(anxColor, healColor, u_transition);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            float currentSize = size * mix(1.0, 1.5 + u_breathe * 1.5, u_transition);
+            gl_PointSize = currentSize * (300.0 / -mvPosition.z);
+            gl_Position = projectionMatrix * mvPosition;
+            vAlpha = mix(0.7, 0.4 + u_breathe * 0.4, u_transition);
+        }
+    </script>
+
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        varying vec3 vColor;
+        varying float vAlpha;
+        void main() {
+            vec2 uv = gl_PointCoord - 0.5;
+            float dist = length(uv);
+            if (dist > 0.5) discard;
+            float alpha = (1.0 - smoothstep(0.1, 0.5, dist)) * vAlpha;
+            gl_FragColor = vec4(vColor, alpha); 
+        }
+    </script>
+
+    <script>
+        // --- 系统状态 ---
+        const State = {
+            started: false,
+            calmness: 0.0,    
+            isHealed: false,
+            isDragging: false,
+            breathePhase: 0,
+            showBreathUI: false // 控制呼吸引导 UI 是否显示的标识
+        };
+
+        // --- Web Audio API (重构音效引擎) ---
+        let audioCtx, droneOsc, droneGain, noiseFilter, noiseGain;
+        let bowlGain, bowlGain2; // 用于控制颂钵敲击
+
+        function initAudio() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+
+            // 1. 焦虑的心跳/低鸣 (Drone)
+            droneOsc = audioCtx.createOscillator();
+            droneOsc.type = 'sawtooth';
+            droneOsc.frequency.value = 45;
+            droneGain = audioCtx.createGain();
+            droneGain.gain.value = 0.5;
+            const droneFilter = audioCtx.createBiquadFilter();
+            droneFilter.type = 'lowpass';
+            droneFilter.frequency.value = 150;
+            droneOsc.connect(droneFilter).connect(droneGain).connect(audioCtx.destination);
+            droneOsc.start();
+
+            // 2. 纯净的 432Hz 颂钵 (初始化节点，但不发声，等待被“敲击”)
+            const bowlOsc = audioCtx.createOscillator();
+            bowlOsc.type = 'sine';
+            bowlOsc.frequency.value = 432;
+            bowlGain = audioCtx.createGain();
+            bowlGain.gain.value = 0.0;
+            bowlOsc.connect(bowlGain).connect(audioCtx.destination);
+            bowlOsc.start();
+
+            const bowlOsc2 = audioCtx.createOscillator(); 
+            bowlOsc2.type = 'sine';
+            bowlOsc2.frequency.value = 216; // 低八度增强共鸣，更加空灵厚重
+            bowlGain2 = audioCtx.createGain();
+            bowlGain2.gain.value = 0.0;
+            bowlOsc2.connect(bowlGain2).connect(audioCtx.destination);
+            bowlOsc2.start();
+
+            // 3. 柔和的海浪声 (Brown Noise)
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                lastOut = (lastOut + (0.02 * white)) / 1.02;
+                data[i] = lastOut * 3.5; 
+            }
+            const noiseSrc = audioCtx.createBufferSource();
+            noiseSrc.buffer = buffer;
+            noiseSrc.loop = true;
+            noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = 'lowpass';
+            noiseFilter.frequency.value = 100;
+            noiseGain = audioCtx.createGain();
+            noiseGain.gain.value = 0.0;
+            noiseSrc.connect(noiseFilter).connect(noiseGain).connect(audioCtx.destination);
+            noiseSrc.start();
+        }
+
+        // 优化点：手写颂钵敲击物理衰减函数 (极致空灵)
+        function strikeBowl(intensity) {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            
+            // 清理之前的调度，防止重叠破音
+            bowlGain.gain.cancelScheduledValues(now);
+            bowlGain2.gain.cancelScheduledValues(now);
+            
+            bowlGain.gain.setValueAtTime(bowlGain.gain.value, now);
+            bowlGain2.gain.setValueAtTime(bowlGain2.gain.value, now);
+            
+            // 敲击瞬间 (Attack)
+            bowlGain.gain.linearRampToValueAtTime(0.6 * intensity, now + 0.05);
+            bowlGain2.gain.linearRampToValueAtTime(0.4 * intensity, now + 0.1);
+            
+            // 悠长的泛音衰减 (Exponential Decay - 余音绕梁)
+            bowlGain.gain.exponentialRampToValueAtTime(0.0001, now + 8.0);
+            bowlGain2.gain.exponentialRampToValueAtTime(0.0001, now + 12.0);
+        }
+
+        function updateAudio(transition, breathe) {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+
+            // 焦虑低鸣声随治愈进度减弱
+            droneGain.gain.setTargetAtTime(0.5 * (1.0 - transition), now, 0.1);
+            
+            // 海浪潮汐跟随 4-7-8 呼吸完美同步
+            noiseGain.gain.setTargetAtTime((0.05 + breathe * 0.3) * transition, now, 0.1);
+            noiseFilter.frequency.setTargetAtTime(100 + transition * (150 + breathe * 350), now, 0.1);
+            
+            // 颂钵不再这里连续更新，改为特定阶段触发 strikeBowl()
+        }
+
+        // --- Three.js 初始化 ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 2000);
+        camera.position.set(0, 0, 150);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // --- 核心：释·茧 粒子系统 ---
+        class HealingParticleSystem {
+            constructor() {
+                this.count = 150000; 
+                this.geo = new THREE.BufferGeometry();
+                
+                const pos = new Float32Array(this.count * 3);
+                const anxColor = new Float32Array(this.count * 3);
+                const healColor = new Float32Array(this.count * 3);
+                const size = new Float32Array(this.count);
+                
+                this.particles = [];
+
+                for(let i = 0; i < this.count; i++) {
+                    const u = Math.random();
+                    const v = Math.random();
+                    const theta = u * 2.0 * Math.PI;
+                    const phi = Math.acos(2.0 * v - 1.0);
+                    
+                    const rAnx = 12 + Math.sin(theta * 8) * 4 + Math.cos(phi * 6) * 5;
+                    const anxX = rAnx * Math.sin(phi) * Math.cos(theta);
+                    const anxY = rAnx * Math.sin(phi) * Math.sin(theta);
+                    const anxZ = rAnx * Math.cos(phi);
+
+                    const healR = 10 + Math.pow(Math.random(), 1.5) * 100; 
+                    const healTheta = Math.random() * Math.PI * 2;
+                    const healZ = (Math.random() - 0.5) * (15 - healR*0.1); 
+
+                    let acR, acG, acB;
+                    if(Math.random() < 0.3) {
+                        acR = 0.9; acG = 0.1; acB = 0.4; 
+                    } else {
+                        acR = 0.1; acG = 0.2; acB = 0.6; 
+                    }
+
+                    let hcR, hcG, hcB;
+                    if (healR < 30) {
+                        hcR = 1.0; hcG = 0.7; hcB = 0.3; 
+                    } else if (healR < 70) {
+                        hcR = 0.2; hcG = 0.8; hcB = 0.7; 
+                    } else {
+                        hcR = 0.9; hcG = 0.6; hcB = 0.7; 
+                    }
+
+                    pos[i*3] = 0; pos[i*3+1] = 0; pos[i*3+2] = 0;
+                    
+                    anxColor[i*3] = acR; anxColor[i*3+1] = acG; anxColor[i*3+2] = acB;
+                    healColor[i*3] = hcR; healColor[i*3+1] = hcG; healColor[i*3+2] = hcB;
+                    
+                    size[i] = Math.random() * 1.5 + 0.5;
+
+                    this.particles.push({
+                        anxX, anxY, anxZ,
+                        healR, healTheta, healZ,
+                        x: pos[i*3], y: pos[i*3+1], z: pos[i*3+2],
+                        vx: 0, vy: 0, vz: 0,
+                        randOff: Math.random() * Math.PI * 2
+                    });
+                }
+
+                this.geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                this.geo.setAttribute('anxColor', new THREE.BufferAttribute(anxColor, 3));
+                this.geo.setAttribute('healColor', new THREE.BufferAttribute(healColor, 3));
+                this.geo.setAttribute('size', new THREE.BufferAttribute(size, 1));
+
+                this.mat = new THREE.ShaderMaterial({
+                    vertexShader: document.getElementById('vertexShader').textContent,
+                    fragmentShader: document.getElementById('fragmentShader').textContent,
+                    uniforms: {
+                        u_transition: { value: 0.0 },
+                        u_breathe: { value: 0.0 }
+                    },
+                    transparent: true,
+                    depthWrite: false,
+                    blending: THREE.AdditiveBlending
+                });
+
+                this.mesh = new THREE.Points(this.geo, this.mat);
+                scene.add(this.mesh);
+            }
+
+            update(time, calm, breathe) {
+                const positions = this.geo.attributes.position.array;
+                
+                const transition = calm * calm * (3 - 2 * calm);
+                this.mat.uniforms.u_transition.value = transition;
+                this.mat.uniforms.u_breathe.value = breathe;
+
+                const noiseScale = 0.15 * (1.0 - transition) + 0.02 * transition;
+                const activity = 0.5 * (1.0 - transition) + 0.05 * transition;
+                const springK = 0.15 * (1.0 - transition) + 0.01 * transition;
+                const friction = 0.85 * (1.0 - transition) + 0.96 * transition; 
+
+                const galaxyRotSpeed = 0.05;
+
+                for(let i=0; i<this.count; i++) {
+                    const p = this.particles[i];
+                    
+                    let targetX, targetY, targetZ;
+                    
+                    if (transition < 0.99) {
+                        const currentTheta = p.healTheta + time * galaxyRotSpeed * (50 / (p.healR + 10));
+                        const hX = p.healR * Math.cos(currentTheta);
+                        const hY = p.healR * Math.sin(currentTheta);
+                        
+                        targetX = p.anxX * (1 - transition) + hX * transition;
+                        targetY = p.anxY * (1 - transition) + hY * transition;
+                        targetZ = p.anxZ * (1 - transition) + p.healZ * transition;
+                    } else {
+                        const currentTheta = p.healTheta + time * galaxyRotSpeed * (50 / (p.healR + 10));
+                        targetX = p.healR * Math.cos(currentTheta);
+                        targetY = p.healR * Math.sin(currentTheta);
+                        targetZ = p.healZ;
+                    }
+
+                    p.vx += Math.sin(p.y * noiseScale + time * 3 + p.randOff) * activity;
+                    p.vy += Math.cos(p.x * noiseScale + time * 3 + p.randOff) * activity;
+
+                    if (State.isDragging && !State.isHealed) {
+                        const dx = p.x - mouse.x;
+                        const dy = p.y - mouse.y;
+                        const dist2 = dx*dx + dy*dy;
+                        if (dist2 < 900) { 
+                            p.vx *= 0.8; 
+                            p.vy *= 0.8;
+                        }
+                    }
+
+                    p.vx += (targetX - p.x) * springK;
+                    p.vy += (targetY - p.y) * springK;
+                    p.vz += (targetZ - p.z) * springK;
+
+                    p.vx *= friction;
+                    p.vy *= friction;
+                    p.vz *= friction;
+
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.z += p.vz;
+
+                    positions[i*3] = p.x;
+                    positions[i*3+1] = p.y;
+                    positions[i*3+2] = p.z;
+                }
+                
+                this.geo.attributes.position.needsUpdate = true;
+            }
+        }
+
+        // --- 交互与事件系统 ---
+        const clockSys = new HealingParticleSystem();
+        const clock = new THREE.Clock();
+        const mouse = { x: 0, y: 0 };
+
+        const startBtn = document.getElementById('start-btn');
+        const msg0 = document.getElementById('msg-0');
+        const msg1 = document.getElementById('msg-1');
+        const msg2 = document.getElementById('msg-2');
+        const ring = document.getElementById('progress-ring');
+        const breatheHint = document.getElementById('breathe-hint');
+
+        startBtn.addEventListener('click', () => {
+            initAudio();
+            State.started = true;
+            startBtn.style.opacity = 0;
+            startBtn.style.pointerEvents = 'none';
+            msg0.classList.remove('active');
+            setTimeout(() => {
+                msg0.style.display = 'none';
+                msg1.classList.add('active');
+            }, 2000);
+        });
+
+        function updateMouse(e) {
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            const vec = new THREE.Vector3(
+                (clientX / window.innerWidth) * 2 - 1,
+                -(clientY / window.innerHeight) * 2 + 1, 0.5
+            );
+            vec.unproject(camera);
+            vec.sub(camera.position).normalize();
+            const dist = -camera.position.z / vec.z;
+            const pos = camera.position.clone().add(vec.multiplyScalar(dist));
+            mouse.x = pos.x; mouse.y = pos.y;
+
+            if (State.started && !State.isHealed) {
+                ring.style.opacity = 1;
+                ring.style.transform = `translate(${clientX - 20}px, ${clientY - 20}px)`;
+            }
+        }
+
+        const interactStart = (e) => { 
+            if(!State.started || State.isHealed) return; 
+            State.isDragging = true; 
+            updateMouse(e); 
+        };
+        const interactMove = (e) => { 
+            if(!State.started || State.isHealed) return;
+            if(State.isDragging) updateMouse(e); 
+        };
+        const interactEnd = () => { 
+            State.isDragging = false; 
+            ring.style.opacity = 0;
+        };
+
+        window.addEventListener('mousedown', interactStart);
+        window.addEventListener('mousemove', interactMove);
+        window.addEventListener('mouseup', interactEnd);
+        window.addEventListener('touchstart', interactStart, {passive:false});
+        window.addEventListener('touchmove', interactMove, {passive:false});
+        window.addEventListener('touchend', interactEnd);
+
+        // --- 核心动画循环 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // 状态机触发逻辑
+            if (State.started && !State.isHealed) {
+                if (State.isDragging) {
+                    State.calmness += 0.003; 
+                } else {
+                    State.calmness -= 0.005; 
+                }
+                State.calmness = Math.max(0, Math.min(1, State.calmness));
+
+                // 彻底进入治愈状态
+                if (State.calmness >= 1.0) {
+                    State.isHealed = true;
+                    ring.style.display = 'none';
+                    msg1.classList.remove('active');
+                    strikeBowl(1.2); // 爆炸瞬间敲响最洪亮的一下颂钵
+                    
+                    setTimeout(() => {
+                        msg2.classList.add('active');
+                        State.showBreathUI = true; // 3秒后启动呼吸引导 UI
+                    }, 3000); 
+                }
+            }
+
+            // 呼吸逻辑计算
+            let breathe = 0;
+            if (State.isHealed) {
+                const cycle = time % 19; // 4-7-8 周期
+                
+                if (cycle < 4) {
+                    breathe = cycle / 4; 
+                    if(State.breathePhase !== 1) { 
+                        breatheHint.innerText = '吸气 ···'; 
+                        State.breathePhase = 1; 
+                        strikeBowl(0.8); // 每次重新开始吸气时，轻轻敲响颂钵
+                    }
+                } else if (cycle < 11) {
+                    breathe = 1.0; 
+                    if(State.breathePhase !== 2) { 
+                        breatheHint.innerText = '屏息 ···'; 
+                        State.breathePhase = 2; 
+                    }
+                } else {
+                    breathe = 1.0 - ((cycle - 11) / 8); 
+                    if(State.breathePhase !== 3) { 
+                        breatheHint.innerText = '呼气 ···'; 
+                        State.breathePhase = 3; 
+                        strikeBowl(0.4); // 呼气时，以极微弱的力度再敲一次，释放压力
+                    }
+                }
+                
+                // 优化点：在 JS 中控制呼吸文字的物理缩放与渐隐，视觉引导更强
+                if (State.showBreathUI) {
+                    const hintScale = 1.0 + breathe * 0.15; // 文字随吸气微微变大
+                    breatheHint.style.transform = `scale(${hintScale})`;
+                    breatheHint.style.opacity = 0.3 + breathe * 0.7; // 文字随吸气变亮
+                }
+
+                camera.position.z += (200 - camera.position.z) * 0.005;
+            } else {
+                const shake = (1.0 - State.calmness) * 0.5;
+                camera.position.x = Math.sin(time * 20) * shake;
+                camera.position.y = Math.cos(time * 23) * shake;
+            }
+
+            clockSys.update(time, State.calmness, breathe);
+            updateAudio(State.calmness, breathe);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>
