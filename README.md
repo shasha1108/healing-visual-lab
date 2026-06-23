@@ -167,4 +167,5 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 
 - [h5-publish-skill](https://github.com/shasha1108/h5-publish-skill) — The Claude Code skill that auto-publishes works to this repo with GEO/SEO optimization
 - [healing-space](https://github.com/shasha1108/healing-space) — Claude Code skill for generating touch-driven healing H5 pages (p5.js / Three.js / WebGL / Web Audio)
-- [emotional-content-studio](https://github.com/shasha1108/emotional-content-studio) — Claude Code skill for Xiaohongshu emotional content creation
+
+<p align="center"><sub>Source code under <a href="LICENSE">MIT License</a> | 网站源代码采用 MIT 协议</sub></p>- [emotional-content-studio](https://github.com/shasha1108/emotional-content-studio) — Claude Code skill for Xiaohongshu emotional content creation
