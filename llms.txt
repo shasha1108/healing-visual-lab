@@ -3,7 +3,7 @@
 # It answers: "What is this repo, what can I find here, and how do I navigate it?"
 
 ## REPO SUMMARY
-A curated collection of 13 standalone interactive healing H5 experiments.
+A curated collection of 14 standalone interactive healing H5 experiments.
 Each work is a self-contained HTML file — open in a browser and interact.
 Tech stack spans Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio API, CSS 3D, GSAP, and particle systems.
 Most works load Three.js via CDN (r128); silent-translator is the only zero-dependency work.
@@ -36,9 +36,11 @@ Q: "I need a Chinese ink-wash / shanshui aesthetic effect" → inkmeditation (in
 
 Q: "I need a WebGL particle healing with breathing rhythm and touch-based emotion regulation" → unbound-mind (150K particles, smoothstep anxiety→calm transition, spring-damper physics, 432Hz singing bowl, 4-7-8 breathing UI guide)
 
+Q: "I need a p5.js / Frutiger Aero glass-wipe healing effect with VHS nostalgia" → sky-through-glass (p5.js 1.9.0, FBO masking, drag-to-wipe interaction, Web Audio brown noise → pentatonic wind chime, CRT/VHS CSS overlays, custom lerp-follow cursor)
+
 ## NAVIGATION
 - llms.txt → this file, agent-first index
-- works.json → machine-readable index of all 13 works (tech stack, keywords, healing domain, particle count)
+- works.json → machine-readable index of all 14 works (tech stack, keywords, healing domain, particle count)
 - CLAUDE.md → Claude Code auto-load context
 - README.md → human-friendly bilingual overview with tech landscape table
 - index.html → GitHub Pages directory browser

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<!--
+  Title: Sky Through Glass · 玻璃天空
+  Summary: 蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS 噪点被轻轻擦开，露出 Frutiger Aero 的乐观年代。
+  Tech: p5.js, FBO Masking, Web Audio API, Frutiger Aero, CRT/VHS CSS, Custom Cursor
+  Keywords: p5js, fbo-masking, web-audio-api, frutiger-aero, vhs-aesthetic, glass-wipe, digital-healing, nostalgia
+  Render: Canvas2D + DOM
+  Audio: yes (brown noise drone → pentatonic wind chime)
+  Touch: yes (drag to wipe)
+  Dependencies: 1 (p5.js CDN)
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>玻璃天空 · Sky Through Glass</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+  /* 强制反默认光标 */
+  *, *::before, *::after { cursor: none !important; }
+
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    overflow: hidden; background: #0a1016;
+    font-family: "Noto Serif SC", "Songti SC", serif;
+    user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+
+  canvas { display: block; position: fixed; inset: 0; z-index: 1; }
+
+  /* VHS / CRT 装饰层 */
+  #crt-overlay {
+    position: fixed; inset: 0; z-index: 3; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.1) 0px, rgba(0,0,0,0.1) 1px, transparent 1px, transparent 3px),
+                radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+    mix-blend-mode: multiply; transition: opacity 3s ease;
+  }
+  #rgb-split-overlay {
+    position: fixed; inset: 0; z-index: 3; pointer-events: none;
+    mix-blend-mode: screen; opacity: 0.4; transition: opacity 3s ease;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(255,80,120,0.05) 50%, rgba(80,200,255,0.05) 60%, transparent 80%);
+  }
+
+  /* 文案层 */
+  #ui-layer {
+    position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  .center-text {
+    position: absolute; font-size: clamp(14px, 2.5vw, 18px);
+    letter-spacing: 10px; font-weight: 300; color: rgba(245, 250, 255, 0.9);
+    text-shadow: 0 0 15px rgba(180, 220, 255, 0.6);
+    opacity: 0; transition: opacity 2s ease-in-out; text-align: center;
+  }
+  .center-text.on { opacity: 1; }
+  
+  #hint-text {
+    position: absolute; bottom: 12%; font-size: clamp(11px, 1.8vw, 13px);
+    letter-spacing: 15px; color: rgba(255, 255, 255, 0.45);
+    opacity: 0; transition: opacity 1.5s ease;
+  }
+  #hint-text.on { opacity: 1; }
+
+  /* 90s HUD */
+  #retro-hud {
+    position: fixed; top: 5%; right: 5%; z-index: 6;
+    font-family: "Courier New", monospace; font-size: 11px; letter-spacing: 2px;
+    color: rgba(180, 230, 255, 0.6); pointer-events: none; opacity: 0; transition: opacity 2s ease;
+    text-shadow: 1px 0 rgba(255,80,120,0.5), -1px 0 rgba(80,200,255,0.5);
+  }
+  #retro-hud.on { opacity: 1; }
+  .blink { animation: blink 1.2s infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  #brand {
+    position: fixed; bottom: 5%; right: 5%; z-index: 6;
+    font-family: "Trebuchet MS", sans-serif; font-size: clamp(12px, 2vw, 15px);
+    font-weight: bold; letter-spacing: 4px; color: rgba(255, 255, 255, 0.5);
+    text-shadow: 2px 2px 0 rgba(0,100,180,0.4), -1px -1px 0 rgba(255,140,180,0.3);
+    opacity: 0; transition: opacity 2s;
+  }
+  #brand.on { opacity: 1; }
+
+  /* 交互光标 */
+  #cursor {
+    position: fixed; width: 28px; height: 28px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(180,230,255,0.5) 30%, transparent 70%);
+    pointer-events: none; z-index: 999; opacity: 0; mix-blend-mode: screen;
+    transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background 0.2s;
+  }
+  body.pressing #cursor {
+    width: 18px; height: 18px;
+    background: radial-gradient(circle, rgba(255,240,200,1) 0%, rgba(255,200,120,0.6) 40%, transparent 70%);
+  }
+  @media (max-width: 768px) { #cursor { display: none; } *, *::before, *::after { cursor: auto !important; } }
+</style>
+</head>
+<body>
+
+<div id="crt-overlay"></div>
+<div id="rgb-split-overlay"></div>
+
+<div id="ui-layer">
+  <div id="msg" class="center-text"></div>
+  <div id="hint-text"></div>
+</div>
+
+<div id="retro-hud">
+  <div>SYS://AERO_VIEWPORT.exe</div>
+  <div>MEM <span class="blink">▌</span></div>
+  <div id="time-disp">00:00:00</div>
+  <div id="sig-disp">SIGNAL: ▯▯▯▯▯▯▯▯▯▯</div>
+</div>
+<div id="brand">AERO™ · EST.回到过去</div>
+<div id="cursor"></div>
+
+<script>
+// ==========================================
+// 核心状态机与音频引擎
+// ==========================================
+const S = {
+  time: 0, phase: 1, 
+  pollution: 0, targetPollution: 0,
+  cleanAmt: 0, totalGlassArea: 10000, 
+  wiping: false, mx: -100, my: -100,
+  trails: []
+};
+
+const AudioSys = {
+  ctx: null, master: null, droneG: null, noiseG: null, init: false,
+  setup() {
+    if(this.init) return; this.init = true;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return; this.ctx = new AC();
+    this.master = this.ctx.createGain(); this.master.gain.value = 0.7;
+    this.master.connect(this.ctx.destination);
+    
+    // 174Hz 治愈三角波
+    const drone = this.ctx.createOscillator(); drone.type = 'triangle'; drone.frequency.value = 174;
+    this.droneG = this.ctx.createGain(); this.droneG.gain.value = 0;
+    drone.connect(this.droneG).connect(this.master); drone.start();
+
+    // 400Hz 低通白噪
+    const bufferSize = this.ctx.sampleRate * 2;
+    const nBuf = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = nBuf.getChannelData(0);
+    for(let i=0; i<bufferSize; i++) data[i] = (Math.random()*2-1)*0.5;
+    const nSrc = this.ctx.createBufferSource(); nSrc.buffer = nBuf; nSrc.loop = true;
+    const lpf = this.ctx.createBiquadFilter(); lpf.type = 'lowpass'; lpf.frequency.value = 400;
+    this.noiseG = this.ctx.createGain(); this.noiseG.gain.value = 0;
+    nSrc.connect(lpf).connect(this.noiseG).connect(this.master); nSrc.start();
+  },
+  triggerDrone() {
+    if(!this.ctx) return;
+    this.droneG.gain.setTargetAtTime(0.06, this.ctx.currentTime, 2);
+    this.noiseG.gain.setTargetAtTime(0.04, this.ctx.currentTime, 2);
+  },
+  stopDrone() {
+    if(!this.ctx) return;
+    this.droneG.gain.setTargetAtTime(0, this.ctx.currentTime, 2);
+    this.noiseG.gain.setTargetAtTime(0, this.ctx.currentTime, 2);
+  },
+  playChime() {
+    if(!this.ctx) return;
+    const scale = [523.25, 587.33, 659.25, 783.99, 880.00]; // C5, D5, E5, G5, A5
+    const f = scale[Math.floor(Math.random() * scale.length)];
+    const osc = this.ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = f;
+    const g = this.ctx.createGain();
+    const now = this.ctx.currentTime;
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.06, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+    osc.connect(g).connect(this.master); osc.start(now); osc.stop(now + 1.5);
+  },
+  playClimax() {
+    if(!this.ctx) return;
+    const chord = [261.63, 329.63, 392.00, 493.88]; // Cmaj7
+    const now = this.ctx.currentTime;
+    chord.forEach((f, i) => {
+      const osc = this.ctx.createOscillator(); osc.type = 'sine'; osc.frequency.value = f;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(0.04, now + 0.5 + i*0.2);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 5);
+      osc.connect(g).connect(this.master); osc.start(now); osc.stop(now+6);
+    });
+  }
+};
+
+// ==========================================
+// p5.js 视觉引擎
+// ==========================================
+let vhsLayer, maskLayer, noiseTex;
+let bubbles = [], drops = [], dusts = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(min(window.devicePixelRatio, 2));
+
+  vhsLayer = createGraphics(width, height);
+  maskLayer = createGraphics(width, height);
+  maskLayer.background(0, 0); // 初始全透明
+
+  // 预渲染极速噪点纹理
+  noiseTex = createGraphics(256, 256);
+  noiseTex.loadPixels();
+  for(let i=0; i<noiseTex.pixels.length; i+=4) {
+    let v = random(255);
+    noiseTex.pixels[i] = v; noiseTex.pixels[i+1] = v; noiseTex.pixels[i+2] = v; 
+    noiseTex.pixels[i+3] = random(30, 80);
+  }
+  noiseTex.updatePixels();
+
+  // 初始化 Frutiger Aero 元素
+  for(let i=0; i<22; i++) bubbles.push({ x: random(width), y: random(height), r: random(30, 100), sp: random(0.1, 0.3), seed: random(100) });
+  for(let i=0; i<35; i++) drops.push({ x: random(width), y: random(height), r: random(3, 10), a: random(100, 200) });
+  for(let i=0; i<280; i++) dusts.push({ x: random(width), y: random(height), r: random(1.5, 3.5), a: random(100, 200) });
+  
+  S.totalGlassArea = width * height * 0.7; 
+}
+
+function draw() {
+  let dt = min(deltaTime/1000, 0.05);
+  S.time += dt;
+
+  // 1. 叙事状态机
+  updateNarrative();
+
+  // 2. 绘制底层：纯净 Aero 天空
+  drawAeroSky(dt);
+
+  // 3. 擦拭蒙版生成
+  if(S.wiping && S.phase >= 2 && S.phase < 4) {
+    let dx = mouseX - S.mx, dy = mouseY - S.my;
+    let speed = sqrt(dx*dx + dy*dy);
+    if(speed > 0) {
+      // 真实擦玻璃物理：慢速更干净(效率 1.3)，太快刮不净(0.6)
+      let eff = speed < 20 ? 1.3 : (speed > 80 ? 0.6 : 1.0);
+      S.cleanAmt += (speed * eff * 35) / S.totalGlassArea;
+      
+      maskLayer.noStroke();
+      let grad = maskLayer.drawingContext.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 70);
+      grad.addColorStop(0, `rgba(255,255,255,${0.3 * eff})`);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      maskLayer.drawingContext.fillStyle = grad;
+      maskLayer.circle(mouseX, mouseY, 140);
+
+      S.trails.push({ x: mouseX, y: mouseY, t: S.time });
+      if(frameCount % 15 === 0) AudioSys.playChime();
+    }
+  }
+  S.mx = mouseX; S.my = mouseY;
+
+  // 4. 绘制顶层：VHS 蒙尘与动态噪点
+  S.pollution += (S.targetPollution - S.pollution) * 0.02;
+  if (S.pollution > 0.01 && S.phase < 4) {
+    vhsLayer.clear();
+    // 雾化底色
+    vhsLayer.background(20, 25, 35, 160 * S.pollution);
+    
+    // 动态噪点 (利用贴图极速渲染)
+    vhsLayer.drawingContext.globalCompositeOperation = 'screen';
+    vhsLayer.tint(255, 255 * S.pollution);
+    vhsLayer.image(noiseTex, random(-50,0), random(-50,0), width+100, height+100);
+    
+    // 实体污渍
+    vhsLayer.drawingContext.globalCompositeOperation = 'source-over';
+    vhsLayer.noStroke();
+    for(let d of dusts) { vhsLayer.fill(30, 40, 50, d.a * S.pollution); vhsLayer.circle(d.x, d.y, d.r); }
+
+    // FBO Masking：神奇的 destination-out 物理擦除
+    vhsLayer.drawingContext.globalCompositeOperation = 'destination-out';
+    vhsLayer.image(maskLayer, 0, 0);
+    vhsLayer.drawingContext.globalCompositeOperation = 'source-over';
+
+    image(vhsLayer, 0, 0);
+  }
+
+  // 5. 绘制顶层湿痕 (1.5s 蒸发)
+  drawWetTrails();
+
+  // 6. 更新 HUD & 光标
+  updateUI();
+}
+
+// ==========================================
+// 画面渲染细节
+// ==========================================
+function drawAeroSky(dt) {
+  // 三段式渐变
+  let cTop = color(125, 200, 230), cMid = color(180, 225, 215), cBot = color(220, 235, 200);
+  for(let y=0; y<=height; y+=5) {
+    let t = y/height;
+    let col = t < 0.5 ? lerpColor(cTop, cMid, t*2) : lerpColor(cMid, cBot, (t-0.5)*2);
+    stroke(col); strokeWeight(5); line(0, y, width, y);
+  }
+  
+  // 果冻气泡
+  noStroke();
+  for(let b of bubbles) {
+    b.y -= b.sp; if(b.y < -b.r) b.y = height + b.r;
+    let breath = 1 + sin(S.time * 2 + b.seed) * 0.05;
+    
+    let g = drawingContext.createRadialGradient(b.x, b.y, b.r*0.2, b.x, b.y, b.r*1.2*breath);
+    g.addColorStop(0, 'rgba(220,245,255,0.3)'); g.addColorStop(1, 'rgba(180,230,240,0)');
+    drawingContext.fillStyle = g; circle(b.x, b.y, b.r*2.4*breath);
+
+    drawingContext.fillStyle = 'rgba(220,245,255,0.15)'; circle(b.x, b.y, b.r*1.8*breath);
+    
+    // Frutiger 高光
+    fill(255, 255, 255, 200);
+    ellipse(b.x - b.r*0.35, b.y - b.r*0.4, b.r*0.3, b.r*0.15);
+    fill(255, 255, 255, 100);
+    ellipse(b.x + b.r*0.3, b.y + b.r*0.35, b.r*0.15, b.r*0.08);
+  }
+}
+
+function drawWetTrails() {
+  drawingContext.globalCompositeOperation = 'screen';
+  let validTrails = [];
+  for(let p of S.trails) {
+    let age = S.time - p.t;
+    if(age < 1.5) { // 1.5s 蒸发
+      let alpha = map(age, 0, 1.5, 0.4, 0);
+      noStroke(); fill(200, 230, 255, alpha * 255);
+      circle(p.x, p.y, 40 + age*20);
+      validTrails.push(p);
+    }
+  }
+  S.trails = validTrails;
+  drawingContext.globalCompositeOperation = 'source-over';
+}
+
+// ==========================================
+// 叙事剧本与文字控制
+// ==========================================
+function updateNarrative() {
+  const showText = (str) => {
+    let el = document.getElementById('msg');
+    if(el.innerText !== str) {
+      el.classList.remove('on');
+      setTimeout(() => { el.innerText = str; el.classList.add('on'); }, 1500);
+    }
+  };
+
+  if(S.time < 7 && S.phase === 1) {
+    showText("小时候· 天空还没有噪点");
+  } 
+  else if(S.time >= 7 && S.phase === 1) {
+    S.phase = 2;
+    S.targetPollution = 1; // 蒙尘渗入
+    document.getElementById('retro-hud').classList.add('on');
+    document.getElementById('brand').classList.add('on');
+    AudioSys.triggerDrone();
+    showText("什么时候起 · 天空蒙上了噪点");
+    setTimeout(() => { if(S.phase === 2) showText("是信号不好 · 还是世界本来如此"); }, 6000);
+    setTimeout(() => { 
+      if(S.phase === 2) {
+        showText("用指腹 · 把玻璃擦一遍");
+        document.getElementById('hint-text').innerText = "[ 拖拽 / 擦拭 ]";
+        document.getElementById('hint-text').classList.add('on');
+      }
+    }, 12000);
+  }
+  else if(S.cleanAmt > 0.02 && S.phase === 2) {
+    S.phase = 3;
+    document.getElementById('hint-text').classList.remove('on');
+    showText("一点一点 · 透出来了");
+  }
+  else if(S.cleanAmt > 0.88 && S.phase === 3) {
+    S.phase = 4;
+    S.targetPollution = 0; // 高潮：清理最后的噪点
+    document.getElementById('crt-overlay').style.opacity = '0';
+    document.getElementById('rgb-split-overlay').style.opacity = '0';
+    document.getElementById('retro-hud').style.opacity = '0.2';
+    AudioSys.stopDrone();
+    AudioSys.playClimax();
+    showText("小时候的天空 · 还在这里");
+  }
+}
+
+function updateUI() {
+  // 时间与信号条
+  let hh = nf(floor(S.time/3600), 2), mm = nf(floor(S.time/60)%60, 2), ss = nf(floor(S.time)%60, 2);
+  document.getElementById('time-disp').innerText = `CLIP: ${hh}:${mm}:${ss}`;
+  let bars = constrain(floor(S.cleanAmt * 10), 0, 10);
+  document.getElementById('sig-disp').innerText = "SIGNAL: " + "▮".repeat(bars) + "▯".repeat(10-bars);
+
+  // 光标
+  let cur = document.getElementById('cursor');
+  if(!cur.style.opacity) cur.style.opacity = '1';
+  let cx = parseFloat(cur.style.left||mouseX), cy = parseFloat(cur.style.top||mouseY);
+  cur.style.left = lerp(cx, mouseX, 0.2) + 'px';
+  cur.style.top  = lerp(cy, mouseY, 0.2) + 'px';
+}
+
+// ==========================================
+// 交互事件拦截
+// ==========================================
+function startInteract() { 
+  AudioSys.setup(); 
+  if(S.ctx && S.ctx.state === 'suspended') S.ctx.resume();
+  S.wiping = true; document.body.classList.add('pressing'); 
+}
+function stopInteract() { S.wiping = false; document.body.classList.remove('pressing'); }
+
+window.addEventListener('mousedown', startInteract);
+window.addEventListener('mouseup', stopInteract);
+window.addEventListener('touchstart', (e) => { startInteract(); S.mx = e.touches[0].clientX; S.my = e.touches[0].clientY; }, {passive:false});
+window.addEventListener('touchend', stopInteract);
+window.addEventListener('touchmove', (e) => { e.preventDefault(); }, {passive:false});
+window.addEventListener('resize', () => { resizeCanvas(windowWidth, windowHeight); maskLayer.resizeCanvas(width, height); vhsLayer.resizeCanvas(width, height); });
+</script>
+</body>
+</html>

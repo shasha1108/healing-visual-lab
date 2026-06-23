@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 13,
-  "updated": "2026-06-18",
+  "total": 14,
+  "updated": "2026-06-23",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -22,7 +22,8 @@
     "canvas_2d": [
       "breathing-boundary",
       "cosmic-recollection",
-      "silent-translator"
+      "silent-translator",
+      "sky-through-glass"
     ],
     "webgl_glsl": [
       "breath-mirror",
@@ -43,7 +44,8 @@
       "silent-translator",
       "deep-blue-breath",
       "time-particle-clock",
-      "unbound-mind"
+      "unbound-mind",
+      "sky-through-glass"
     ],
     "css_3d_gsap": [
       "cosmic-recollection",
@@ -72,10 +74,14 @@
       "inkmeditation",
       "overthinking-engine",
       "deep-blue-breath",
-      "unbound-mind"
+      "unbound-mind",
+      "sky-through-glass"
     ],
     "zero_dependency": [
       "silent-translator"
+    ],
+    "p5js": [
+      "sky-through-glass"
     ]
   },
   "works": [
@@ -537,6 +543,41 @@
         "unbound-mind_1.png",
         "unbound-mind_2.png",
         "unbound-mind_3.png"
+      ]
+    },
+    {
+      "slug": "sky-through-glass",
+      "title_en": "Sky Through Glass",
+      "title_zh": "玻璃天空",
+      "tagline": "蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。",
+      "tech": [
+        "p5.js",
+        "FBO Masking",
+        "Web Audio API",
+        "Frutiger Aero",
+        "CRT/VHS CSS",
+        "Custom Cursor"
+      ],
+      "keywords": [
+        "p5js",
+        "fbo-masking",
+        "web-audio-api",
+        "frutiger-aero",
+        "vhs-aesthetic",
+        "glass-wipe",
+        "digital-healing",
+        "nostalgia"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D + DOM",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A (FBO masking)",
+      "files": [
+        "sky-through-glass.html",
+        "sky-through-glass.md",
+        "sky-through-glass_1.gif"
       ]
     }
   ]

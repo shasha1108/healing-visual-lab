@@ -4,66 +4,19 @@
     "version": 1
   },
   "mappings": [
-    {
-      "title": "水墨太极：滴水生波",
-      "slug": "sumi-e-taichi",
-      "first_pushed": "2026-06-11"
-    },
-    {
-      "title": "墨池心境",
-      "slug": "inkmeditation",
-      "first_pushed": "2026-06-11"
-    },
-    {
-      "title": "宇宙回响 V78 (哲学终章)",
-      "slug": "cosmic-recollection",
-      "first_pushed": "2026-06-12"
-    },
-    {
-      "title": "青绿·层峦 (高密度分层版)",
-      "slug": "layered-mountains",
-      "first_pushed": "2026-06-12"
-    },
-    {
-      "title": "琉璃化雨 · 东方禅意疗愈",
-      "slug": "glass-rain",
-      "first_pushed": "2026-06-12"
-    },
-    {
-      "title": "无声的翻译官 | 躯体化便签",
-      "slug": "silent-translator",
-      "first_pushed": "2026-06-15"
-    },
-    {
-      "title": "息流 · 幻镜 | 东方数字疗愈",
-      "slug": "breath-mirror",
-      "first_pushed": "2026-06-15"
-    },
-    {
-      "title": "过载脑区 | The Overthinking Engine",
-      "slug": "overthinking-engine",
-      "first_pushed": "2026-06-16"
-    },
-    {
-      "title": "深蓝呼吸 V204 (沉浸慢速版)",
-      "slug": "deep-blue-breath",
-      "first_pushed": "2026-06-17"
-    },
-    {
-      "title": "万里江山图 - 宏大视界",
-      "slug": "grand-jiangshan",
-      "first_pushed": "2026-06-17"
-    },
-    {
-      "title": "时间流转 - 粒子时钟",
-      "slug": "time-particle-clock",
-      "first_pushed": "2026-06-17"
-    },
-    {
-      "title": "释·茧 | Unbound Mind",
-      "slug": "unbound-mind",
-      "first_pushed": "2026-06-18"
-    }
-  ],
-  "呼吸边界｜The Breathing Boundary": "breathing-boundary"
+    {"title": "水墨太极：滴水生波", "slug": "sumi-e-taichi", "first_pushed": "2026-06-11"},
+    {"title": "墨池心境", "slug": "inkmeditation", "first_pushed": "2026-06-11"},
+    {"title": "宇宙回响 V78 (哲学终章)", "slug": "cosmic-recollection", "first_pushed": "2026-06-12"},
+    {"title": "青绿·层峦 (高密度分层版)", "slug": "layered-mountains", "first_pushed": "2026-06-12"},
+    {"title": "琉璃化雨 · 东方禅意疗愈", "slug": "glass-rain", "first_pushed": "2026-06-12"},
+    {"title": "无声的翻译官", "slug": "silent-translator", "first_pushed": "2026-06-13"},
+    {"title": "息流 · 幻镜", "slug": "breath-mirror", "first_pushed": "2026-06-14"},
+    {"title": "过载脑区", "slug": "overthinking-engine", "first_pushed": "2026-06-15"},
+    {"title": "呼吸边界", "slug": "breathing-boundary", "first_pushed": "2026-06-16"},
+    {"title": "深蓝呼吸 V204", "slug": "deep-blue-breath", "first_pushed": "2026-06-17"},
+    {"title": "万里江山图 - 宏大视界", "slug": "grand-jiangshan", "first_pushed": "2026-06-17"},
+    {"title": "时间流转 - 粒子时钟", "slug": "time-particle-clock", "first_pushed": "2026-06-18"},
+    {"title": "释·茧", "slug": "unbound-mind", "first_pushed": "2026-06-18"},
+    {"title": "玻璃天空 · Sky Through Glass", "slug": "sky-through-glass", "first_pushed": "2026-06-23"}
+  ]
 }

@@ -158,3 +158,5 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 | Procedural terrain / GLSL Simplex noise landscape | `grand-jiangshan` (470K particles, OrbitControls, 4D noise) |
 | Particle clock / time visualization with ShaderMaterial | `time-particle-clock` (200K particles, analog clock, mouse-drag time control) |
 | WebGL particle healing with breathing rhythm & audio | `unbound-mind` (150K particles, spring-damper physics, 4-7-8 breathing, 432Hz singing bowl) |
+| p5.js FBO masking / Frutiger Aero glass-wipe with VHS nostalgia | `sky-through-glass` (drag-to-wipe, Web Audio drone→wind chime) |
+
