@@ -160,3 +160,11 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 | WebGL particle healing with breathing rhythm & audio | `unbound-mind` (150K particles, spring-damper physics, 4-7-8 breathing, 432Hz singing bowl) |
 | p5.js FBO masking / Frutiger Aero glass-wipe with VHS nostalgia | `sky-through-glass` (drag-to-wipe, Web Audio drone→wind chime) |
 
+
+---
+
+## 🤝 Related / 相关项目
+
+- [h5-publish-skill](https://github.com/shasha1108/h5-publish-skill) — The Claude Code skill that auto-publishes works to this repo with GEO/SEO optimization
+- [healing-space](https://github.com/shasha1108/healing-space) — Claude Code skill for generating touch-driven healing H5 pages (p5.js / Three.js / WebGL / Web Audio)
+- [emotional-content-studio](https://github.com/shasha1108/emotional-content-studio) — Claude Code skill for Xiaohongshu emotional content creation
