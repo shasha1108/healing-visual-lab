@@ -1,6 +1,6 @@
 # Healing Visual Lab · 视觉疗愈实验室
 
-> **Interactive digital healing experiments** — Three.js · WebGL · Canvas particles · Web Audio API · GLSL custom shaders · Creative coding for emotional design. A growing collection of browser-based therapeutic art: open a page, interact, and let the visuals do what words cannot.
+> **Interactive art & digital wellness experiments** — Three.js · WebGL · Canvas particles · Web Audio API · GLSL custom shaders · Creative coding for emotional design. A growing collection of generative healing browser-art: open a page, touch, and let the visuals do what words cannot. Touch-design driven, procedural-art and shader-art throughout.
 > **用代码翻译情绪**——当语言不够用时，让画面和声音替你说话。一个持续生长的数字交互疗愈作品集。大部分作品通过 CDN 加载 Three.js，手机优先。
 
 [![Topics](https://img.shields.io/badge/topics-threejs%20%7C%20webgl%20%7C%20canvas%20%7C%20particle--system%20%7C%20creative--coding%20%7C%20web--audio%20%7C%20glsl%20%7C%20digital--healing-blue)](https://github.com/shasha1108/Healing-visual)
