@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<!--
+  Title: Pixel Aquarium · 像素水族箱
+  Summary: 晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃水箱内游动。单击投食，双击敲玻璃——赛博养鱼，指尖治愈。
+  Tech: p5.js, CSS Glassmorphism, Procedural Pixel Flora, AI FSM
+  Keywords: pixel-art, frutiger-aero, aquarium, digital-pet, p5js, glassmorphism, procedural-generation, calming-h5
+  Render: Canvas2D + DOM
+  Audio: no
+  Touch: yes (tap=feed, double-tap=knock)
+  Dependencies: 1 (p5.js CDN)
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#7ad0f5">
+<title>Pixel Aquarium · 像素水族箱</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100vw; height: 100vh; overflow: hidden;
+    background: linear-gradient(160deg, #6ac5f8 0%, #90dcf4 35%, #bdf2e4 70%, #e6fcf5 100%);
+    font-family: "Segoe UI", "Frutiger", sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+
+  /* ── 环境光斑 (底层) ── */
+  .ambient-light {
+    position: fixed; z-index: 1; pointer-events: none; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.7) 0%, transparent 60%);
+    animation: orbFloat 12s ease-in-out infinite alternate;
+  }
+  .ambient-light.l1 { width: 35vw; height: 35vw; top: -5%; left: 8%; }
+  .ambient-light.l2 { width: 25vw; height: 25vw; bottom: 8%; right: 5%; animation-delay: -5s; }
+
+  @keyframes orbFloat {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(50px, -40px) scale(1.1); }
+  }
+
+  /* ── 模糊毛玻璃底板 (Z-index: 2) ── */
+  .aquarium-bg {
+    position: fixed; z-index: 2; pointer-events: none;
+    top: 6vh; left: 5vw; right: 5vw; bottom: 6vh;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 20px 40px rgba(0, 80, 120, 0.15);
+  }
+
+  /* ── 透明外壳与高光反射 (Z-index: 4) ── */
+  .aquarium-glass {
+    position: fixed; z-index: 4; pointer-events: none;
+    top: 6vh; left: 5vw; right: 5vw; bottom: 6vh;
+    border-top: 2px solid rgba(255, 255, 255, 0.9);
+    border-left: 2px solid rgba(255, 255, 255, 0.6);
+    border-right: 1px solid rgba(255, 255, 255, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 24px;
+    box-shadow: 
+      inset 0 0 20px rgba(255, 255, 255, 0.4),
+      inset 0 40px 40px rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+  }
+
+  .aquarium-glass::after {
+    content: ''; position: absolute;
+    top: -20%; left: -10%; width: 120%; height: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 50%; transform: rotate(-10deg);
+  }
+
+  /* ── UI元素 ── */
+  .top-bar {
+    position: absolute; top: 16px; left: 24px; z-index: 5;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px;
+    color: rgba(10, 80, 110, 0.8); text-shadow: 0 1px 2px rgba(255,255,255,0.9);
+  }
+  .top-bar .btn {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: linear-gradient(135deg, #fff, #b4e3dc);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1), inset 0 -2px 4px rgba(0,0,0,0.1);
+  }
+
+  .hint-text {
+    position: fixed; z-index: 5; pointer-events: none;
+    bottom: calc(6vh - 30px); width: 100%; text-align: center;
+    font-size: 12px; letter-spacing: 3px; font-weight: bold;
+    color: #3b8b9e; text-shadow: 0 1px 1px #fff; opacity: 0.8;
+  }
+
+  /* ── 敲玻璃涟漪 ── */
+  .knock-ripple {
+    position: fixed; z-index: 6; pointer-events: none;
+    border-radius: 50%; border: 3px solid rgba(255,255,255,0.9);
+    background: radial-gradient(circle, rgba(255,255,255,0.5) 0%, transparent 60%);
+    animation: ripple 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    transform: translate(-50%, -50%);
+  }
+  @keyframes ripple {
+    0% { width: 0; height: 0; opacity: 1; border-width: 8px; }
+    100% { width: 250px; height: 250px; opacity: 0; border-width: 1px; }
+  }
+
+  /* 拦截交互层 */
+  #interaction-layer { position: fixed; inset: 0; z-index: 7; }
+</style>
+</head>
+<body>
+
+<!-- 环境光底色 -->
+<div class="ambient-light l1"></div>
+<div class="ambient-light l2"></div>
+
+<!-- 毛玻璃底板 -->
+<div class="aquarium-bg"></div>
+
+<!-- 玻璃外壳 (Canvas 被 p5.js 强行插在 bg 和 glass 中间) -->
+<div class="aquarium-glass">
+</div>
+
+<div class="hint-text">🖱️ 单击: 投食 &ensp;|&ensp; 👆 双击: 敲玻璃</div>
+<div id="interaction-layer"></div>
+
+<script>
+// ==========================================
+// 核心配置与数据
+// ==========================================
+const PX = 6; 
+let frameBounds;
+
+let fishes = [];
+let foods = [];
+let plants = []; 
+let bubbles = [];
+let sands = [];
+
+// 鱼类调色盘
+const FISH_PALETTES = [
+  { body: '#ff7e67', fin: '#ff4c29', eye: '#fff' }, 
+  { body: '#50c878', fin: '#228b22', eye: '#fff' }, 
+  { body: '#87cefa', fin: '#4169e1', eye: '#fff' }, 
+  { body: '#ffb6c1', fin: '#ff1493', eye: '#fff' }, 
+  { body: '#ffd700', fin: '#ffa500', eye: '#fff' }  
+];
+
+// 【扩充一倍】的多彩植物生态调色盘
+const PLANT_COLORS = [
+  ['#ff4757', '#ff6b81'], // 0 珊瑚红粉
+  ['#ffa502', '#eccc68'], // 1 海绵黄橙
+  ['#9b59b6', '#cd84f1'], // 2 海葵紫
+  ['#00cec9', '#81ecec'], // 3 荧光青
+  ['#2ed573', '#7bed9f'], // 4 水草绿
+  ['#ff7f50', '#ffa07a'], // 5 珊瑚橘 (新增)
+  ['#1e90ff', '#87cefa'], // 6 深海蓝 (新增)
+  ['#ff1493', '#ffb6c1'], // 7 荧光桃红 (新增)
+  ['#ffd700', '#ffebcd'], // 8 香槟金 (新增)
+  ['#00fa9a', '#98fb98']  // 9 薄荷绿 (新增)
+];
+
+// ==========================================
+// P5.js 初始化 (强化渲染与层级)
+// ==========================================
+function setup() {
+  let cvs = createCanvas(windowWidth, windowHeight);
+  
+  // 核心修复：强行锁死 Canvas 的 CSS，彻底杜绝 Z-index 失效问题
+  cvs.style('position', 'fixed');
+  cvs.style('top', '0');
+  cvs.style('left', '0');
+  cvs.style('z-index', '3'); // 精准夹在 aquarium-bg (2) 和 aquarium-glass (4) 之间
+  cvs.style('pointer-events', 'none');
+  
+  // 给 Canvas 增加一点 CSS Drop Shadow，让水族箱里的东西更立体！
+  cvs.style('filter', 'drop-shadow(0px 8px 6px rgba(0, 80, 120, 0.15))');
+  
+  noSmooth(); 
+
+  calculateBounds();
+
+  // 1. 初始化小鱼 (6条)
+  for (let i = 0; i < 6; i++) {
+    fishes.push({
+      x: random(frameBounds.x + 50, frameBounds.right - 50),
+      y: random(frameBounds.y + 50, frameBounds.bottom - 50),
+      vx: random(1, 2) * (random() > 0.5 ? 1 : -1),
+      vy: random(-0.5, 0.5),
+      color: random(FISH_PALETTES),
+      state: 'wander',
+      timer: 0,
+      tailWag: random(10),
+      reaction: 0
+    });
+  }
+
+  // 2. 【扩充一倍】初始化多彩植物生态
+  for (let i = 0; i < 25; i++) { // 从 15 增加到 25 棵植物，生态更繁茂
+    // 增加了 seagrass, tube_sponge, brain_coral, sea_fan 四种新形态
+    let pType = random(['kelp', 'seagrass', 'coral', 'anemone', 'sponge', 'tube_sponge', 'brain_coral', 'sea_fan']);
+    let cTheme = random(PLANT_COLORS);
+    
+    // 限制海带和海草主要为绿色系
+    if (pType === 'kelp' || pType === 'seagrass') cTheme = random([PLANT_COLORS[4], PLANT_COLORS[9]]); 
+    
+    let plant = {
+      type: pType,
+      x: random(frameBounds.x + 30, frameBounds.right - 30),
+      y: frameBounds.bottom,
+      color1: cTheme[0], color2: cTheme[1],
+      height: floor(random(6, 16)),
+      phase: random(TWO_PI),
+      blocks: []
+    };
+
+    // 为需要像素阵列拼接的植物预生成块结构
+    if (pType === 'coral' || pType === 'sponge' || pType === 'brain_coral' || pType === 'sea_fan') {
+      if (pType === 'brain_coral') {
+        let r = floor(random(4, 7)); // 半圆形脑纹珊瑚
+        for(let by = 0; by < r; by++){
+          let limit = round(sqrt(r*r - by*by));
+          for(let bx = -limit; bx <= limit; bx++){
+            if(random() > 0.1) plant.blocks.push({ dx: bx, dy: -by, c: random() > 0.5 ? plant.color1 : plant.color2 });
+          }
+        }
+      } else if (pType === 'sea_fan') {
+        let h = floor(random(5, 9)); // 扇形展开
+        for(let by = 0; by < h; by++){
+          let spread = round(by * 0.8);
+          for(let bx = -spread; bx <= spread; bx++){
+            if(random() > 0.4 || abs(bx) === spread) plant.blocks.push({ dx: bx, dy: -by, c: random() > 0.5 ? plant.color1 : plant.color2 });
+          }
+        }
+      } else {
+        let clusterSize = floor(random(4, 8)); // 普通珊瑚/海绵
+        for(let by = 0; by < clusterSize; by++){
+          let limit = round(clusterSize/2);
+          for(let bx = -limit; bx < limit; bx++){
+            if(random() > 0.4) plant.blocks.push({ dx: bx, dy: -by, c: random() > 0.5 ? plant.color1 : plant.color2 });
+          }
+        }
+      }
+    }
+    plants.push(plant);
+  }
+  plants.sort((a, b) => a.height - b.height); // 产生前后错落感
+
+  // 3. 初始化像素底砂
+  for (let x = frameBounds.x; x < frameBounds.right; x += PX * 1.5) {
+    let h = floor(random(2, 6));
+    for (let i = 0; i < h; i++) {
+      sands.push({
+        x: x + random(-PX, PX),
+        y: frameBounds.bottom - i * PX,
+        c: color(random(220, 250), random(230, 245), random(200, 220))
+      });
+    }
+  }
+
+  bindInteractions();
+}
+
+// ==========================================
+// 渲染主循环
+// ==========================================
+function draw() {
+  clear(); // 保持背景透明
+
+  noStroke();
+  
+  // 1. 画五颜六色的植物
+  for (let p of plants) {
+    p.phase += 0.03;
+    drawPixelPlant(p);
+  }
+
+  // 2. 画亮色底砂
+  for (let s of sands) {
+    fill(s.c);
+    rect(s.x, s.y, PX, PX);
+  }
+
+  // 3. 更新与画鱼食
+  for (let i = foods.length - 1; i >= 0; i--) {
+    let f = foods[i];
+    f.vy += 0.05;
+    f.y += f.vy;
+    f.x += sin(frameCount * 0.05 + f.seed) * 0.5;
+    
+    fill('#ff9632');
+    rect(round(f.x), round(f.y), PX, PX, 1);
+    if (f.y > frameBounds.bottom - PX) foods.splice(i, 1);
+  }
+
+  // 4. 更新与画鱼
+  for (let f of fishes) {
+    updateFish(f);
+    drawPixelFish(f);
+  }
+
+  // 5. 气泡生成与上升
+  if (frameCount % 15 === 0 && random() > 0.4) {
+    bubbles.push({
+      x: random(frameBounds.x + 30, frameBounds.right - 30),
+      y: frameBounds.bottom - 10,
+      size: floor(random(1.5, 4.5)) * PX,
+      phase: random(TWO_PI)
+    });
+  }
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    let b = bubbles[i];
+    b.y -= 1.8;
+    b.x += sin(frameCount * 0.06 + b.phase) * 1.5;
+    
+    // 【修改】气泡全部变为圆滑的 circle
+    noFill(); stroke(255, 200); strokeWeight(1.5);
+    circle(round(b.x), round(b.y), b.size);
+    noStroke(); fill(255, 255);
+    // 调整高光位置，使其刚好贴合圆的左上角内侧
+    circle(round(b.x) - b.size * 0.18, round(b.y) - b.size * 0.18, b.size * 0.35);
+
+    if (b.y < frameBounds.y) bubbles.splice(i, 1);
+  }
+}
+
+// ==========================================
+// 多彩植物绘制 (扩充种类)
+// ==========================================
+function drawPixelPlant(p) {
+  let bx = round(p.x);
+  let by = round(p.y);
+
+  if (p.type === 'kelp') {
+    for (let i = 0; i < p.height; i++) {
+      let sway = sin(p.phase + i * 0.3) * (i * PX * 0.2);
+      fill(i % 2 === 0 ? p.color1 : p.color2);
+      rect(bx + round(sway), by - i * PX - PX, PX * 1.5, PX);
+    }
+  } 
+  else if (p.type === 'seagrass') {
+    // 海草：比海带更细长，多分支错落摇摆
+    for (let i = 0; i < p.height; i++) {
+      let sway = sin(p.phase + i * 0.2) * (i * PX * 0.15);
+      fill(p.color1);
+      rect(bx - PX + round(sway), by - i * PX - PX, PX * 0.8, PX);
+      fill(p.color2);
+      rect(bx + PX + round(sway * 1.2), by - i * PX - PX, PX * 0.8, PX);
+    }
+  }
+  else if (p.type === 'tube_sponge') {
+    // 管状海绵：垂直的彩色粗管子，顶部带有深色的开口
+    let tubes = [-1.5, 1.5];
+    for (let t of tubes) {
+      for (let i = 0; i < p.height * 0.5; i++) {
+        fill(i % 2 === 0 ? p.color1 : p.color2);
+        rect(bx + t * PX, by - i * PX - PX, PX * 1.5, PX);
+      }
+      fill(0, 0, 0, 100); // 黑色管口
+      rect(bx + t * PX + 1, by - floor(p.height * 0.5) * PX - PX, PX, PX * 0.5);
+    }
+  }
+  else if (p.type === 'anemone') {
+    fill(p.color2);
+    rect(bx - PX*1.5, by - PX, PX*4, PX); 
+    for(let t=0; t<3; t++){ 
+      for(let i=1; i<p.height*0.6; i++) {
+        let sway = sin(p.phase + i * 0.4 + t) * (i * PX * 0.3);
+        fill(p.color1);
+        rect(bx - PX + t*PX*1.5 + round(sway), by - i * PX - PX, PX, PX);
+      }
+    }
+  } 
+  else {
+    // 其他珊瑚/海绵/脑纹等聚落物
+    let pulse = round(sin(p.phase) * 1.5); 
+    for(let blk of p.blocks) {
+      fill(blk.c);
+      rect(bx + blk.dx * PX, by + blk.dy * PX - pulse, PX, PX);
+    }
+  }
+}
+
+// ==========================================
+// 鱼的 AI 逻辑与绘制
+// ==========================================
+function updateFish(f) {
+  let targetX, targetY;
+  if (f.state === 'flee') {
+    f.timer--;
+    if (f.timer <= 0) f.state = 'wander';
+  } 
+  else if (foods.length > 0) {
+    let minDist = 9999, targetIdx = -1;
+    for (let i = 0; i < foods.length; i++) {
+      let d = dist(f.x, f.y, foods[i].x, foods[i].y);
+      if (d < minDist) { minDist = d; targetX = foods[i].x; targetY = foods[i].y; targetIdx = i; }
+    }
+    if (targetIdx !== -1 && minDist < 350) {
+      f.state = 'chase';
+      if (minDist < PX * 2.5) {
+        foods.splice(targetIdx, 1);
+        f.reaction = 35; 
+        f.state = 'wander';
+      }
+    } else f.state = 'wander';
+  } else { f.state = 'wander'; }
+
+  if (f.state === 'chase') {
+    let angle = atan2(targetY - f.y, targetX - f.x);
+    f.vx += cos(angle) * 0.15; f.vy += sin(angle) * 0.15;
+  } else if (f.state === 'wander') {
+    f.vx += (noise(f.x * 0.01, f.tailWag) - 0.5) * 0.12;
+    f.vy += (noise(f.y * 0.01, f.tailWag) - 0.5) * 0.12;
+  }
+
+  let speedLimit = f.state === 'flee' ? 9 : (f.state === 'chase' ? 3.5 : 1.5);
+  let currentSpeed = sqrt(f.vx * f.vx + f.vy * f.vy);
+  if (currentSpeed > speedLimit) {
+    f.vx = (f.vx / currentSpeed) * speedLimit; f.vy = (f.vy / currentSpeed) * speedLimit;
+  }
+  
+  f.x += f.vx; f.y += f.vy;
+
+  let pad = PX * 4;
+  if (f.x < frameBounds.x + pad) { f.x = frameBounds.x + pad; f.vx *= -0.8; }
+  if (f.x > frameBounds.right - pad) { f.x = frameBounds.right - pad; f.vx *= -0.8; }
+  if (f.y < frameBounds.y + pad) { f.y = frameBounds.y + pad; f.vy *= -0.8; }
+  if (f.y > frameBounds.bottom - pad) { f.y = frameBounds.bottom - pad; f.vy *= -0.8; }
+}
+
+function drawPixelFish(f) {
+  push();
+  translate(round(f.x), round(f.y));
+  
+  let isRight = f.vx > 0;
+  if (!isRight) scale(-1, 1);
+  rotate(f.vy * 0.1); 
+
+  f.tailWag += abs(f.vx) * 0.1 + 0.05;
+  let wagOffset = sin(f.tailWag) > 0 ? 0 : PX;
+
+  noStroke();
+
+  fill(f.color.body);
+  rect(-PX*2, -PX*1.5, PX*4, PX*3);
+  
+  fill(f.color.fin);
+  rect(-PX, -PX*2.5, PX*2, PX); 
+  rect(-PX, PX*1.5, PX*2, PX);  
+  rect(-PX*3, -PX*1.5 + round(wagOffset), PX, PX*2); 
+
+  fill(f.color.eye);
+  rect(PX, -PX*0.5, PX, PX);
+  fill(0); 
+  rect(PX*1.5, -PX*0.5, PX*0.5, PX*0.5);
+
+  if (f.reaction > 0) {
+    f.reaction--;
+    fill(f.color.fin); rect(PX*2, 0, PX, PX); 
+    if (f.reaction > 15) {
+      fill('#ff5078'); rect(0, -PX*4, PX*1.5, PX*1.5); 
+    }
+  }
+  pop();
+}
+
+// ==========================================
+// 交互事件拦截
+// ==========================================
+function bindInteractions() {
+  const layer = document.getElementById('interaction-layer');
+  let lastTapTime = 0;
+  let tapTimeout;
+
+  layer.addEventListener('pointerdown', (e) => {
+    let now = Date.now();
+    let x = e.clientX; let y = e.clientY;
+
+    if (now - lastTapTime < 300) {
+      clearTimeout(tapTimeout);
+      triggerKnock(x, y);
+      lastTapTime = 0; 
+    } else {
+      lastTapTime = now;
+      tapTimeout = setTimeout(() => { triggerFeed(x, y); }, 300);
+    }
+  });
+}
+
+function triggerFeed(mx, my) {
+  if (mx < frameBounds.x || mx > frameBounds.right || my < frameBounds.y || my > frameBounds.bottom) return;
+  foods.push({ x: mx, y: my, vy: 0, seed: random(100) });
+  if (foods.length > 25) foods.shift(); 
+}
+
+function triggerKnock(mx, my) {
+  let rip = document.createElement('div');
+  rip.className = 'knock-ripple';
+  rip.style.left = mx + 'px'; rip.style.top = my + 'px';
+  document.body.appendChild(rip);
+  setTimeout(() => rip.remove(), 800);
+
+  if (foods.length > 0) foods.pop(); 
+
+  for (let f of fishes) {
+    let d = dist(f.x, f.y, mx, my);
+    if (d < 400) {
+      f.state = 'flee'; f.timer = 50; 
+      let angle = atan2(f.y - my, f.x - mx);
+      let force = map(d, 0, 400, 15, 3); 
+      f.vx += cos(angle) * force; f.vy += sin(angle) * force;
+    }
+  }
+}
+
+function calculateBounds() {
+  frameBounds = {
+    x: width * 0.05, y: height * 0.06, right: width * 0.95, bottom: height * 0.94
+  };
+}
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  calculateBounds();
+}
+</script>
+</body>
+</html>

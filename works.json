@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 14,
-  "updated": "2026-06-23",
+  "total": 15,
+  "updated": "2026-06-24",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -23,7 +23,8 @@
       "breathing-boundary",
       "cosmic-recollection",
       "silent-translator",
-      "sky-through-glass"
+      "sky-through-glass",
+      "pixel-aquarium"
     ],
     "webgl_glsl": [
       "breath-mirror",
@@ -50,7 +51,8 @@
     "css_3d_gsap": [
       "cosmic-recollection",
       "overthinking-engine",
-      "silent-translator"
+      "silent-translator",
+      "pixel-aquarium"
     ],
     "particle_system": [
       "breathing-boundary",
@@ -75,13 +77,15 @@
       "overthinking-engine",
       "deep-blue-breath",
       "unbound-mind",
-      "sky-through-glass"
+      "sky-through-glass",
+      "pixel-aquarium"
     ],
     "zero_dependency": [
       "silent-translator"
     ],
     "p5js": [
-      "sky-through-glass"
+      "sky-through-glass",
+      "pixel-aquarium"
     ]
   },
   "works": [
@@ -578,6 +582,39 @@
         "sky-through-glass.html",
         "sky-through-glass.md",
         "sky-through-glass_1.gif"
+      ]
+    },
+    {
+      "slug": "pixel-aquarium",
+      "title_en": "Pixel Aquarium",
+      "title_zh": "像素水族箱",
+      "tagline": "晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。",
+      "tech": [
+        "p5.js",
+        "CSS Glassmorphism",
+        "Procedural Pixel Flora",
+        "AI FSM"
+      ],
+      "keywords": [
+        "pixel-art",
+        "frutiger-aero",
+        "aquarium",
+        "digital-pet",
+        "p5js",
+        "glassmorphism",
+        "procedural-generation",
+        "calming-h5"
+      ],
+      "healing_domain": "meditation",
+      "render": "Canvas2D + DOM",
+      "has_audio": false,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A (pixel sprites)",
+      "files": [
+        "pixel-aquarium.html",
+        "pixel-aquarium.md",
+        "pixel-aquarium_1.gif"
       ]
     }
   ]
