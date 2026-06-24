@@ -30,22 +30,32 @@
 
 ## 📦 Works / 作品目录
 
-| # | Slug | Title | One-liner / 一句话 | Tech Keywords |
-| 1 | `sumi-e-taichi/` | 水墨太极 \| Sumi-e Taichi | 一滴墨落入宣纸——既是破坏，也是开始 | Three.js WebGL, particle physics, taichi gravity field, ink ripple simulation |
-| 2 | `inkmeditation/` | 墨池心境 \| Inkmeditation | 算法物理学 × 视觉设计 × 心理疗愈 | Three.js WebGL, 100K+ particles, real-time fluid dynamics, breath-cycle sync |
-| 3 | `cosmic-recollection/` | 宇宙回响 V78 \| Cosmic Recollection | 万物皆有裂痕——那是光照进来的地方 | Three.js WebGL, Canvas 2D texture generation, CSS 3D transforms, GSAP animation, 60K particle system |
-| 4 | `layered-mountains/` | 青绿·层峦 \| Layered Mountains | 触之即散，聚散随缘 | Three.js WebGL, 250K particles, layered landscape rendering, raycaster interaction |
-| 5 | `glass-rain/` | 琉璃化雨 \| Glass Rain | 眼泪落尽，便见晴空 | Three.js WebGL, FBO fluid simulation, touch-drag physics, GLSL shader |
-| 6 | `silent-translator/` | 无声的翻译官 \| Silent Translator | 身体替你说了说不出的话 | Canvas 2D, frame-by-frame sketch animation, Web Audio healing engine, CSS 3D transforms |
-| 7 | `breath-mirror/` | 息流 · 幻镜 \| Breath Mirror | 这里没有深渊，也没有波澜 | Three.js WebGL, GLSL fragment shader, GPU fluid simulation, Web Audio API, Brown noise engine |
-| 8 | `overthinking-engine/` | 过载脑区 \| Overthinking Engine | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP animation, CRT cyberpunk aesthetic, typewriter narrative, CSS animation |
-| 9 | `breathing-boundary/` | 呼吸边界 \| Breathing Boundary | 看似隔绝，实则翻译——这是一层活着的、会呼吸的边界 | Three.js WebGL, Custom GLSL Shader (Simplex Noise/FBM), Web Audio API, Canvas 2D, dual particle system |
-| 10 | `deep-blue-breath/` | 深蓝呼吸 V204 \| Deep Blue Breath | 深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升 | Three.js WebGL, 25K particle system, vortex-to-healing transition, Web Audio API (rain noise + Fmaj7 chords) |
-| 11 | `grand-jiangshan/` | 万里江山图 - 宏大视界 \| Grand Jiangshan | 我见青山多妩媚，料青山见我应如是 | Three.js WebGL, custom GLSL shader, 4D Simplex noise terrain, 470K particle system, OrbitControls |
-| 12 | `time-particle-clock/` | 时间流转 - 粒子时钟 \| Time Particle Clock | 时间是流动的粒子——拖拽加速，松开即止，每一秒都有声音 | Three.js WebGL, custom ShaderMaterial, 200K particle system, analog clock algorithm, Web Audio tick synthesis, mouse-drag physics |
-| 13 | `unbound-mind/` | 释·茧 \| Unbound Mind | 这团乱麻，是你此刻的思绪吗？试着长按屏幕，慢慢抚平它们... | Three.js WebGL, Custom GLSL Shaders, 150K particle system, Web Audio API, spring-damper physics, 4-7-8 breathing rhythm |
-| 14 | `sky-through-glass/` | 玻璃天空 \| Sky Through Glass | 蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。 | p5.js, FBO Masking, Web Audio API, Frutiger Aero, CRT/VHS CSS, Custom Cursor |
-| 15 | `pixel-aquarium/` | 像素水族箱 \| Pixel Aquarium | 晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。 | p5.js, CSS Glassmorphism, Procedural Pixel Flora, AI FSM |
+<details open>
+<summary><b>🌀 Three.js / WebGL</b> &ensp;<sub>13 works</sub></summary>
+
+- [水墨太极 / Sumi-e Taichi](sumi-e-taichi/sumi-e-taichi.html) — 一滴墨落入宣纸，既是破坏也是开始
+- [墨池心境 / Inkmeditation](inkmeditation/inkmeditation.html) — 十万粒子实时流体，随呼吸节律沉浮
+- [宇宙回响 V78 / Cosmic Recollection](cosmic-recollection/cosmic-recollection.html) — 万物皆有裂痕，那是光照进来的地方
+- [青绿·层峦 / Layered Mountains](layered-mountains/layered-mountains.html) — 触之即散，聚散随缘
+- [琉璃化雨 / Glass Rain](glass-rain/glass-rain.html) — 眼泪落尽，便见晴空
+- [息流·幻镜 / Breath Mirror](breath-mirror/breath-mirror.html) — GPU 流体 + 棕噪引擎，呼吸即镜像
+- [呼吸边界 / Breathing Boundary](breathing-boundary/breathing-boundary.html) — 一层活着的、会呼吸的边界
+- [深蓝呼吸 V204 / Deep Blue Breath](deep-blue-breath/deep-blue-breath.html) — 深蓝之中，金色粒子缓缓上升
+- [万里江山图 / Grand Jiangshan](grand-jiangshan/grand-jiangshan.html) — 470K 粒子过程化生成万里江山
+- [时间流转 / Time Particle Clock](time-particle-clock/time-particle-clock.html) — 时间是流动的粒子，拖拽加速松开即止
+- [释·茧 / Unbound Mind](unbound-mind/unbound-mind.html) — 轻轻抚摸，茧会自己松开
+- [无声的翻译官 / Silent Translator](silent-translator/silent-translator.html) — 身体替你说了说不出的话
+- [过载脑区 / Overthinking Engine](overthinking-engine/overthinking-engine.html) — 过度清醒地审视自己，正在毁掉我们的生活
+
+</details>
+
+<details open>
+<summary><b>🎨 Canvas / p5.js</b> &ensp;<sub>2 works</sub></summary>
+
+- [玻璃天空 / Sky Through Glass](sky-through-glass/sky-through-glass.html) — Frutiger Aero 美学，指腹划过擦开 VHS 噪点
+- [像素水族箱 / Pixel Aquarium](pixel-aquarium/pixel-aquarium.html) — 像素小鱼在毛玻璃水箱游动，单击投食双击敲玻璃
+
+</details>
 
 ---
 
