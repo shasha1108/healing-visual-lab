@@ -31,20 +31,21 @@
 ## 📦 Works / 作品目录
 
 | # | Slug | Title | One-liner / 一句话 | Tech Keywords |
-|---|------|-------|-------------------|---------------|
-| 1 | `sumi-e-taichi/` | 水墨太极 | 一滴墨落入宣纸——既是破坏，也是开始 | Three.js WebGL, particle physics, taichi gravity field |
-| 2 | `inkmeditation/` | 墨池心境 | 算法物理学 × 视觉设计 × 心理疗愈 | 100K+ particles, real-time fluid dynamics, breath-cycle sync |
-| 3 | `cosmic-recollection/` | 宇宙回响 V78 | 万物皆有裂痕——那是光照进来的地方 | CSS 3D transforms, multi-layer parallax, cosmic timeline animation |
-| 4 | `layered-mountains/` | 青绿·层峦 | 触之即散，聚散随缘 | 250K particles, layered landscape rendering, touch scatter |
-| 5 | `glass-rain/` | 琉璃化雨 | 眼泪落尽，便见晴空 | Touch-drag physics, realistic gravity water drops, Web Audio rain |
-| 6 | `silent-translator/` | 无声的翻译官 | 身体替你说了说不出的话 | Frame-by-frame anatomical sketch, Web Audio healing engine |
-| 7 | `breath-mirror/` | 息流 · 幻镜 | 这里没有深渊，也没有波澜 | GPU fluid simulation, Brown noise engine, breath-responsive |
-| 8 | `overthinking-engine/` | 过载脑区 | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative |
-| 9 | `breathing-boundary/` | 呼吸边界｜The Breathing Boundary | 看似隔绝，实则翻译——一层活着的、会呼吸的边界 | Three.js · GLSL shader · Web Audio · Particle system |
-| 10 | `deep-blue-breath/` | 深蓝呼吸 V204 | 深蓝之中，漩涡慢转——长按屏幕，让金色粒子缓缓上升 | Three.js WebGL, 25K particles, vortex-to-healing, Web Audio rain + Fmaj7 |
-| 11 | `grand-jiangshan/` | 万里江山图 - 宏大视界 | 我见青山多妩媚——470K粒子过程化生成万里江山 | Three.js WebGL, GLSL Simplex noise terrain, 470K particles, OrbitControls |
-| 12 | `time-particle-clock/` | 时间流转 - 粒子时钟 | 时间是流动的粒子——200K粒子时钟，拖拽加速，松开即止 | Three.js WebGL, ShaderMaterial, 200K particles, analog clock, Web Audio ticks |
-| 13 | `unbound-mind/` | 释·茧 \| Unbound Mind | 这团乱麻，是你此刻的思绪吗？试着长按屏幕，慢慢抚平它们 | Three.js WebGL, 150K particles, Custom GLSL, Web Audio, 4-7-8 breathing |
+| 1 | `sumi-e-taichi/` | 水墨太极 \| Sumi-e Taichi | 一滴墨落入宣纸——既是破坏，也是开始 | Three.js WebGL, particle physics, taichi gravity field, ink ripple simulation |
+| 2 | `inkmeditation/` | 墨池心境 \| Inkmeditation | 算法物理学 × 视觉设计 × 心理疗愈 | Three.js WebGL, 100K+ particles, real-time fluid dynamics, breath-cycle sync |
+| 3 | `cosmic-recollection/` | 宇宙回响 V78 \| Cosmic Recollection | 万物皆有裂痕——那是光照进来的地方 | Three.js WebGL, Canvas 2D texture generation, CSS 3D transforms, GSAP animation, 60K particle system |
+| 4 | `layered-mountains/` | 青绿·层峦 \| Layered Mountains | 触之即散，聚散随缘 | Three.js WebGL, 250K particles, layered landscape rendering, raycaster interaction |
+| 5 | `glass-rain/` | 琉璃化雨 \| Glass Rain | 眼泪落尽，便见晴空 | Three.js WebGL, FBO fluid simulation, touch-drag physics, GLSL shader |
+| 6 | `silent-translator/` | 无声的翻译官 \| Silent Translator | 身体替你说了说不出的话 | Canvas 2D, frame-by-frame sketch animation, Web Audio healing engine, CSS 3D transforms |
+| 7 | `breath-mirror/` | 息流 · 幻镜 \| Breath Mirror | 这里没有深渊，也没有波澜 | Three.js WebGL, GLSL fragment shader, GPU fluid simulation, Web Audio API, Brown noise engine |
+| 8 | `overthinking-engine/` | 过载脑区 \| Overthinking Engine | 过度清醒地审视自己，正在毁掉我们的生活 | GSAP animation, CRT cyberpunk aesthetic, typewriter narrative, CSS animation |
+| 9 | `breathing-boundary/` | 呼吸边界 \| Breathing Boundary | 看似隔绝，实则翻译——这是一层活着的、会呼吸的边界 | Three.js WebGL, Custom GLSL Shader (Simplex Noise/FBM), Web Audio API, Canvas 2D, dual particle system |
+| 10 | `deep-blue-breath/` | 深蓝呼吸 V204 \| Deep Blue Breath | 深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升 | Three.js WebGL, 25K particle system, vortex-to-healing transition, Web Audio API (rain noise + Fmaj7 chords) |
+| 11 | `grand-jiangshan/` | 万里江山图 - 宏大视界 \| Grand Jiangshan | 我见青山多妩媚，料青山见我应如是 | Three.js WebGL, custom GLSL shader, 4D Simplex noise terrain, 470K particle system, OrbitControls |
+| 12 | `time-particle-clock/` | 时间流转 - 粒子时钟 \| Time Particle Clock | 时间是流动的粒子——拖拽加速，松开即止，每一秒都有声音 | Three.js WebGL, custom ShaderMaterial, 200K particle system, analog clock algorithm, Web Audio tick synthesis, mouse-drag physics |
+| 13 | `unbound-mind/` | 释·茧 \| Unbound Mind | 这团乱麻，是你此刻的思绪吗？试着长按屏幕，慢慢抚平它们... | Three.js WebGL, Custom GLSL Shaders, 150K particle system, Web Audio API, spring-damper physics, 4-7-8 breathing rhythm |
+| 14 | `sky-through-glass/` | 玻璃天空 \| Sky Through Glass | 蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。 | p5.js, FBO Masking, Web Audio API, Frutiger Aero, CRT/VHS CSS, Custom Cursor |
+| 15 | `pixel-aquarium/` | 像素水族箱 \| Pixel Aquarium | 晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。 | p5.js, CSS Glassmorphism, Procedural Pixel Flora, AI FSM |
 
 ---
 
@@ -115,7 +116,7 @@ New works are pushed via automated pipeline with consistent naming conventions.
 
 ---
 
-*Last updated: 2026-06-18 | Works: 13 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
+*Last updated: 2026-06-24 | Works: 15 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
 
 ---
 
@@ -129,7 +130,7 @@ New works are pushed via automated pipeline with consistent naming conventions.
 |------|---------|--------|
 | `llms.txt` | Quick index: what's here, which work to pick for a given tech | Agent-optimized plaintext |
 | `CLAUDE.md` | Claude Code auto-load context: conventions, citation format | Markdown |
-| `works.json` | Full structured index: 13 works × tech, keywords, healing domain, render, audio, touch, dependencies | JSON |
+| `works.json` | Full structured index: 15 works × tech, keywords, healing domain, render, audio, touch, dependencies | JSON |
 | `README.md` | Human-friendly bilingual overview with tech landscape table | Markdown |
 | `index.html` | Live GitHub Pages directory | HTML |
 
