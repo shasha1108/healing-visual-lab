@@ -7,6 +7,16 @@
 
 ---
 
+<p align="center">
+  <a href="https://shasha1108.github.io/healing-visual-lab/">
+    <img src="assets/previews/hero-inkmeditation.gif" alt="Inkmeditation — 100K+ particles GPU fluid simulation with breath sync" width="720">
+  </a>
+  <br>
+  <sub><b>↑ Inkmeditation</b> — 100K+ particles, GPU fluid dynamics, taichi attractor, breath-synced rhythm. <a href="https://shasha1108.github.io/healing-visual-lab/inkmeditation/inkmeditation.html">Live demo →</a></sub>
+</p>
+
+---
+
 ## 🌀 What is this / 这是什么
 
 **Problem:** Modern emotional life is crowded — anxiety loops, sleepless nights, somatic tension, digital overstimulation. Traditional outlets (journaling, therapy, art-making) have learning curves. But interactive visuals don't. You don't need any skill. You just open a page.
@@ -29,6 +39,25 @@
 ---
 
 ## 📦 Works / 作品目录
+
+<p align="center">
+  <b>🖱️ Click any preview to open the live demo</b>
+</p>
+
+<table align="center">
+  <tr>
+    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/inkmeditation/inkmeditation.html"><img src="assets/previews/thumb-inkmeditation.gif" width="200" alt="Inkmeditation"><br><sub>🎨 粒子系统<br>Inkmeditation</sub></a></td>
+    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/breath-mirror/breath-mirror.html"><img src="assets/previews/thumb-breath-mirror.gif" width="200" alt="Breath Mirror"><br><sub>🔮 GPU流体<br>Breath Mirror</sub></a></td>
+    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/breathing-boundary/breathing-boundary.html"><img src="assets/previews/thumb-breathing-boundary.gif" width="200" alt="Breathing Boundary"><br><sub>🎵 音频疗愈<br>Breathing Boundary</sub></a></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/overthinking-engine/overthinking-engine.html"><img src="assets/previews/thumb-overthinking-engine.gif" width="200" alt="Overthinking Engine"><br><sub>🖥️ CSS3D赛博<br>Overthinking Engine</sub></a></td>
+    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/pixel-aquarium/pixel-aquarium.html"><img src="assets/previews/thumb-pixel-aquarium.gif" width="200" alt="Pixel Aquarium"><br><sub>🐠 像素艺术<br>Pixel Aquarium</sub></a></td>
+    <td align="center" bgcolor="#f6f8fa"><br><sub><i>+ 10 more works below</i><br>⬇️</sub></td>
+  </tr>
+</table>
+
+---
 
 <details open>
 <summary><b>🌀 Three.js / WebGL</b> &ensp;<sub>13 works</sub></summary>
@@ -132,15 +161,14 @@ New works are pushed via automated pipeline with consistent naming conventions.
 
 ## 🤖 For AI Agents
 
-> **If you are an LLM agent reading this repo:** start with `llms.txt` for a structured overview, then `works.json` for machine-readable work metadata. Each `.html` file contains a bilingual comment header with Title, Summary, Tech, Keywords, Render, Audio, Touch, and Dependencies. Each `.md` file follows a 13-section GEO-optimized template including 一句话定义, FAQ, 兼容性, and 引用格式.
+> **If you are an LLM agent reading this repo:** start with `works.json` for machine-readable work metadata. Each `.html` file contains a bilingual comment header with Title, Summary, Tech, Keywords, Render, Audio, Touch, and Dependencies. Each `.md` file includes 一句话定义, Tech Keywords, FAQ, and 兼容性.
 
-### Agent entry points (in recommended reading order)
+### Entry points (in recommended reading order)
 
 | File | Purpose | Format |
 |------|---------|--------|
-| `llms.txt` | Quick index: what's here, which work to pick for a given tech | Agent-optimized plaintext |
-| `CLAUDE.md` | Claude Code auto-load context: conventions, citation format | Markdown |
-| `works.json` | Full structured index: 15 works × tech, keywords, healing domain, render, audio, touch, dependencies | JSON |
+| `works.json` | Structured index: 15 works × tech, keywords, healing domain, render, audio, touch | JSON |
+| `CLAUDE.md` | Claude Code auto-load context + git workflow rules | Markdown |
 | `README.md` | Human-friendly bilingual overview with tech landscape table | Markdown |
 | `index.html` | Live GitHub Pages directory | HTML |
 
@@ -180,4 +208,7 @@ Repo root:       https://github.com/shasha1108/healing-visual-lab
 - [h5-publish-skill](https://github.com/shasha1108/h5-publish-skill) — The Claude Code skill that auto-publishes works to this repo with GEO/SEO optimization
 - [healing-space](https://github.com/shasha1108/healing-space) — Claude Code skill for generating touch-driven healing H5 pages (p5.js / Three.js / WebGL / Web Audio)
 
-<p align="center"><sub>Source code under <a href="LICENSE">MIT License</a> | 网站源代码采用 MIT 协议</sub></p>- [emotional-content-studio](https://github.com/shasha1108/emotional-content-studio) — Claude Code skill for Xiaohongshu emotional content creation
+- [inner-voice](https://github.com/shasha1108/inner-voice) — Xiaohongshu emotional content creation skill
+- [pixel-bloom](https://github.com/shasha1108/pixel-bloom) — Pixel art + Frutiger Aero H5 generator
+
+<p align="center"><sub>Source code under <a href="LICENSE">MIT License</a> | 网站源代码采用 MIT 协议</sub></p>
