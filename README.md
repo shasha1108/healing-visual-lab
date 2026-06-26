@@ -76,12 +76,25 @@
 
 ## 🌱 Creative philosophy / 创作理念
 
-This is not art. This is a toolkit.
-This is not a portfolio. This is an emotional first-aid kit.
+**Code translates what words cannot.** Every piece in this repo starts with an emotional state that's hard to name — and becomes an interactive experience that doesn't need explanation.
 
-Every piece was born from the same impulse: modern life packs too much emotion into too little space. Anxiety, overthinking, insomnia, somatic stress — everyone carries a backlog of unspoken things. Interactive visuals are a release valve. No skill required. Just open the page and let the algorithm sit with you for a while.
+**What I believe:**
+- **Zero friction.** Open a page. No frameworks, no build steps, no sign-up. Just the browser.
+- **Less is more.** Vanilla HTML/CSS/JS wherever possible. Dependencies only when they earn their place.
+- **Interaction over instruction.** The best interface doesn't tell you what to do. You touch, it responds, you understand.
+- **Emotion deserves engineering.** Feelings are complex systems. So is the code that holds them.
 
-**这不是艺术。这是工具。不是作品展示。是情绪急救箱。**
+Each `.html` file is a self-contained experiment. Open it, interact, let the algorithm sit with you for a moment.
+
+**代码翻译语言说不清的东西。** 每件作品始于一个难以命名的情绪——焦虑、疲惫、说不出口的重量——然后变成一个不需要解释的交互体验。
+
+**我相信的：**
+- **零摩擦。** 打开页面就行。没有框架、没有构建步骤、不需要注册。只有浏览器。
+- **少即是多。** 尽可能纯 HTML/CSS/JS。依赖项只在值得时才引入。
+- **交互胜过说明。** 最好的界面不告诉你怎么做——你触碰，它回应，你就懂了。
+- **情绪值得被认真工程化。** 感情是复杂系统。承载它们的代码也是。
+
+每个 `.html` 文件是一个独立的实验。打开、交互、让算法陪你待一会儿。
 
 ---
 
