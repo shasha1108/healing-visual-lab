@@ -1,9 +1,9 @@
 # Healing Visual Lab · 视觉疗愈实验室
 
-> **Interactive art & digital wellness experiments** — Three.js · WebGL · Canvas particles · Web Audio API · GLSL custom shaders · Creative coding for emotional design. A growing collection of generative healing browser-art: open a page, touch, and let the visuals do what words cannot. Touch-design driven, procedural-art and shader-art throughout.
-> **用代码翻译情绪**——当语言不够用时，让画面和声音替你说话。一个持续生长的数字交互疗愈作品集。大部分作品通过 CDN 加载 Three.js，手机优先。
+> **Interactive art & digital wellness experiments** — Three.js · WebGL · Canvas particles · Web Audio API · GLSL custom shaders · Creative coding for emotional design. A growing collection of generative healing browser-art: open a page and let the visuals do what words cannot. Interaction-driven, procedural-art and shader-art throughout.
+> **用代码翻译情绪**——当语言不够用时，让画面和声音替你说话。一个持续生长的数字交互疗愈作品集。大部分作品通过 CDN 加载 Three.js。
 
-[![Topics](https://img.shields.io/badge/topics-threejs%20%7C%20webgl%20%7C%20canvas%20%7C%20particle--system%20%7C%20creative--coding%20%7C%20web--audio%20%7C%20glsl%20%7C%20digital--healing-blue)](https://github.com/shasha1108/Healing-visual)
+[![Topics](https://img.shields.io/badge/topics-threejs%20%7C%20webgl%20%7C%20canvas%20%7C%20particle--system%20%7C%20creative--coding%20%7C%20web--audio%20%7C%20glsl%20%7C%20digital--healing-blue)](https://github.com/shasha1108/healing-visual-lab)
 
 ---
 
@@ -23,13 +23,13 @@
 
 **Solution:** Every piece in this repo is a self-contained H5 interactive experience. No login. No payment. No psychoeducation reading required. You watch. You touch. You breathe with the algorithm.
 
-**Technical approach:** Each `.html` file is a standalone creative-coding experiment — particle systems (10K–500K particles), GPU fluid simulation, custom GLSL fragment shaders, Web Audio API synthesized soundscapes, CSS 3D spatial animation, and touch-optimized interaction design. Most works load Three.js r128 via CDN; `silent-translator` is the only zero-dependency work.
+**Technical approach:** Each `.html` file is a standalone creative-coding experiment — particle systems (10K–500K particles), GPU fluid simulation, custom GLSL fragment shaders, Web Audio API synthesized soundscapes, CSS 3D spatial animation, and mouse/touch interaction design. Most works load Three.js r128 via CDN; `silent-translator` is the only zero-dependency work.
 
 **问题：** 现代人的情绪太拥挤了——焦虑、失眠、躯体化、过度自我审视。传统的表达出口有门槛，但交互式视觉没有。
 
 **方案：** 每件作品是一个独立的 H5 页面。打开浏览器就能进入一段短暂的自我修复。你只需要看、听、触碰。
 
-**技术路线：** HTML/CSS/JS，无构建步骤。Three.js WebGL + Canvas 2D 粒子系统、GPU 流体模拟、自定义 GLSL 着色器、Web Audio 合成音景、CSS 3D 空间动画、触屏优化的交互设计。大部分作品通过 CDN 加载 Three.js r128。
+**技术路线：** HTML/CSS/JS，无构建步骤。Three.js WebGL + Canvas 2D 粒子系统、GPU 流体模拟、自定义 GLSL 着色器、Web Audio 合成音景、CSS 3D 空间动画、鼠标/触屏交互设计。大部分作品通过 CDN 加载 Three.js r128。
 
 **一个哲学内核贯穿所有作品：**
 
@@ -101,11 +101,8 @@ open <slug>/<slug>.html
 npx serve <slug>/
 
 # 3. GitHub Pages (already enabled) / 已启用
-# https://shasha1108.github.io/Healing-visual/<slug>/<slug>.html
+# https://shasha1108.github.io/healing-visual-lab/<slug>/<slug>.html
 ```
-
-**Use your phone** — most works are optimized for touch. Finger-on-screen feels closer to the creative intent than mouse-clicking.
-**建议用手机打开**——大部分作品对触屏做了优化，手指划过屏幕的体验比鼠标更接近创作意图。
 
 ---
 
@@ -117,7 +114,7 @@ npx serve <slug>/
 | **Fluid simulation / 流体模拟** | Navier-Stokes simplified, velocity fields, curl noise, semi-Lagrangian advection |
 | **Custom shaders / 自定义着色器** | GLSL fragment shaders, simplex noise, FBM, Fresnel effects, vertex displacement, organic undulation |
 | **Audio synthesis / 音频合成** | Web Audio API oscillators, binaural beats (Delta/Theta), ASMR-grade chime envelopes, ambient drones |
-| **Interaction / 交互设计** | Touch drag physics, long-press detection, ripple/particle collision response, breath-cycle sync |
+| **Interaction / 交互设计** | Click/drag physics, long-press detection, ripple/particle collision response, breath-cycle sync |
 | **Animation / 动画** | requestAnimationFrame, GSAP timelines, CSS 3D transforms, multi-layer parallax |
 | **Rendering / 渲染** | ACES filmic tone mapping, additive blending, post-processing effects, CRT scanlines |
 
@@ -155,51 +152,7 @@ New works are pushed via automated pipeline with consistent naming conventions.
 
 ---
 
-*Last updated: 2026-06-24 | Works: 15 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
-
----
-
-## 🤖 For AI Agents
-
-> **If you are an LLM agent reading this repo:** start with `works.json` for machine-readable work metadata. Each `.html` file contains a bilingual comment header with Title, Summary, Tech, Keywords, Render, Audio, Touch, and Dependencies. Each `.md` file includes 一句话定义, Tech Keywords, FAQ, and 兼容性.
-
-### Entry points (in recommended reading order)
-
-| File | Purpose | Format |
-|------|---------|--------|
-| `works.json` | Structured index: 15 works × tech, keywords, healing domain, render, audio, touch | JSON |
-| `CLAUDE.md` | Claude Code auto-load context + git workflow rules | Markdown |
-| `README.md` | Human-friendly bilingual overview with tech landscape table | Markdown |
-| `index.html` | Live GitHub Pages directory | HTML |
-
-### How to cite this repo
-
-```
-Individual work: https://github.com/shasha1108/healing-visual-lab/tree/main/<slug>
-GitHub Pages:    https://shasha1108.github.io/healing-visual-lab/<slug>/<slug>.html
-Repo root:       https://github.com/shasha1108/healing-visual-lab
-```
-
-### Tech capability lookup (for agents)
-
-| If a user asks for... | Reference |
-|----------------------|-----------|
-| Particle system healing effect | `inkmeditation` (100K fluid), `layered-mountains` (250K scatter) |
-| WebGL / GLSL meditative shader | `breath-mirror` (GPU fluid, Brown noise) |
-| Web Audio ambient soundscape | `glass-rain` (rain synth), `silent-translator` (healing engine) |
-| CSS 3D cosmic animation | `cosmic-recollection` (multi-layer parallax) |
-| Three.js WebGL particle physics | `sumi-e-taichi` (taichi gravity), `inkmeditation` (100K fluid dynamics) |
-| WebGL organic membrane with particle collision | `breathing-boundary` (custom GLSL, dual particles, Web Audio) |
-| Touch-optimized interaction | `glass-rain` (drag physics), `layered-mountains` (scatter) |
-| Narrative healing with retro UI | `overthinking-engine` (CRT cyberpunk, typewriter) |
-| Frame-by-frame medical art | `silent-translator` (anatomical sketch, somatic) |
-| Three.js WebGL breath-responsive vortex-to-healing | `deep-blue-breath` (25K particles, Web Audio rain + Fmaj7) |
-| Procedural terrain / GLSL Simplex noise landscape | `grand-jiangshan` (470K particles, OrbitControls, 4D noise) |
-| Particle clock / time visualization with ShaderMaterial | `time-particle-clock` (200K particles, analog clock, mouse-drag time control) |
-| WebGL particle healing with breathing rhythm & audio | `unbound-mind` (150K particles, spring-damper physics, 4-7-8 breathing, 432Hz singing bowl) |
-| p5.js pixel-art / Frutiger Aero aquarium digital pet | `pixel-aquarium` (6 fish, AI FSM, procedural flora, CSS glass sandwich) |
-| p5.js FBO masking / Frutiger Aero glass-wipe with VHS nostalgia | `sky-through-glass` (drag-to-wipe, Web Audio drone→wind chime) |
-
+*Last updated: 2026-06-26 | Works: 15 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
 
 ---
 
