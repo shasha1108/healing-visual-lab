@@ -7,16 +7,6 @@
 
 ---
 
-<p align="center">
-  <a href="https://shasha1108.github.io/healing-visual-lab/">
-    <img src="assets/previews/hero-inkmeditation.gif" alt="Inkmeditation — 100K+ particles GPU fluid simulation with breath sync" width="720">
-  </a>
-  <br>
-  <sub><b>↑ Inkmeditation</b> — 100K+ particles, GPU fluid dynamics, taichi attractor, breath-synced rhythm. <a href="https://shasha1108.github.io/healing-visual-lab/inkmeditation/inkmeditation.html">Live demo →</a></sub>
-</p>
-
----
-
 ## 🌀 What is this / 这是什么
 
 **Problem:** Modern emotional life is crowded — anxiety loops, sleepless nights, somatic tension, digital overstimulation. Traditional outlets (journaling, therapy, art-making) have learning curves. But interactive visuals don't. You don't need any skill. You just open a page.
@@ -40,69 +30,33 @@
 
 ## 📦 Works / 作品目录
 
-<p align="center">
-  <b>🖱️ Click any preview to open the live demo</b>
-</p>
+> Click any work name to open live demo · 点击作品名打开在线演示
 
-<table align="center">
-  <tr>
-    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/inkmeditation/inkmeditation.html"><img src="assets/previews/thumb-inkmeditation.gif" width="200" alt="Inkmeditation"><br><sub>🎨 粒子系统<br>Inkmeditation</sub></a></td>
-    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/breath-mirror/breath-mirror.html"><img src="assets/previews/thumb-breath-mirror.gif" width="200" alt="Breath Mirror"><br><sub>🔮 GPU流体<br>Breath Mirror</sub></a></td>
-    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/breathing-boundary/breathing-boundary.html"><img src="assets/previews/thumb-breathing-boundary.gif" width="200" alt="Breathing Boundary"><br><sub>🎵 音频疗愈<br>Breathing Boundary</sub></a></td>
-  </tr>
-  <tr>
-    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/overthinking-engine/overthinking-engine.html"><img src="assets/previews/thumb-overthinking-engine.gif" width="200" alt="Overthinking Engine"><br><sub>🖥️ CSS3D赛博<br>Overthinking Engine</sub></a></td>
-    <td align="center"><a href="https://shasha1108.github.io/healing-visual-lab/pixel-aquarium/pixel-aquarium.html"><img src="assets/previews/thumb-pixel-aquarium.gif" width="200" alt="Pixel Aquarium"><br><sub>🐠 像素艺术<br>Pixel Aquarium</sub></a></td>
-    <td align="center" bgcolor="#f6f8fa"><br><sub><i>+ 10 more works below</i><br>⬇️</sub></td>
-  </tr>
-</table>
+| # | Work / 作品 | What it does | Tech |
+|:--:|------------|-------------|------|
+| 1 | **[Inkmeditation · 墨池心境](inkmeditation/inkmeditation.html)** | 100K+ particles flow like ink in water, synced to breath rhythm | Three.js · GLSL · Web Audio |
+| 2 | **[Breath Mirror · 息流幻镜](breath-mirror/breath-mirror.html)** | GPU fluid simulation + camera AR mirror + Brown noise engine | Three.js · GLSL · WebRTC |
+| 3 | **[Unbound Mind · 释·茧](unbound-mind/unbound-mind.html)** | 150K particles cocoon dissolves with touch, 4-7-8 breathing, 432Hz singing bowl | Three.js · GLSL · Web Audio |
+| 4 | **[Grand Jiangshan · 万里江山图](grand-jiangshan/grand-jiangshan.html)** | 470K particles form procedural Chinese landscape with 4D Simplex noise | Three.js · GLSL |
+| 5 | **[Glass Rain · 琉璃化雨](glass-rain/glass-rain.html)** | GPU FBO fluid, touch-drag ripple perturbation, additive blending | Three.js · GLSL |
+| 6 | **[Breathing Boundary · 呼吸边界](breathing-boundary/breathing-boundary.html)** | Living membrane with binaural beats (Delta 58Hz+61Hz), dual particle systems | Three.js · GLSL · Web Audio |
+| 7 | **[Overthinking Engine · 过载脑区](overthinking-engine/overthinking-engine.html)** | CRT cyberpunk terminal, GSAP typewriter narrative, auto 10s healing ritual | CSS 3D · GSAP · Web Audio |
+| 8 | **[Cosmic Recollection · 宇宙回响V78](cosmic-recollection/cosmic-recollection.html)** | Deep space multi-layer parallax, Three.js + Canvas textures + CSS 3D | Three.js · Canvas 2D · CSS 3D |
+| 9 | **[Silent Translator · 无声翻译官](silent-translator/silent-translator.html)** | Frame-by-frame anatomical sketch, Fmaj7 chord synthesis — zero dependencies | Canvas 2D · Web Audio |
+| 10 | **[Pixel Aquarium · 像素水族箱](pixel-aquarium/pixel-aquarium.html)** | 6 pixel fish with AI FSM, 25 procedural flora, CSS glassmorphism | p5.js · Canvas 2D |
 
----
+<details>
+<summary><b>+ 5 more works / 另外 5 件作品</b></summary>
 
-<details open>
-<summary><b>🌀 Three.js / WebGL</b> &ensp;<sub>13 works</sub></summary>
-
-- [水墨太极 / Sumi-e Taichi](sumi-e-taichi/sumi-e-taichi.html) — 一滴墨落入宣纸，既是破坏也是开始
-- [墨池心境 / Inkmeditation](inkmeditation/inkmeditation.html) — 十万粒子实时流体，随呼吸节律沉浮
-- [宇宙回响 V78 / Cosmic Recollection](cosmic-recollection/cosmic-recollection.html) — 万物皆有裂痕，那是光照进来的地方
-- [青绿·层峦 / Layered Mountains](layered-mountains/layered-mountains.html) — 触之即散，聚散随缘
-- [琉璃化雨 / Glass Rain](glass-rain/glass-rain.html) — 眼泪落尽，便见晴空
-- [息流·幻镜 / Breath Mirror](breath-mirror/breath-mirror.html) — GPU 流体 + 棕噪引擎，呼吸即镜像
-- [呼吸边界 / Breathing Boundary](breathing-boundary/breathing-boundary.html) — 一层活着的、会呼吸的边界
-- [深蓝呼吸 V204 / Deep Blue Breath](deep-blue-breath/deep-blue-breath.html) — 深蓝之中，金色粒子缓缓上升
-- [万里江山图 / Grand Jiangshan](grand-jiangshan/grand-jiangshan.html) — 470K 粒子过程化生成万里江山
-- [时间流转 / Time Particle Clock](time-particle-clock/time-particle-clock.html) — 时间是流动的粒子，拖拽加速松开即止
-- [释·茧 / Unbound Mind](unbound-mind/unbound-mind.html) — 轻轻抚摸，茧会自己松开
-- [无声的翻译官 / Silent Translator](silent-translator/silent-translator.html) — 身体替你说了说不出的话
-- [过载脑区 / Overthinking Engine](overthinking-engine/overthinking-engine.html) — 过度清醒地审视自己，正在毁掉我们的生活
+| Work / 作品 | One-liner |
+|------------|-----------|
+| [Sumi-e Taichi · 水墨太极](sumi-e-taichi/sumi-e-taichi.html) | Ink drop meets rice paper — taichi gravity field, ink ripple |
+| [Layered Mountains · 青绿层峦](layered-mountains/layered-mountains.html) | 250K particle landscape, 3-layer shanshui, touch scatter |
+| [Deep Blue Breath · 深蓝呼吸](deep-blue-breath/deep-blue-breath.html) | 25K particles, press-and-hold breath progress, blue→gold transition |
+| [Time Particle Clock · 时间流转](time-particle-clock/time-particle-clock.html) | 200K particle analog clock, mouse-drag time control, Web Audio ticks |
+| [Sky Through Glass · 玻璃天空](sky-through-glass/sky-through-glass.html) | p5.js FBO masking, drag-to-wipe, VHS/CRT nostalgia overlays |
 
 </details>
-
-<details open>
-<summary><b>🎨 Canvas / p5.js</b> &ensp;<sub>2 works</sub></summary>
-
-- [玻璃天空 / Sky Through Glass](sky-through-glass/sky-through-glass.html) — Frutiger Aero 美学，指腹划过擦开 VHS 噪点
-- [像素水族箱 / Pixel Aquarium](pixel-aquarium/pixel-aquarium.html) — 像素小鱼在毛玻璃水箱游动，单击投食双击敲玻璃
-
-</details>
-
----
-
-## 🖱️ How to use / 如何使用
-
-Each subdirectory is a **standalone H5 page** (most load Three.js r128 via CDN):
-每个子目录都是一个**独立 H5 页面**（大部分通过 CDN 加载 Three.js r128）：
-
-```bash
-# 1. Open directly in browser / 浏览器直接打开
-open <slug>/<slug>.html
-
-# 2. Any HTTP server / 任意本地服务
-npx serve <slug>/
-
-# 3. GitHub Pages (already enabled) / 已启用
-# https://shasha1108.github.io/healing-visual-lab/<slug>/<slug>.html
-```
 
 ---
 
@@ -128,20 +82,6 @@ This is not a portfolio. This is an emotional first-aid kit.
 Every piece was born from the same impulse: modern life packs too much emotion into too little space. Anxiety, overthinking, insomnia, somatic stress — everyone carries a backlog of unspoken things. Interactive visuals are a release valve. No skill required. Just open the page and let the algorithm sit with you for a while.
 
 **这不是艺术。这是工具。不是作品展示。是情绪急救箱。**
-
----
-
-## 📂 Repo structure / 仓库结构
-
-```
-<slug>/
-├── <slug>.html      ← Self-contained runnable H5 / 完整可运行的交互页
-├── <slug>.md        ← Bilingual work description / 中英双语作品说明
-└── <slug>_N.jpg     ← Preview screenshots / 预览截图
-```
-
-New works are pushed via automated pipeline with consistent naming conventions.
-新作品通过自动化脚本推送，保持命名约定一致。
 
 ---
 
