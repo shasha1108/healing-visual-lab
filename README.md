@@ -30,31 +30,31 @@
 
 ## 📦 Works / 作品目录
 
-> Click any work name to open live demo · 点击作品名打开在线演示
+> Click to open live demo · 点击作品名直接体验
 
-| # | Work / 作品 | What it does | Tech |
-|:--:|------------|-------------|------|
-| 1 | **[Inkmeditation · 墨池心境](inkmeditation/inkmeditation.html)** | 100K+ particles flow like ink in water, synced to breath rhythm | Three.js · GLSL · Web Audio |
-| 2 | **[Breath Mirror · 息流幻镜](breath-mirror/breath-mirror.html)** | GPU fluid simulation + camera AR mirror + Brown noise engine | Three.js · GLSL · WebRTC |
-| 3 | **[Unbound Mind · 释·茧](unbound-mind/unbound-mind.html)** | 150K particles cocoon dissolves with touch, 4-7-8 breathing, 432Hz singing bowl | Three.js · GLSL · Web Audio |
-| 4 | **[Grand Jiangshan · 万里江山图](grand-jiangshan/grand-jiangshan.html)** | 470K particles form procedural Chinese landscape with 4D Simplex noise | Three.js · GLSL |
-| 5 | **[Glass Rain · 琉璃化雨](glass-rain/glass-rain.html)** | GPU FBO fluid, touch-drag ripple perturbation, additive blending | Three.js · GLSL |
-| 6 | **[Breathing Boundary · 呼吸边界](breathing-boundary/breathing-boundary.html)** | Living membrane with binaural beats (Delta 58Hz+61Hz), dual particle systems | Three.js · GLSL · Web Audio |
-| 7 | **[Overthinking Engine · 过载脑区](overthinking-engine/overthinking-engine.html)** | CRT cyberpunk terminal, GSAP typewriter narrative, auto 10s healing ritual | CSS 3D · GSAP · Web Audio |
-| 8 | **[Cosmic Recollection · 宇宙回响V78](cosmic-recollection/cosmic-recollection.html)** | Deep space multi-layer parallax, Three.js + Canvas textures + CSS 3D | Three.js · Canvas 2D · CSS 3D |
-| 9 | **[Silent Translator · 无声翻译官](silent-translator/silent-translator.html)** | Frame-by-frame anatomical sketch, Fmaj7 chord synthesis — zero dependencies | Canvas 2D · Web Audio |
-| 10 | **[Pixel Aquarium · 像素水族箱](pixel-aquarium/pixel-aquarium.html)** | 6 pixel fish with AI FSM, 25 procedural flora, CSS glassmorphism | p5.js · Canvas 2D |
+| # | Work / 作品 | 核心理念 / Concept | Tech |
+|:--:|------------|-------------------|------|
+| 1 | **[Inkmeditation · 墨池心境](inkmeditation/inkmeditation.html)** | 一滴墨落入水中，十万粒子随呼吸节律沉浮。An ink drop in water — 100K particles breathe with you. | Three.js · GLSL · Web Audio |
+| 2 | **[Breath Mirror · 息流幻镜](breath-mirror/breath-mirror.html)** | 摄像头将你的影像化为GPU流体雾面，呼吸即镜像。Camera turns you into GPU fluid fog — breathing is the mirror. | Three.js · GLSL · WebRTC |
+| 3 | **[Unbound Mind · 释·茧](unbound-mind/unbound-mind.html)** | 情绪的茧被指尖轻轻抚开，150K粒子从焦虑过渡到平静。A cocoon dissolves under your fingertips — particles shift from anxiety to calm. | Three.js · GLSL · Web Audio |
+| 4 | **[Grand Jiangshan · 万里江山图](grand-jiangshan/grand-jiangshan.html)** | 470K粒子在4D Simplex噪声中生成程序化山水，可旋转探索。470K particles form procedural landscape — rotate and explore. | Three.js · GLSL |
+| 5 | **[Glass Rain · 琉璃化雨](glass-rain/glass-rain.html)** | 眼泪化为琉璃，指尖划过玻璃表面激起涟漪。Tears become glass — your fingertip sends ripples across the surface. | Three.js · GLSL |
+| 6 | **[Breathing Boundary · 呼吸边界](breathing-boundary/breathing-boundary.html)** | 一层活着的膜在呼吸，双耳节拍（Delta 58Hz+61Hz）引导脑波。A living membrane breathes — binaural beats guide your brainwaves. | Three.js · GLSL · Web Audio |
+| 7 | **[Overthinking Engine · 过载脑区](overthinking-engine/overthinking-engine.html)** | CRT终端里，过度思考被逐字敲出，10秒后自动释怀。Overthinking typed out on a CRT terminal — auto-releases after 10 seconds. | CSS 3D · GSAP · Web Audio |
+| 8 | **[Cosmic Recollection · 宇宙回响V78](cosmic-recollection/cosmic-recollection.html)** | 多层深空视差——万物皆有裂痕，那是光照进来的地方。Deep space parallax — cracks are where the light gets in. | Three.js · Canvas 2D · CSS 3D |
+| 9 | **[Silent Translator · 无声翻译官](silent-translator/silent-translator.html)** | 身体替你说了说不出的话，逐帧素描 + Fmaj7和弦，零依赖。Your body speaks what you can't — frame-by-frame sketch + Fmaj7 chords, zero dependencies. | Canvas 2D · Web Audio |
+| 10 | **[Pixel Aquarium · 像素水族箱](pixel-aquarium/pixel-aquarium.html)** | 6条像素小鱼在毛玻璃水箱游动，点击投食、双击敲玻璃。6 pixel fish in a frosted glass tank — tap feed, double-tap knock. | p5.js · Canvas 2D |
 
 <details>
 <summary><b>+ 5 more works / 另外 5 件作品</b></summary>
 
-| Work / 作品 | One-liner |
-|------------|-----------|
-| [Sumi-e Taichi · 水墨太极](sumi-e-taichi/sumi-e-taichi.html) | Ink drop meets rice paper — taichi gravity field, ink ripple |
-| [Layered Mountains · 青绿层峦](layered-mountains/layered-mountains.html) | 250K particle landscape, 3-layer shanshui, touch scatter |
-| [Deep Blue Breath · 深蓝呼吸](deep-blue-breath/deep-blue-breath.html) | 25K particles, press-and-hold breath progress, blue→gold transition |
-| [Time Particle Clock · 时间流转](time-particle-clock/time-particle-clock.html) | 200K particle analog clock, mouse-drag time control, Web Audio ticks |
-| [Sky Through Glass · 玻璃天空](sky-through-glass/sky-through-glass.html) | p5.js FBO masking, drag-to-wipe, VHS/CRT nostalgia overlays |
+| Work / 作品 | 核心理念 / Concept |
+|------------|-------------------|
+| [Sumi-e Taichi · 水墨太极](sumi-e-taichi/sumi-e-taichi.html) | 一滴墨落入宣纸，既是破坏也是开始——太极引力场中的墨韵流转。Ink meets rice paper — destruction and beginning in a taichi gravity field. |
+| [Layered Mountains · 青绿层峦](layered-mountains/layered-mountains.html) | 250K粒子堆叠出青绿山水，触之即散，聚散随缘。250K particles form layered shanshui — touch scatters, time gathers. |
+| [Deep Blue Breath · 深蓝呼吸](deep-blue-breath/deep-blue-breath.html) | 深蓝之中，金色粒子随按住呼吸的节奏缓缓升起。In deep blue, golden particles rise with the rhythm of held breath. |
+| [Time Particle Clock · 时间流转](time-particle-clock/time-particle-clock.html) | 时间是流动的粒子——200K粒子构成的表盘，拖拽加速、松手即止。Time is flowing particles — 200K particle clock, drag to speed up. |
+| [Sky Through Glass · 玻璃天空](sky-through-glass/sky-through-glass.html) | 指腹划过毛玻璃，擦开VHS噪点露出天空——Frutiger Aero美学的怀旧疗愈。Finger wipes frosted glass to reveal sky — Frutiger Aero nostalgia. |
 
 </details>
 
