@@ -109,12 +109,13 @@ Each `.html` file is a self-contained experiment. Open it, interact, let the alg
 
 ---
 
-## 🤝 Related / 相关项目
+## 🔗 More from @shasha1108
 
-- [h5-publish-skill](https://github.com/shasha1108/h5-publish-skill) — The Claude Code skill that auto-publishes works to this repo with GEO/SEO optimization
-- [healing-space](https://github.com/shasha1108/healing-space) — Claude Code skill for generating touch-driven healing H5 pages (p5.js / Three.js / WebGL / Web Audio)
-
-- [inner-voice](https://github.com/shasha1108/inner-voice) — Xiaohongshu emotional content creation skill
-- [pixel-bloom](https://github.com/shasha1108/pixel-bloom) — Pixel art + Frutiger Aero H5 generator
+| Repo | What |
+|------|------|
+| [healing-space](https://github.com/shasha1108/healing-space) | 触觉驱动的交互式疗愈 H5 生成器——GPU 流体、WebGL 着色器 |
+| [pixel-bloom](https://github.com/shasha1108/pixel-bloom) | 像素艺术 × 毛玻璃美学——赛博养宠、电子水族箱 |
+| [inner-voice](https://github.com/shasha1108/inner-voice) | 小红书情绪内容创作——隐喻挖掘、场景写作、视觉叙事 |
+| [h5-publish-skill](https://github.com/shasha1108/h5-publish-skill) | 一键发布 H5 到 GitHub Pages——拖入文件夹即上线 |
 
 <p align="center"><sub>Source code under <a href="LICENSE">MIT License</a> | 网站源代码采用 MIT 协议</sub></p>
