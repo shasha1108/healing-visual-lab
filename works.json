@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 16,
+  "total": 17,
   "updated": "2026-06-29",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -17,7 +17,8 @@
       "deep-blue-breath",
       "grand-jiangshan",
       "time-particle-clock",
-      "unbound-mind"
+      "unbound-mind",
+      "falling-verse"
     ],
     "canvas_2d": [
       "breathing-boundary",
@@ -38,7 +39,8 @@
       "deep-blue-breath",
       "grand-jiangshan",
       "time-particle-clock",
-      "unbound-mind"
+      "unbound-mind",
+      "falling-verse"
     ],
     "web_audio": [
       "breath-mirror",
@@ -48,7 +50,8 @@
       "time-particle-clock",
       "unbound-mind",
       "sky-through-glass",
-      "aero-slime"
+      "aero-slime",
+      "falling-verse"
     ],
     "css_3d_gsap": [
       "cosmic-recollection",
@@ -65,7 +68,8 @@
       "deep-blue-breath",
       "grand-jiangshan",
       "time-particle-clock",
-      "unbound-mind"
+      "unbound-mind",
+      "falling-verse"
     ],
     "fluid_simulation": [
       "breath-mirror",
@@ -81,7 +85,8 @@
       "unbound-mind",
       "sky-through-glass",
       "pixel-aquarium",
-      "aero-slime"
+      "aero-slime",
+      "falling-verse"
     ],
     "zero_dependency": [
       "silent-translator"
@@ -473,6 +478,30 @@
         "aero-slime.html",
         "aero-slime.md",
         "aero-slime_1.gif"
+      ]
+    },
+    {
+      "slug": "falling-verse",
+      "title_en": "Falling Verse",
+      "title_zh": "宇宙时钟",
+      "tagline": "时间的字符拓扑。数字从行星环上剥落，金→珊瑚粉→星空蓝，沉入幽蓝水面。",
+      "tech": [
+        "Three.js WebGL",
+        "Web Audio API",
+        "Planetary Orbital Mechanics",
+        "Particle Typography",
+        "Sacred Geometry"
+      ],
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 2,
+      "particle_count": "N/A (orbital particle system)",
+      "files": [
+        "falling-verse.html",
+        "falling-verse.md",
+        "falling-verse_1.gif"
       ]
     }
   ]
