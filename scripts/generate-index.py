@@ -115,6 +115,8 @@ def update_index(data):
 
     html = re.sub(r'\d+ works · Updated', f'{len(works)} works · Updated', html)
     html = re.sub(r'Updated \d{4}-\d{2}-\d{2}', f'Updated {today}', html, count=1)
+    # Sync JSON-LD dateModified to avoid stale structured data
+    html = re.sub(r'"dateModified":\s*"\d{4}-\d{2}-\d{2}"', f'"dateModified": "{today}"', html)
 
     with open(index_path, 'w') as f:
         f.write(html)
