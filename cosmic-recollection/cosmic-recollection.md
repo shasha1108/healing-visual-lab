@@ -1,6 +1,5 @@
 # Cosmic Recollection · 宇宙回响 V78（哲学终章）
 
-> **Tech Keywords:** CSS 3D transforms, multi-layer parallax, cosmic timeline animation, GSAP, philosophical digital art
 
 > **一句话定义:** 这是一个基于 Three.js WebGL + Canvas 纹理生成构建的宇宙时间线可视化，专门解决了个人记忆与宏大宇宙叙事之间的视觉连接问题。
 > **What it does:** A cosmic timeline visualization built with Three.js WebGL and Canvas texture generation that visualizes the connection between personal memory and grand cosmic narrative.

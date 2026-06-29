@@ -1,6 +1,5 @@
 # Sumi-e Taichi · 水墨太极：滴水生波
 
-> **Tech Keywords:** Canvas 2D, particle physics, taichi gravity field, ink ripple simulation, zen circle generative art
 
 > **一句话定义:** 这是一个基于 Three.js WebGL 构建的水墨太极粒子物理模拟，专门解决了太极引力场驱动粒子形成水墨扩散与回旋效果的实时交互问题。
 > **What it does:** A sumi-e taichi particle physics simulation built with Three.js WebGL that drives particles to form ink-wash diffusion and rotation effects through a taichi gravity field algorithm.

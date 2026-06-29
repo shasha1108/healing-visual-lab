@@ -1,6 +1,5 @@
 # Silent Translator · 无声的翻译官 | 躯体化便签
 
-> **Tech Keywords:** frame-by-frame anatomical sketch, Web Audio healing engine, somatic therapy art, body-mind connection
 
 > **一句话定义:** 这是一个基于原生 Canvas 2D + Web Audio 构建的躯体化症状医学插图 H5，专门解决了情绪与身体症状之间关联的可视化科普问题。
 > **What it does:** A somatic symptom medical illustration H5 built with vanilla Canvas 2D and Web Audio that visualizes the connection between emotions and physical symptoms.

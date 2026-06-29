@@ -1,6 +1,5 @@
 # Breath Mirror · 息流 · 幻镜 | 东方数字疗愈
 
-> **Tech Keywords:** GPU fluid simulation, Brown noise engine, breath-responsive mirror, WebGL shader, digital zen, meditative interaction
 
 > **一句话定义:** 这是一个基于 Three.js WebGL + GLSL 片段着色器构建的 GPU 流体模拟实验，专门解决了呼吸节奏与视觉反馈实时同步的问题。
 > **What it does:** A GPU fluid simulation built with Three.js WebGL and GLSL fragment shaders that synchronizes breath rhythm with real-time visual feedback.

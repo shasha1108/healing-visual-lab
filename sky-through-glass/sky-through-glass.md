@@ -1,6 +1,5 @@
 # Sky Through Glass · 玻璃天空
 
-> **Tech Keywords:** p5.js, FBO masking, Web Audio API, Frutiger Aero, VHS aesthetic, glass-wipe interaction
 
 ![Sky Through Glass - Frutiger Aero glass-wipe interaction with VHS noise and blue sky](sky-through-glass_1.gif)
 

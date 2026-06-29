@@ -1,6 +1,5 @@
 # Overthinking Engine · 过载脑区 | The Overthinking Engine
 
-> **Tech Keywords:** GSAP animation engine, CRT cyberpunk aesthetic, typewriter narrative, overthinking, visual therapy H5
 
 > **一句话定义:** 这是一个基于 GSAP + CSS 动画构建的 CRT 复古终端风格叙事 H5，专门解决了「过度思考」心理状态的视觉外化与疗愈仪式感设计问题。
 > **What it does:** A CRT retro-terminal narrative H5 built with GSAP and CSS animation that externalizes the 'overthinking' mental state through visual glitch aesthetics and healing ritual design.

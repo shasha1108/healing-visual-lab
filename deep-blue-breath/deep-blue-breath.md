@@ -1,6 +1,5 @@
 # Deep Blue Breath · 深蓝呼吸 V204 (沉浸慢速版)
 
-> **Tech Keywords:** Three.js WebGL, 25K particle system, vortex-to-healing transition, Web Audio rain noise + Fmaj7 chords, immersive breath-responsive H5
 
 > **一句话定义:** 这是一个基于 Three.js WebGL + Web Audio API 构建的 25,000 粒子深蓝呼吸疗愈实验，专门解决了按压交互驱动粒子从漩涡模式平滑过渡到金色上升治愈模式的实时渲染问题。
 > **What it does:** A 25,000-particle deep blue breathing healing experiment built with Three.js WebGL and Web Audio API that smoothly transitions particles from vortex mode to golden ascension healing mode through press-and-hold interaction.

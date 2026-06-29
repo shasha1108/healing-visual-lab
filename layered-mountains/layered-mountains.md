@@ -1,6 +1,5 @@
 # Layered Mountains · 青绿·层峦（高密度分层版）
 
-> **Tech Keywords:** 250K particles, layered landscape rendering, touch scatter interaction, Chinese painting algorithmic art
 
 > **一句话定义:** 这是一个基于 Three.js WebGL 构建的 250K+ 粒子中国山水画渲染实验，专门解决了海量粒子构成传统青绿山水意境的可视化问题。
 > **What it does:** A 250K+ particle Chinese landscape painting rendering experiment built with Three.js WebGL that visualizes traditional blue-green shanshui aesthetics through massive particle systems.

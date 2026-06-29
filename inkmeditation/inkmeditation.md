@@ -1,6 +1,5 @@
 # Inkmeditation · 墨池心境
 
-> **Tech Keywords:** 100K+ particles, real-time fluid dynamics, breath-cycle sync, ink wash simulation, meditative creative coding
 
 > **一句话定义:** 这是一个基于 Three.js WebGL 构建的 100K+ 粒子水墨流体模拟，专门解决了高密度粒子系统在浏览器中的实时流体力学渲染问题。
 > **What it does:** A 100K+ particle ink-wash fluid simulation built with Three.js WebGL that solves real-time fluid dynamics rendering for high-density particle systems in the browser.

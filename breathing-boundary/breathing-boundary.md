@@ -1,6 +1,5 @@
 # Breathing Boundary · 呼吸边界｜The Breathing Boundary
 
-> **Tech Keywords:** threejs, webgl, custom glsl shader, particle system, web audio, binaural beats, organic membrane, touch interaction, breathing animation
 
 > **一句话定义:** 这是一个基于 Three.js WebGL + 自定义 GLSL 着色器构建的有机膜粒子系统，专门解决了呼吸节律与半透膜视觉边界动态映射的问题。
 > **What it does:** An organic membrane particle system built with Three.js WebGL and custom GLSL shaders that dynamically maps breathing rhythm to a semi-permeable visual boundary.

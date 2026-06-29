@@ -100,17 +100,6 @@
         "taichi gravity field",
         "ink ripple simulation"
       ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "particle-physics",
-        "taichi",
-        "ink-ripple",
-        "zen-circle",
-        "generative-art",
-        "ink-simulation",
-        "gravity-field"
-      ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
       "has_audio": false,
@@ -133,18 +122,6 @@
         "100K+ particles",
         "real-time fluid dynamics",
         "breath-cycle sync"
-      ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "particle-system",
-        "100k-particles",
-        "fluid-dynamics",
-        "ink-wash",
-        "breath-sync",
-        "meditative",
-        "creative-coding",
-        "digital-healing"
       ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
@@ -170,16 +147,6 @@
         "GSAP animation",
         "60K particle system"
       ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "canvas-texture",
-        "cosmic-timeline",
-        "particle-system",
-        "philosophical-art",
-        "space-narrative",
-        "digital-healing"
-      ],
       "healing_domain": "existential",
       "render": "WebGL (Three.js) + Canvas 2D + CSS 3D",
       "has_audio": false,
@@ -203,16 +170,6 @@
         "layered landscape rendering",
         "raycaster interaction"
       ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "particle-system",
-        "250k-particles",
-        "chinese-painting",
-        "layered-landscape",
-        "algorithmic-art",
-        "raycaster"
-      ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
       "has_audio": false,
@@ -235,17 +192,6 @@
         "FBO fluid simulation",
         "touch-drag physics",
         "GLSL shader"
-      ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "fbo-fluid",
-        "gravity-simulation",
-        "water-drops",
-        "touch-interaction",
-        "glsl-shader",
-        "eastern-zen",
-        "healing-h5"
       ],
       "healing_domain": "emotional_release",
       "render": "WebGL (Three.js)",
@@ -271,17 +217,6 @@
         "Web Audio healing engine",
         "CSS 3D transforms"
       ],
-      "keywords": [
-        "canvas-2d",
-        "anatomical-sketch",
-        "frame-by-frame",
-        "somatic-therapy",
-        "web-audio",
-        "body-mind",
-        "healing-art",
-        "medical-illustration",
-        "zero-dependencies"
-      ],
       "healing_domain": "somatic",
       "render": "Canvas 2D + CSS 3D",
       "has_audio": true,
@@ -306,16 +241,6 @@
         "Web Audio API",
         "Brown noise engine"
       ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "gpu-fluid",
-        "brown-noise",
-        "breath-responsive",
-        "mirror-shader",
-        "digital-zen",
-        "meditative-h5"
-      ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
       "has_audio": true,
@@ -338,16 +263,6 @@
         "CRT cyberpunk aesthetic",
         "typewriter narrative",
         "CSS animation"
-      ],
-      "keywords": [
-        "gsap",
-        "crt-effect",
-        "cyberpunk",
-        "typewriter",
-        "overthinking",
-        "visual-therapy",
-        "narrative-h5",
-        "retro-ui"
       ],
       "healing_domain": "cognitive",
       "render": "HTML/CSS (GSAP)",
@@ -373,18 +288,6 @@
         "Canvas 2D",
         "dual particle system"
       ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "glsl",
-        "custom-shader",
-        "particle-system",
-        "web-audio",
-        "binaural-beats",
-        "organic-membrane",
-        "ripple-effect",
-        "breathing-animation"
-      ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js) + Canvas 2D",
       "has_audio": true,
@@ -407,19 +310,6 @@
         "25K particle system",
         "vortex-to-healing transition",
         "Web Audio API (rain noise + Fmaj7 chords)"
-      ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "particle-system",
-        "25k-particles",
-        "deep-blue",
-        "breath-responsive",
-        "vortex-to-healing",
-        "web-audio",
-        "fmaj7-chords",
-        "rain-noise",
-        "immersive-h5"
       ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
@@ -444,19 +334,6 @@
         "4D Simplex noise terrain",
         "470K particle system",
         "OrbitControls"
-      ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "glsl",
-        "simplex-noise",
-        "terrain-generation",
-        "470k-particles",
-        "chinese-landscape",
-        "shanshui",
-        "orbit-controls",
-        "procedural-terrain",
-        "algorithmic-art"
       ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
@@ -483,19 +360,6 @@
         "Web Audio tick synthesis",
         "mouse-drag physics"
       ],
-      "keywords": [
-        "threejs",
-        "webgl",
-        "shader-material",
-        "200k-particles",
-        "analog-clock",
-        "particle-clock",
-        "time-visualization",
-        "mouse-drag",
-        "web-audio-tick",
-        "fluid-dissipation",
-        "creative-coding"
-      ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
       "has_audio": true,
@@ -520,20 +384,6 @@
         "Web Audio API",
         "spring-damper physics",
         "4-7-8 breathing rhythm"
-      ],
-      "keywords": [
-        "webgl",
-        "threejs",
-        "particle-system",
-        "healing",
-        "meditation",
-        "breathing",
-        "glsl",
-        "audio-visual",
-        "interactive-art",
-        "emotion-regulation",
-        "spring-physics",
-        "smoothstep"
       ],
       "healing_domain": "emotional_release",
       "render": "WebGL (Three.js)",
@@ -562,16 +412,6 @@
         "CRT/VHS CSS",
         "Custom Cursor"
       ],
-      "keywords": [
-        "p5js",
-        "fbo-masking",
-        "web-audio-api",
-        "frutiger-aero",
-        "vhs-aesthetic",
-        "glass-wipe",
-        "digital-healing",
-        "nostalgia"
-      ],
       "healing_domain": "emotional_release",
       "render": "Canvas2D + DOM",
       "has_audio": true,
@@ -594,16 +434,6 @@
         "CSS Glassmorphism",
         "Procedural Pixel Flora",
         "AI FSM"
-      ],
-      "keywords": [
-        "pixel-art",
-        "frutiger-aero",
-        "aquarium",
-        "digital-pet",
-        "p5js",
-        "glassmorphism",
-        "procedural-generation",
-        "calming-h5"
       ],
       "healing_domain": "meditation",
       "render": "Canvas2D + DOM",

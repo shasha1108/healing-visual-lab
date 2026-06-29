@@ -1,6 +1,5 @@
 # Unbound Mind · 释·茧
 
-> **Tech Keywords:** WebGL, Three.js, Particle System, Custom GLSL Shaders, Web Audio API, 4-7-8 Breathing
 
 > **一句话定义:** 这是一个基于 Three.js + WebGL 构建的粒子疗愈交互作品，专门解决了用户通过触觉拖拽将内心焦虑视觉化为星系平静、配合 4-7-8 呼吸节奏实现情绪调节的问题。
 > **What it does:** A WebGL particle healing experience built with Three.js that transforms anxious thought patterns into calm galaxy formations through touch-based interaction and 4-7-8 breathing rhythm.

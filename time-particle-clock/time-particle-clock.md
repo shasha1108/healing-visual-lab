@@ -1,6 +1,5 @@
 # Time Particle Clock · 时间流转 - 粒子时钟
 
-> **Tech Keywords:** Three.js WebGL, custom ShaderMaterial, 200K particles, analog clock algorithm, mouse-drag physics, Web Audio tick synthesis, fluid dissipation
 
 > **一句话定义:** 这是一个基于 Three.js WebGL + 自定义 ShaderMaterial 构建的 200,000 粒子模拟时钟实验，通过时针/分针/秒针三套粒子系统将抽象时间可视化，专门解决了拖拽交互驱动时钟加速/减速时粒子流体消散感与指针结构保持之间的平衡问题。
 > **What it does:** A 200,000-particle analog clock experiment built with Three.js WebGL and custom ShaderMaterial that visualizes abstract time through three particle systems (hour/minute/second hands), balancing fluid particle dissipation with clock-hand structural integrity during drag-accelerated time manipulation.

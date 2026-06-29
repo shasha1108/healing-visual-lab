@@ -1,6 +1,5 @@
 # Pixel Aquarium · 像素水族箱
 
-> **Tech Keywords:** p5.js, pixel-art, Frutiger Aero, CSS glassmorphism, procedural flora, digital-aquarium, calming H5
 
 ![Pixel Aquarium — 像素小鱼在 Frutiger Aero 毛玻璃水族箱中游动，点击投食，双击敲玻璃](pixel-aquarium_1.gif)
 
