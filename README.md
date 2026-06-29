@@ -1,121 +1,222 @@
-# Healing Visual Lab · 视觉疗愈实验室
+<a id="top"></a>
 
-> **Interactive art & digital wellness experiments** — Three.js · WebGL · Canvas particles · Web Audio API · GLSL custom shaders · Creative coding for emotional design. A growing collection of generative healing browser-art: open a page and let the visuals do what words cannot. Interaction-driven, procedural-art and shader-art throughout.
-> **用代码翻译情绪**——当语言不够用时，让画面和声音替你说话。一个持续生长的数字交互疗愈作品集。大部分作品通过 CDN 加载 Three.js。
+<div align="center">
 
-[![Topics](https://img.shields.io/badge/topics-threejs%20%7C%20webgl%20%7C%20canvas%20%7C%20particle--system%20%7C%20creative--coding%20%7C%20web--audio%20%7C%20glsl%20%7C%20digital--healing-blue)](https://github.com/shasha1108/healing-visual-lab)
+<h1>Healing Visual Lab · 视觉疗愈实验室</h1>
 
----
+<p><em>用代码翻译情绪——当语言不够用时，让画面和声音替你说话。一个持续生长的交互式数字疗愈作品集。</em></p>
 
-## 🌀 What is this / 这是什么
+<p>
+  <a href="https://github.com/shasha1108/healing-visual-lab/stargazers"><img src="https://img.shields.io/github/stars/shasha1108/healing-visual-lab?style=for-the-badge&color=7C5CBF" alt="Stars"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
+  <a href="https://shasha1108.github.io/healing-visual-lab/"><img src="https://img.shields.io/badge/Live-Demo-4CAF50?style=for-the-badge" alt="Live Demo"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Works-15-ED225D?style=for-the-badge" alt="15 Works"></a>
+</p>
 
-**Problem:** Modern emotional life is crowded — anxiety loops, sleepless nights, somatic tension, digital overstimulation. Traditional outlets (journaling, therapy, art-making) have learning curves. But interactive visuals don't. You don't need any skill. You just open a page.
+<p>
+  <a href="#-快速开始">快速开始</a> ·
+  <a href="#-作品目录">作品目录</a> ·
+  <a href="#-技术全景">技术全景</a> ·
+  <a href="#-创作理念">创作理念</a> ·
+  <a href="#-项目结构">项目结构</a>
+</p>
 
-**Solution:** Every piece in this repo is a self-contained H5 interactive experience. No login. No payment. No psychoeducation reading required. You watch. You touch. You breathe with the algorithm.
-
-**Technical approach:** Each `.html` file is a standalone creative-coding experiment — particle systems (10K–500K particles), GPU fluid simulation, custom GLSL fragment shaders, Web Audio API synthesized soundscapes, CSS 3D spatial animation, and mouse/touch interaction design. Most works load Three.js r128 via CDN; `silent-translator` is the only zero-dependency work.
-
-**问题：** 现代人的情绪太拥挤了——焦虑、失眠、躯体化、过度自我审视。传统的表达出口有门槛，但交互式视觉没有。
-
-**方案：** 每件作品是一个独立的 H5 页面。打开浏览器就能进入一段短暂的自我修复。你只需要看、听、触碰。
-
-**技术路线：** HTML/CSS/JS，无构建步骤。Three.js WebGL + Canvas 2D 粒子系统、GPU 流体模拟、自定义 GLSL 着色器、Web Audio 合成音景、CSS 3D 空间动画、鼠标/触屏交互设计。大部分作品通过 CDN 加载 Three.js r128。
-
-**一个哲学内核贯穿所有作品：**
-
-> 身体记得的，代码可以翻译。代码翻译不了的，时间可以消融。
-> What the body remembers, code can translate. What code cannot translate, time dissolves.
+</div>
 
 ---
 
-## 📦 Works / 作品目录
+<details open>
+<summary><strong>📑 目录</strong></summary>
 
-> Click to open live demo · 点击作品名直接体验
-
-| # | Work / 作品 | 核心理念 / Concept | Tech |
-|:--:|------------|-------------------|------|
-| 1 | **[Inkmeditation · 墨池心境](https://shasha1108.github.io/healing-visual-lab/inkmeditation/inkmeditation.html)** | 一滴墨落入水中，十万粒子随呼吸节律沉浮。An ink drop in water — 100K particles breathe with you. | Three.js · GLSL · Web Audio |
-| 2 | **[Breath Mirror · 息流幻镜](https://shasha1108.github.io/healing-visual-lab/breath-mirror/breath-mirror.html)** | 摄像头将你的影像化为GPU流体雾面，呼吸即镜像。Camera turns you into GPU fluid fog — breathing is the mirror. | Three.js · GLSL · WebRTC |
-| 3 | **[Unbound Mind · 释·茧](https://shasha1108.github.io/healing-visual-lab/unbound-mind/unbound-mind.html)** | 情绪的茧被指尖轻轻抚开，150K粒子从焦虑过渡到平静。A cocoon dissolves under your fingertips — particles shift from anxiety to calm. | Three.js · GLSL · Web Audio |
-| 4 | **[Grand Jiangshan · 万里江山图](https://shasha1108.github.io/healing-visual-lab/grand-jiangshan/grand-jiangshan.html)** | 470K粒子在4D Simplex噪声中生成程序化山水，可旋转探索。470K particles form procedural landscape — rotate and explore. | Three.js · GLSL |
-| 5 | **[Glass Rain · 琉璃化雨](https://shasha1108.github.io/healing-visual-lab/glass-rain/glass-rain.html)** | 眼泪化为琉璃，指尖划过玻璃表面激起涟漪。Tears become glass — your fingertip sends ripples across the surface. | Three.js · GLSL |
-| 6 | **[Breathing Boundary · 呼吸边界](https://shasha1108.github.io/healing-visual-lab/breathing-boundary/breathing-boundary.html)** | 一层活着的膜在呼吸，双耳节拍（Delta 58Hz+61Hz）引导脑波。A living membrane breathes — binaural beats guide your brainwaves. | Three.js · GLSL · Web Audio |
-| 7 | **[Overthinking Engine · 过载脑区](https://shasha1108.github.io/healing-visual-lab/overthinking-engine/overthinking-engine.html)** | CRT终端里，过度思考被逐字敲出，10秒后自动释怀。Overthinking typed out on a CRT terminal — auto-releases after 10 seconds. | CSS 3D · GSAP · Web Audio |
-| 8 | **[Cosmic Recollection · 宇宙回响V78](https://shasha1108.github.io/healing-visual-lab/cosmic-recollection/cosmic-recollection.html)** | 多层深空视差——万物皆有裂痕，那是光照进来的地方。Deep space parallax — cracks are where the light gets in. | Three.js · Canvas 2D · CSS 3D |
-| 9 | **[Silent Translator · 无声翻译官](https://shasha1108.github.io/healing-visual-lab/silent-translator/silent-translator.html)** | 身体替你说了说不出的话，逐帧素描 + Fmaj7和弦，零依赖。Your body speaks what you can't — frame-by-frame sketch + Fmaj7 chords, zero dependencies. | Canvas 2D · Web Audio |
-| 10 | **[Pixel Aquarium · 像素水族箱](https://shasha1108.github.io/healing-visual-lab/pixel-aquarium/pixel-aquarium.html)** | 6条像素小鱼在毛玻璃水箱游动，点击投食、双击敲玻璃。6 pixel fish in a frosted glass tank — tap feed, double-tap knock. | p5.js · Canvas 2D |
-
-<details>
-<summary><b>+ 5 more works / 另外 5 件作品</b></summary>
-
-| Work / 作品 | 核心理念 / Concept |
-|------------|-------------------|
-| [Sumi-e Taichi · 水墨太极](https://shasha1108.github.io/healing-visual-lab/sumi-e-taichi/sumi-e-taichi.html) | 一滴墨落入宣纸，既是破坏也是开始——太极引力场中的墨韵流转。Ink meets rice paper — destruction and beginning in a taichi gravity field. |
-| [Layered Mountains · 青绿层峦](https://shasha1108.github.io/healing-visual-lab/layered-mountains/layered-mountains.html) | 250K粒子堆叠出青绿山水，触之即散，聚散随缘。250K particles form layered shanshui — touch scatters, time gathers. |
-| [Deep Blue Breath · 深蓝呼吸](https://shasha1108.github.io/healing-visual-lab/deep-blue-breath/deep-blue-breath.html) | 深蓝之中，金色粒子随按住呼吸的节奏缓缓升起。In deep blue, golden particles rise with the rhythm of held breath. |
-| [Time Particle Clock · 时间流转](https://shasha1108.github.io/healing-visual-lab/time-particle-clock/time-particle-clock.html) | 时间是流动的粒子——200K粒子构成的表盘，拖拽加速、松手即止。Time is flowing particles — 200K particle clock, drag to speed up. |
-| [Sky Through Glass · 玻璃天空](https://shasha1108.github.io/healing-visual-lab/sky-through-glass/sky-through-glass.html) | 指腹划过毛玻璃，擦开VHS噪点露出天空——Frutiger Aero美学的怀旧疗愈。Finger wipes frosted glass to reveal sky — Frutiger Aero nostalgia. |
+- [概述](#-概述)
+- [快速开始](#-快速开始)
+- [作品目录](#-作品目录)
+- [技术全景](#-技术全景)
+- [创作理念](#-创作理念)
+- [相关项目](#-相关项目)
+- [许可](#-许可)
 
 </details>
 
 ---
 
-## 🛠️ Technical landscape / 技术全景
+## 📖 概述
 
-| Domain / 领域 | Techniques used / 使用的技术 |
-|---------------|---------------------------|
-| **Particle systems / 粒子系统** | Three.js WebGL point sprites, GPU instanced rendering, Canvas 2D, 10K–500K real-time particles |
-| **Fluid simulation / 流体模拟** | Navier-Stokes simplified, velocity fields, curl noise, semi-Lagrangian advection |
-| **Custom shaders / 自定义着色器** | GLSL fragment shaders, simplex noise, FBM, Fresnel effects, vertex displacement, organic undulation |
-| **Audio synthesis / 音频合成** | Web Audio API oscillators, binaural beats (Delta/Theta), ASMR-grade chime envelopes, ambient drones |
-| **Interaction / 交互设计** | Click/drag physics, long-press detection, ripple/particle collision response, breath-cycle sync |
-| **Animation / 动画** | requestAnimationFrame, GSAP timelines, CSS 3D transforms, multi-layer parallax |
-| **Rendering / 渲染** | ACES filmic tone mapping, additive blending, post-processing effects, CRT scanlines |
+**Healing Visual Lab** 是一个持续生长的交互式数字疗愈作品集——15 件独立的 H5 页面，每件都是一个完整的创意编程实验。
+
+现代人的情绪太拥挤了——焦虑、失眠、躯体化、过度自我审视。传统的表达出口有门槛（写日记、做咨询、搞艺术），但交互式视觉没有。你不需要任何技能——打开页面，看、听、触碰，让算法陪你待一会儿。
+
+| 特点 | 说明 |
+|------|------|
+| 🚪 **零摩擦** | 每个 `.html` 文件独立运行，无框架、无构建步骤、无需注册——只有浏览器 |
+| 🎨 **粒子系统** | 10K–500K 实时粒子，GPU 实例化渲染 |
+| 🌊 **流体模拟** | Navier-Stokes 简化模型、FBO ping-pong、速度场、旋度噪声 |
+| ✨ **自定义着色器** | GLSL 片元着色器、Simplex/FBM 噪声、菲涅尔效果、顶点位移 |
+| 🔊 **音频合成** | Web Audio API 振荡器、双耳节拍（Delta/Theta）、环境 drone、Fmaj7 和弦 |
+| 🖐️ **触觉交互** | 点击/拖拽物理、长按检测、涟漪/粒子碰撞响应、呼吸节拍同步 |
+
+> **一个哲学内核贯穿所有作品：** 身体记得的，代码可以翻译。代码翻译不了的，时间可以消融。What the body remembers, code can translate. What code cannot translate, time dissolves.
+
+<p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
 
 ---
 
-## 🌱 Creative philosophy / 创作理念
+## 🚀 快速开始
 
-**Code translates what words cannot.** Every piece in this repo starts with an emotional state that's hard to name — and becomes an interactive experience that doesn't need explanation.
+### 在线体验
 
-**What I believe:**
-- **Zero friction.** Open a page. No frameworks, no build steps, no sign-up. Just the browser.
-- **Less is more.** Vanilla HTML/CSS/JS wherever possible. Dependencies only when they earn their place.
-- **Interaction over instruction.** The best interface doesn't tell you what to do. You touch, it responds, you understand.
-- **Emotion deserves engineering.** Feelings are complex systems. So is the code that holds them.
+每个作品都是一个独立的 H5 页面，点击即开：
 
-Each `.html` file is a self-contained experiment. Open it, interact, let the algorithm sit with you for a moment.
+```
+https://shasha1108.github.io/healing-visual-lab/inkmeditation/inkmeditation.html
+```
+
+### 本地运行
+
+```bash
+git clone https://github.com/shasha1108/healing-visual-lab.git
+cd healing-visual-lab
+# 用浏览器打开任意作品的 .html 文件
+open inkmeditation/inkmeditation.html
+```
+
+### 按情绪选择
+
+| 你感觉…… | 推荐作品 |
+|----------|----------|
+| 🌀 焦虑、思绪停不下来 | 墨池心境、释·茧、过载脑区 |
+| 😮‍💨 疲惫、身体沉重 | 深蓝呼吸、息流幻镜、呼吸边界 |
+| 🌧️ 难过、说不清的沉重 | 琉璃化雨、无声翻译官、玻璃天空 |
+| 🌌 孤独、与世界的疏离 | 宇宙回响、万里江山图、青绿层峦 |
+| 🧘 想安静一会儿 | 水墨太极、像素水族箱、时间流转 |
+
+> 💡 **不知道怎么选？从墨池心境开始——** 一滴墨落入水中，十万粒子随呼吸节律沉浮。这是实验室最早也最受欢迎的作品。
+
+<p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
+
+---
+
+## 📦 Works / 作品目录
+
+> 点击作品名直接体验 · Click to open live demo
+
+<!-- WORKS_START -->
+<!-- ⚠️ 此区域由 scripts/generate-index.py 自动生成，请勿手动编辑 -->
+<!-- ⚠️ This section is auto-generated by scripts/generate-index.py — DO NOT EDIT MANUALLY -->
+
+<details open>
+<summary><b>🌀 Three.js / WebGL</b> &ensp;<sub>11 works</sub></summary>
+
+- [水墨太极 / Sumi-e Taichi](sumi-e-taichi/sumi-e-taichi.html) — 一滴墨落入宣纸——既是破坏，也是开始
+- [墨池心境 / Inkmeditation](inkmeditation/inkmeditation.html) — 算法物理学 × 视觉设计 × 心理疗愈
+- [宇宙回响 V78 / Cosmic Recollection](cosmic-recollection/cosmic-recollection.html) — 万物皆有裂痕——那是光照进来的地方
+- [青绿·层峦 / Layered Mountains](layered-mountains/layered-mountains.html) — 触之即散，聚散随缘
+- [琉璃化雨 / Glass Rain](glass-rain/glass-rain.html) — 眼泪落尽，便见晴空
+- [息流 · 幻镜 / Breath Mirror](breath-mirror/breath-mirror.html) — 这里没有深渊，也没有波澜
+- [呼吸边界 / Breathing Boundary](breathing-boundary/breathing-boundary.html) — 看似隔绝，实则翻译——这是一层活着的、会呼吸的边界
+- [深蓝呼吸 V204 / Deep Blue Breath](deep-blue-breath/deep-blue-breath.html) — 深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升
+- [万里江山图 - 宏大视界 / Grand Jiangshan](grand-jiangshan/grand-jiangshan.html) — 我见青山多妩媚，料青山见我应如是
+- [时间流转 - 粒子时钟 / Time Particle Clock](time-particle-clock/time-particle-clock.html) — 时间是流动的粒子——拖拽加速，松开即止，每一秒都有声音
+- [释·茧 / Unbound Mind](unbound-mind/unbound-mind.html) — 这团乱麻，是你此刻的思绪吗？试着长按屏幕，慢慢抚平它们...
+
+</details>
+
+<details open>
+<summary><b>🎨 Canvas / p5.js</b> &ensp;<sub>3 works</sub></summary>
+
+- [无声的翻译官 / Silent Translator](silent-translator/silent-translator.html) — 身体替你说了说不出的话
+- [玻璃天空 / Sky Through Glass](sky-through-glass/sky-through-glass.html) — 蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。
+- [像素水族箱 / Pixel Aquarium](pixel-aquarium/pixel-aquarium.html) — 晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。
+
+</details>
+
+<details open>
+<summary><b>💻 CSS / GSAP / DOM</b> &ensp;<sub>1 works</sub></summary>
+
+- [过载脑区 / Overthinking Engine](overthinking-engine/overthinking-engine.html) — 过度清醒地审视自己，正在毁掉我们的生活
+
+</details>
+
+<!-- WORKS_END -->
+
+*Last updated: 2026-06-29 | Works: 15 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
+
+<p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
+
+---
+
+## 🛠️ 技术全景
+
+| 领域 | 技术 |
+|------|------|
+| 🎨 **粒子系统** | Three.js WebGL point sprites、GPU 实例化渲染、Canvas 2D、10K–500K 实时粒子 |
+| 🌊 **流体模拟** | Navier-Stokes 简化模型、速度场、旋度噪声、半拉格朗日平流 |
+| ✨ **自定义着色器** | GLSL 片元着色器、Simplex/FBM 噪声、菲涅尔效果、顶点位移、有机波动 |
+| 🔊 **音频合成** | Web Audio API 振荡器、双耳节拍（Delta/Theta）、ASMR 级钟声包络、环境 drone |
+| 🖐️ **交互设计** | 点击/拖拽物理、长按检测、涟漪/粒子碰撞响应、呼吸节拍同步 |
+| 🎬 **动画** | requestAnimationFrame、GSAP Timeline、CSS 3D Transform、多层视差 |
+| 🌫️ **渲染** | ACES 电影色调映射、AdditiveBlending 叠加、后处理效果、CRT 扫描线 |
+
+### 技术覆盖矩阵
+
+| 能力 | 作品数 | 代表作品 |
+|------|--------|----------|
+| Three.js / WebGL | 11 | 墨池心境、万里江山图、释·茧 |
+| Canvas 2D / p5.js | 5 | 无声翻译官、玻璃天空、像素水族箱 |
+| WebGL / GLSL 着色器 | 11 | 息流幻镜、呼吸边界、琉璃化雨 |
+| Web Audio API | 7 | 深蓝呼吸、释·茧、无声翻译官 |
+| CSS 3D / GSAP | 4 | 宇宙回响、过载脑区、无声翻译官 |
+| 粒子系统（10K+） | 9 | 万里江山图（470K）、青绿层峦（250K）、墨池心境（100K） |
+| 流体模拟 | 3 | 息流幻镜、琉璃化雨、墨池心境 |
+| 触觉交互 | 8 | 琉璃化雨、释·茧、玻璃天空、像素水族箱 |
+
+<p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
+
+---
+
+## 🌱 创作理念
 
 **代码翻译语言说不清的东西。** 每件作品始于一个难以命名的情绪——焦虑、疲惫、说不出口的重量——然后变成一个不需要解释的交互体验。
 
-**我相信的：**
-- **零摩擦。** 打开页面就行。没有框架、没有构建步骤、不需要注册。只有浏览器。
-- **少即是多。** 尽可能纯 HTML/CSS/JS。依赖项只在值得时才引入。
-- **交互胜过说明。** 最好的界面不告诉你怎么做——你触碰，它回应，你就懂了。
-- **情绪值得被认真工程化。** 感情是复杂系统。承载它们的代码也是。
+| 信条 | 含义 |
+|------|------|
+| 🚪 **零摩擦** | 打开页面就行。没有框架、没有构建步骤、不需要注册。只有浏览器。 |
+| 🪶 **少即是多** | 尽可能纯 HTML/CSS/JS。依赖项只在值得时才引入。 |
+| 🖐️ **交互胜过说明** | 最好的界面不告诉你怎么做——你触碰，它回应，你就懂了。 |
+| ⚙️ **情绪值得被认真工程化** | 感情是复杂系统。承载它们的代码也是。 |
 
 每个 `.html` 文件是一个独立的实验。打开、交互、让算法陪你待一会儿。
 
----
-
-## 📋 Continuously updated / 持续更新
-
-> If one of these pieces made you feel seen — that's the only reason this repo exists.
 > 如果其中某件作品让你感到被看见——那就是这个仓库存在的全部意义。
+> If one of these pieces made you feel seen — that's the only reason this repo exists.
+
+<p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
 
 ---
 
-*Last updated: 2026-06-26 | Works: 15 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
+## 🔗 相关项目
+
+| 仓库 | 做什么 |
+|------|--------|
+| [**healing-space**](https://github.com/shasha1108/healing-space) | 触觉驱动的交互式疗愈 H5 生成器——GPU 流体、WebGL 着色器 |
+| [**pixel-bloom**](https://github.com/shasha1108/pixel-bloom) | 像素艺术 × 毛玻璃美学——赛博养宠、电子水族箱、像素盆栽 |
+| [**inner-voice**](https://github.com/shasha1108/inner-voice) | 小红书情绪内容创作——隐喻挖掘、场景写作、视觉叙事 |
+| [**h5-publish-skill**](https://github.com/shasha1108/h5-publish-skill) | 一键发布 H5 到 GitHub Pages——拖入文件夹即上线 |
+
+<p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
 
 ---
 
-## 🔗 More from @shasha1108
+## 📄 许可
 
-| Repo | What |
-|------|------|
-| [healing-space](https://github.com/shasha1108/healing-space) | 触觉驱动的交互式疗愈 H5 生成器——GPU 流体、WebGL 着色器 |
-| [pixel-bloom](https://github.com/shasha1108/pixel-bloom) | 像素艺术 × 毛玻璃美学——赛博养宠、电子水族箱 |
-| [inner-voice](https://github.com/shasha1108/inner-voice) | 小红书情绪内容创作——隐喻挖掘、场景写作、视觉叙事 |
-| [h5-publish-skill](https://github.com/shasha1108/h5-publish-skill) | 一键发布 H5 到 GitHub Pages——拖入文件夹即上线 |
+MIT © 2026 [@shasha1108](https://github.com/shasha1108) —— 详见 [LICENSE](LICENSE)。
 
-<p align="center"><sub>Source code under <a href="LICENSE">MIT License</a> | 网站源代码采用 MIT 协议</sub></p>
+<br>
+
+<div align="center">
+
+<sub>用代码翻译情绪，让算法陪你待一会儿。 Code that translates what words cannot — let the algorithm sit with you for a moment.</sub>
+
+</div>
+
+<p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
