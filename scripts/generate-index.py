@@ -17,6 +17,7 @@ def load_works():
 def update_readme(data):
     works = data["works"]
     today = date.today().isoformat()
+    pages_base = data.get("pages", "https://shasha1108.github.io/healing-visual-lab/")
 
     # Group works by render type
     groups = {
@@ -43,7 +44,8 @@ def update_readme(data):
             slug = w["slug"]
             title = f"{w.get('title_zh','')} / {w.get('title_en','')}"
             tagline = (w.get('tagline','') or "")[:60]
-            items.append(f"- [{title}]({slug}/{slug}.html) — {tagline}")
+            url = f"{pages_base}{slug}/{slug}.html"
+            items.append(f"- [{title}]({url}) — {tagline}")
         items_str = "\n".join(items)
         e = emoji.get(group_name, "")
         sections.append(

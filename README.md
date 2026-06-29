@@ -107,33 +107,33 @@ open inkmeditation/inkmeditation.html
 <details open>
 <summary><b>🌀 Three.js / WebGL</b> &ensp;<sub>11 works</sub></summary>
 
-- [水墨太极 / Sumi-e Taichi](sumi-e-taichi/sumi-e-taichi.html) — 一滴墨落入宣纸——既是破坏，也是开始
-- [墨池心境 / Inkmeditation](inkmeditation/inkmeditation.html) — 算法物理学 × 视觉设计 × 心理疗愈
-- [宇宙回响 V78 / Cosmic Recollection](cosmic-recollection/cosmic-recollection.html) — 万物皆有裂痕——那是光照进来的地方
-- [青绿·层峦 / Layered Mountains](layered-mountains/layered-mountains.html) — 触之即散，聚散随缘
-- [琉璃化雨 / Glass Rain](glass-rain/glass-rain.html) — 眼泪落尽，便见晴空
-- [息流 · 幻镜 / Breath Mirror](breath-mirror/breath-mirror.html) — 这里没有深渊，也没有波澜
-- [呼吸边界 / Breathing Boundary](breathing-boundary/breathing-boundary.html) — 看似隔绝，实则翻译——这是一层活着的、会呼吸的边界
-- [深蓝呼吸 V204 / Deep Blue Breath](deep-blue-breath/deep-blue-breath.html) — 深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升
-- [万里江山图 - 宏大视界 / Grand Jiangshan](grand-jiangshan/grand-jiangshan.html) — 我见青山多妩媚，料青山见我应如是
-- [时间流转 - 粒子时钟 / Time Particle Clock](time-particle-clock/time-particle-clock.html) — 时间是流动的粒子——拖拽加速，松开即止，每一秒都有声音
-- [释·茧 / Unbound Mind](unbound-mind/unbound-mind.html) — 这团乱麻，是你此刻的思绪吗？试着长按屏幕，慢慢抚平它们...
+- [水墨太极 / Sumi-e Taichi](https://shasha1108.github.io/healing-visual-lab/sumi-e-taichi/sumi-e-taichi.html) — 一滴墨落入宣纸——既是破坏，也是开始
+- [墨池心境 / Inkmeditation](https://shasha1108.github.io/healing-visual-lab/inkmeditation/inkmeditation.html) — 算法物理学 × 视觉设计 × 心理疗愈
+- [宇宙回响 V78 / Cosmic Recollection](https://shasha1108.github.io/healing-visual-lab/cosmic-recollection/cosmic-recollection.html) — 万物皆有裂痕——那是光照进来的地方
+- [青绿·层峦 / Layered Mountains](https://shasha1108.github.io/healing-visual-lab/layered-mountains/layered-mountains.html) — 触之即散，聚散随缘
+- [琉璃化雨 / Glass Rain](https://shasha1108.github.io/healing-visual-lab/glass-rain/glass-rain.html) — 眼泪落尽，便见晴空
+- [息流 · 幻镜 / Breath Mirror](https://shasha1108.github.io/healing-visual-lab/breath-mirror/breath-mirror.html) — 这里没有深渊，也没有波澜
+- [呼吸边界 / Breathing Boundary](https://shasha1108.github.io/healing-visual-lab/breathing-boundary/breathing-boundary.html) — 看似隔绝，实则翻译——这是一层活着的、会呼吸的边界
+- [深蓝呼吸 V204 / Deep Blue Breath](https://shasha1108.github.io/healing-visual-lab/deep-blue-breath/deep-blue-breath.html) — 深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升
+- [万里江山图 - 宏大视界 / Grand Jiangshan](https://shasha1108.github.io/healing-visual-lab/grand-jiangshan/grand-jiangshan.html) — 我见青山多妩媚，料青山见我应如是
+- [时间流转 - 粒子时钟 / Time Particle Clock](https://shasha1108.github.io/healing-visual-lab/time-particle-clock/time-particle-clock.html) — 时间是流动的粒子——拖拽加速，松开即止，每一秒都有声音
+- [释·茧 / Unbound Mind](https://shasha1108.github.io/healing-visual-lab/unbound-mind/unbound-mind.html) — 这团乱麻，是你此刻的思绪吗？试着长按屏幕，慢慢抚平它们...
 
 </details>
 
 <details open>
 <summary><b>🎨 Canvas / p5.js</b> &ensp;<sub>3 works</sub></summary>
 
-- [无声的翻译官 / Silent Translator](silent-translator/silent-translator.html) — 身体替你说了说不出的话
-- [玻璃天空 / Sky Through Glass](sky-through-glass/sky-through-glass.html) — 蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。
-- [像素水族箱 / Pixel Aquarium](pixel-aquarium/pixel-aquarium.html) — 晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。
+- [无声的翻译官 / Silent Translator](https://shasha1108.github.io/healing-visual-lab/silent-translator/silent-translator.html) — 身体替你说了说不出的话
+- [玻璃天空 / Sky Through Glass](https://shasha1108.github.io/healing-visual-lab/sky-through-glass/sky-through-glass.html) — 蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。
+- [像素水族箱 / Pixel Aquarium](https://shasha1108.github.io/healing-visual-lab/pixel-aquarium/pixel-aquarium.html) — 晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。
 
 </details>
 
 <details open>
 <summary><b>💻 CSS / GSAP / DOM</b> &ensp;<sub>1 works</sub></summary>
 
-- [过载脑区 / Overthinking Engine](overthinking-engine/overthinking-engine.html) — 过度清醒地审视自己，正在毁掉我们的生活
+- [过载脑区 / Overthinking Engine](https://shasha1108.github.io/healing-visual-lab/overthinking-engine/overthinking-engine.html) — 过度清醒地审视自己，正在毁掉我们的生活
 
 </details>
 
