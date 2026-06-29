@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 15,
-  "updated": "2026-06-24",
+  "total": 16,
+  "updated": "2026-06-29",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -24,7 +24,8 @@
       "cosmic-recollection",
       "silent-translator",
       "sky-through-glass",
-      "pixel-aquarium"
+      "pixel-aquarium",
+      "aero-slime"
     ],
     "webgl_glsl": [
       "breath-mirror",
@@ -46,7 +47,8 @@
       "deep-blue-breath",
       "time-particle-clock",
       "unbound-mind",
-      "sky-through-glass"
+      "sky-through-glass",
+      "aero-slime"
     ],
     "css_3d_gsap": [
       "cosmic-recollection",
@@ -78,14 +80,16 @@
       "deep-blue-breath",
       "unbound-mind",
       "sky-through-glass",
-      "pixel-aquarium"
+      "pixel-aquarium",
+      "aero-slime"
     ],
     "zero_dependency": [
       "silent-translator"
     ],
     "p5js": [
       "sky-through-glass",
-      "pixel-aquarium"
+      "pixel-aquarium",
+      "aero-slime"
     ]
   },
   "works": [
@@ -445,6 +449,30 @@
         "pixel-aquarium.html",
         "pixel-aquarium.md",
         "pixel-aquarium_1.gif"
+      ]
+    },
+    {
+      "slug": "aero-slime",
+      "title_en": "Aero Slime",
+      "title_zh": "电子情绪宠物",
+      "tagline": "点击色块投喂情绪，双击玻璃释放惊吓——一只住在亚克力盒子里的电子史莱姆，用颜文字回应你的每一种心情",
+      "tech": [
+        "p5.js",
+        "Web Audio API",
+        "FSM Center-of-Mass Pathfinding",
+        "Line-Art Expressions",
+        "CSS Acrylic Glass"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D + DOM",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A (pixel sprites)",
+      "files": [
+        "aero-slime.html",
+        "aero-slime.md",
+        "aero-slime_1.gif"
       ]
     }
   ]
