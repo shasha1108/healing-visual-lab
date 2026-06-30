@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<!--
+  Title: Rice Fragrance · 稻香
+  Tech: p5.js, Canvas2D, Web Audio API
+  Render: fullViewport
+  Audio: yes
+  Touch: yes (singleTap=放飞纸飞机, longPress=加速时光)
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>稻香 · Rice Fragrance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width:100vw; height:100vh; overflow:hidden;
+    background:#000;
+    font-family:"Noto Serif SC","Songti SC","PingFang SC",serif;
+    user-select:none; -webkit-user-select:none; touch-action:none;
+  }
+  #canvas-container { position:absolute; inset:0; z-index:1; }
+  .ui-layer { position:absolute; z-index:10; pointer-events:none; display:flex; flex-direction:column; align-items:center; width:100%; }
+  #title  { top:7%; color:rgba(255,255,255,0.88); letter-spacing:14px; font-size:26px; font-weight:300; text-shadow:0 2px 10px rgba(0,0,0,0.4); }
+  #sub    { top:14%; color:rgba(255,255,255,0.65); letter-spacing:5px; font-size:12px; text-shadow:0 1px 4px rgba(0,0,0,0.4); }
+  #hint   { bottom:5%; color:rgba(255,255,255,0.45); letter-spacing:3px; font-size:11px; text-shadow:0 1px 2px rgba(0,0,0,0.5); }
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+<div class="ui-layer" id="title">稻 香</div>
+<div class="ui-layer" id="sub">回家吧，回到最初的美好</div>
+<div class="ui-layer" id="hint">单击放飞纸飞机 · 长按加速时光</div>
+
+<script>
+/* ═══════════════════════════════════════════
+   全局常量
+   ══════════════════════════════════════════ */
+const PX = 4;
+let CW, CH;
+
+// 时间：0=午后 → 0.35=黄昏 → 0.65=入夜 → 1=深夜 → 循环
+let timeProgress = 0.0;
+const NORMAL_SPEED = 0.0004;
+const FAST_SPEED   = 0.004;
+let timeSpeed = NORMAL_SPEED;
+
+// 调色板 — [午后, 黄昏, 深夜]
+const COLORS = {
+  skyTop:   ['#5b9bd5','#e8775a','#0a0a2a'],
+  skyBot:   ['#c5d5e0','#f5c842','#181838'],
+  mountain: ['#6b8299','#9e3d3d','#12122a'],
+  rice:     ['#e8b830','#d46a3e','#1a2040'],
+  river:    ['#4dc9f6','#f08a5d','#1e3060'],
+  ground:   ['#c89830','#9e4a20','#151530'],
+};
+
+// 实体容器 — 在 setup() 中初始化
+let stars = [], clouds = [], fireflies = [], dragonflies = [];
+let airplane = null;
+let scarecrow = null;
+
+// 音频 — 单例，initAudio() 只运行一次
+let audioCtx = null, masterGain = null, insectGain = null;
+let audioInited = false;
+let lastNoteFrame = 0;
+
+/* ═══════════════════════════════════════════
+   音频引擎 — 自然风声（粉噪低通 + LFO 波动）
+   ══════════════════════════════════════════ */
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.35;
+  masterGain.connect(audioCtx.destination);
+
+  // 粉噪 → 低通滤波 → 模拟自然风声
+  const bufSize = audioCtx.sampleRate * 3;
+  const noiseBuf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = noiseBuf.getChannelData(0);
+  let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+  for(let i=0;i<bufSize;i++){
+    const w=Math.random()*2-1;
+    b0=0.99886*b0+w*0.0555179;b1=0.99332*b1+w*0.0750759;
+    b2=0.96900*b2+w*0.1538520;b3=0.86650*b3+w*0.3104856;
+    b4=0.55000*b4+w*0.5329522;b5=-0.7616*b5-w*0.0168980;
+    data[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11;b6=w*0.115926;
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = noiseBuf; src.loop = true;
+
+  // 低通滤波 — 去掉尖锐高频，只剩低沉的"呼——"
+  const lpFilter = audioCtx.createBiquadFilter();
+  lpFilter.type = 'lowpass'; lpFilter.frequency.value = 600; lpFilter.Q.value = 1;
+
+  // LFO — 风声时大时小（自然阵风）
+  const lfo = audioCtx.createOscillator();
+  lfo.type = 'sine'; lfo.frequency.value = 0.15; // 很慢的波动
+  const lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = 200; // 频率摆动幅度
+  lfo.connect(lfoGain); lfoGain.connect(lpFilter.frequency);
+
+  insectGain = audioCtx.createGain(); insectGain.gain.value = 0.12;
+  src.connect(lpFilter); lpFilter.connect(insectGain); insectGain.connect(masterGain);
+  src.start(); lfo.start();
+}
+
+function resumeAudio() {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state==='suspended') audioCtx.resume();
+  audioInited = true;
+}
+
+/* ═══════════════════════════════════════════
+   工具函数
+   ══════════════════════════════════════════ */
+function getEnvColor(arr) {
+  let c1,c2,amt;
+  if (timeProgress<0.35){c1=color(arr[0]);c2=color(arr[1]);amt=map(timeProgress,0,0.35,0,1);}
+  else if(timeProgress<0.65){c1=color(arr[1]);c2=color(arr[2]);amt=map(timeProgress,0.35,0.65,0,1);}
+  else{c1=color(arr[2]);c2=color(arr[0]);amt=map(timeProgress,0.65,1,0,1);}
+  return lerpColor(c1,c2,amt);
+}
+
+function getTerrainY(x) {
+  return CH*0.44 + sin(x*0.0018)*CH*0.04 + cos(x*0.0009+2)*CH*0.07;
+}
+
+function getRiver(y,horizon) {
+  if(y<horizon) return null;
+  let t=pow((y-horizon)/(CH-horizon),2.0); // 非线性透视——远近夸张
+  let cx=CW*0.5+sin(t*PI*1.2)*CW*0.15;
+  let w=CW*(0.01+t*0.5);
+  return {cx,w,left:cx-w/2,right:cx+w/2};
+}
+
+/* ═══════════════════════════════════════════
+   实体类
+   ══════════════════════════════════════════ */
+class Scarecrow {
+  constructor(){ this.x=CW*0.25; }
+  update(){ this.y=getTerrainY(this.x)+CH*0.06; }
+  draw(cRice){
+    push(); translate(this.x,this.y); noStroke();
+    fill('#4E342E'); rect(-PX,0,PX*2,PX*14);
+    fill('#5D4037'); rect(-PX*9,-PX*8,PX*18,PX*1.5);
+    let cBody=lerpColor(color('#f1c40f'),cRice,0.3);
+    fill(cBody); rect(-PX*4.5,-PX*10,PX*9,PX*11);
+    fill('#e74c3c'); rect(-PX*2.5,-PX*12,PX*5.5,PX*2);
+    fill('#f5f0e0'); circle(0,-PX*13.5,PX*7);
+    fill('#3a3020'); rect(-PX*1.2,-PX*14.5,PX*1.2,PX*1.2); rect(PX*0.5,-PX*14.5,PX*1.2,PX*1.2);
+    fill('#d1ccc0'); rect(-PX*7,-PX*16.5,PX*14,PX*1.8);
+    fill('#b8955a'); rect(-PX*4.5,-PX*19.5,PX*9,PX*3.5);
+    let sway=sin(frameCount*0.02)*PX*1.5;
+    push(); translate(PX*4.5,-PX*8); rotate(-0.3+sway*0.03);
+    fill(cBody); rect(0,0,PX*8,PX*2);
+    pop();
+    push(); translate(-PX*4.5,-PX*8); rotate(0.25+sway*0.02);
+    fill(cBody); rect(-PX*7,0,PX*7,PX*2);
+    pop();
+    fill('#4a5a70'); rect(-PX*3,-PX*1,PX*6,PX*8);
+    rect(-PX*4,PX*7,PX*3,PX*3); rect(PX*1,PX*7,PX*3,PX*3);
+    pop();
+  }
+}
+
+class Airplane {
+  constructor(x,y){ this.x=x;this.y=y;this.vx=4;this.vy=-6;this.angle=0; }
+  update(){
+    this.vx+=(noise(frameCount*0.05)-0.5)*0.8;
+    this.vy+=0.12;
+    this.x+=this.vx; this.y+=this.vy;
+    this.angle=atan2(this.vy,this.vx);
+  }
+  draw(){
+    push(); translate(this.x,this.y); rotate(this.angle);
+    noStroke(); fill(255,252,248);
+    beginShape();
+    vertex(PX*5,0); vertex(-PX*3,-PX*2); vertex(-PX*1,0); vertex(-PX*3,PX*2);
+    endShape(CLOSE);
+    pop();
+  }
+}
+
+class Firefly {
+  constructor(){
+    this.x=random(CW); this.y=random(CH*0.55,CH);
+    this.homeX=this.x; this.homeY=this.y;
+    this.phase=random(TWO_PI); this.glowPhase=random(TWO_PI);
+  }
+  update(){
+    let t=frameCount*0.006;
+    this.x+=(noise(this.x*0.012,t+this.phase)-0.5)*1.6;
+    this.y+=(noise(this.y*0.012,t+this.phase+80)-0.5)*1.6-0.08;
+    this.x+= (this.homeX-this.x)*0.001;
+    this.y+= (this.homeY-this.y)*0.001;
+    this.glowPhase+=0.04+random()*0.05;
+  }
+  draw(intensity){
+    if(intensity<0.02) return;
+    let a=(sin(this.glowPhase)*0.5+0.5)*255*intensity;
+    noStroke();
+    fill(255,240,130,a*0.25); circle(this.x,this.y,PX*7);
+    fill(255,250,190,a*0.55); circle(this.x,this.y,PX*3);
+    fill(255,255,230,a); rect(this.x,this.y,PX,PX);
+  }
+}
+
+class Dragonfly {
+  constructor(){
+    this.x=random(CW); this.y=random(CH*0.4,CH*0.7);
+    this.vx=random(-1,1); this.vy=random(-0.5,0.5);
+  }
+  update(){
+    this.x+=this.vx+(noise(frameCount*0.05)-0.5)*1.5;
+    this.y+=this.vy+(noise(frameCount*0.05+10)-0.5)*1.5;
+    if(this.x>CW+50)this.x=-50; if(this.x<-50)this.x=CW+50;
+    if(this.y<CH*0.2)this.y=CH*0.2; if(this.y>CH*0.75)this.y=CH*0.75;
+  }
+  draw(intensity){
+    if(intensity<0.01) return;
+    push(); translate(this.x,this.y); rotate(atan2(this.vy,this.vx));
+    noStroke();
+    fill(50,100,150,180*intensity); rect(-PX*2,-PX*0.5,PX*4,PX);
+    let flap=abs(sin(frameCount*1.5))*PX*2;
+    fill(200,240,255,120*intensity);
+    rect(-PX,-PX-flap,PX*1.5,PX*2+flap);
+    rect(-PX,PX,PX*1.5,PX*2+flap);
+    pop();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   P5 生命周期
+   ══════════════════════════════════════════ */
+function setup() {
+  const cvs=createCanvas(windowWidth,windowHeight);
+  cvs.parent('canvas-container');
+  cvs.style('position','absolute');
+  cvs.style('top','0'); cvs.style('left','0');
+  cvs.style('z-index','2');
+  cvs.style('pointer-events','none');
+  pixelDensity(1); noSmooth();
+  CW=width; CH=height;
+
+  // 初始化实体（在 CW/CH 确定后）
+  for(let i=0;i<60;i++) stars.push({x:random(CW),y:random(CH*0.45),a:random(TWO_PI)});
+  scarecrow=new Scarecrow();
+  for(let i=0;i<35;i++) fireflies.push(new Firefly());
+  for(let i=0;i<5;i++) dragonflies.push(new Dragonfly());
+  for(let i=0;i<6;i++) clouds.push({x:random(CW),y:random(CH*0.04,CH*0.25),sz:random(0.8,2.2),spd:0.15+random()*0.3});
+}
+
+function draw() {
+  // ── 时间推进 ──
+  timeProgress+=timeSpeed;
+  if(timeProgress>1) timeProgress=0;
+
+  // ── 颜色解算 ──
+  let cSkyT=getEnvColor(COLORS.skyTop);
+  let cSkyB=getEnvColor(COLORS.skyBot);
+  let cMnt =getEnvColor(COLORS.mountain);
+  let cRice=getEnvColor(COLORS.rice);
+  let cRiv =getEnvColor(COLORS.river);
+
+  // ── 音频联动 ──
+  if(audioCtx&&audioCtx.state==='running'){
+    // 风声随昼夜微调——黄昏略强，深夜略弱
+    let windVol=0.1+sin(timeProgress*TWO_PI)*0.03;
+    insectGain.gain.setTargetAtTime(windVol,audioCtx.currentTime,1);
+  }
+
+  // ═══════════════ L0 天空 ═══════════════
+  let ctx=drawingContext;
+  let grad=ctx.createLinearGradient(0,0,0,CH*0.42);
+  grad.addColorStop(0,cSkyT.toString());
+  grad.addColorStop(1,cSkyB.toString());
+  ctx.fillStyle=grad; ctx.fillRect(0,0,CW,CH);
+
+  // 太阳/月亮 + 星辰
+  let horizon=CH*0.45;
+  noStroke();
+  // 繁星——夜晚渐显
+  if(timeProgress>0.5){
+    let starAlpha=(timeProgress>0.5&&timeProgress<0.9)?map(timeProgress,0.5,0.6,0,255):255;
+    stars.forEach(s=>{
+      fill(255,255,255,(sin(frameCount*0.05+s.a)*0.5+0.5)*starAlpha*0.8);
+      rect(s.x,s.y,PX,PX);
+    });
+  }
+  if(timeProgress<0.6){
+    let sunY=min(map(timeProgress,0,0.6,CH*0.1,horizon+50),horizon-PX*8);
+    fill(255,240,200,220); circle(CW*0.7,sunY,PX*12);
+  }else{
+    let moonY=map(timeProgress,0.6,1,horizon+50,CH*0.1);
+    fill(255,250,240,240); circle(CW*0.3,moonY,PX*10);
+  }
+
+  // 云朵 —— 圆角矩形简洁积云
+  clouds.forEach(c=>{
+    c.x+=0.2*c.sz; if(c.x>CW+150) c.x=-150;
+    let a=timeProgress>0.5?40:160;
+    fill(255,255,255,a);
+    rect(c.x,c.y,PX*12*c.sz,PX*3*c.sz,10);
+    rect(c.x+PX*2,c.y-PX*2,PX*7*c.sz,PX*3*c.sz,10);
+  });
+
+  // ═══════════════ L1 远山（两层起伏 + 小屋）══════════════
+  let mR=red(cMnt),mG=green(cMnt),mB=blue(cMnt);
+
+  fill(mR*0.6,mG*0.7,min(255,mB*1.2),155);
+  beginShape(); vertex(0,CH);
+  for(let x=0;x<=CW;x+=PX*4) vertex(x,horizon-CH*0.05+sin(x*0.003)*CH*0.08+cos(x*0.0013+1)*CH*0.04);
+  vertex(CW,CH); endShape(CLOSE);
+
+  fill(mR*0.8,mG*0.85,mB,200);
+  beginShape(); vertex(0,CH);
+  for(let x=0;x<=CW;x+=PX*4) vertex(x,horizon+sin(x*0.005+2)*CH*0.05+cos(x*0.002+3)*CH*0.03);
+  vertex(CW,CH); endShape(CLOSE);
+
+  // 小屋——5栋红顶，错落沿山脊（基座坐在地面，不悬浮）
+  // 红顶小屋——5栋，沿山脊错落（坐在地面，不悬浮）
+  for(let i=0;i<5;i++){
+    let hx=CW*0.06+i*CW*0.2+noise(i*17,0)*CW*0.06;
+    let ridgeY=horizon+sin(hx*0.005+2)*CH*0.05+cos(hx*0.002+3)*CH*0.03;
+    let hy=ridgeY+2; // 基座沉入山脊
+    let hs=PX*(1.5+noise(i*17,2)*1.5);
+    fill('#faf5ee'); rect(hx-hs*1.8,hy-hs*2.5,hs*3.6,hs*2.5);
+    fill('#c0392b'); // 红顶
+    beginShape(); vertex(hx-hs*2.3,hy-hs*2.5); vertex(hx,hy-hs*5.5); vertex(hx+hs*2.3,hy-hs*2.5); endShape(CLOSE);
+    fill(255,240,200,200); rect(hx-hs*0.6,hy-hs*1.8,hs*1.2,hs*1.2);
+    fill('#8B7355'); rect(hx+hs*0.9,hy-hs*4.5,hs*0.7,hs*2);
+    if(timeProgress<0.55){
+      fill(200,200,200,55);
+      let smY=hy-hs*5-sin(frameCount*0.03+i)*PX*2;
+      circle(hx+hs*1.4,smY,PX*1.5); circle(hx+hs*2,smY-PX*2.5,PX*1);
+    }
+  }
+
+  // 彩虹风车——4座，坐落在山脊（不悬浮）
+  let wmColors=[['#ff6b6b','#ffd93d','#6bcb77','#4d96ff'],
+                ['#ff8e8e','#ffe66d','#8be09c','#6db3ff'],
+                ['#ee5a24','#f6b93b','#78e08f','#38ada9'],
+                ['#fa983a','#f8c291','#82ccdd','#b71540']];
+  for(let i=0;i<4;i++){
+    let wx=CW*0.14+i*CW*0.22+noise(i*23,0)*CW*0.05;
+    let ridgeY=horizon+sin(wx*0.005+2)*CH*0.05+cos(wx*0.002+3)*CH*0.03;
+    let wy=ridgeY+2; // 基座沉入山脊
+    let ws=PX*(1+noise(i*23,2)*1.2);
+    fill('#fafaf5');
+    beginShape(); vertex(wx-ws,wy); vertex(wx,wy-ws*6); vertex(wx+ws,wy); endShape(CLOSE);
+    push(); translate(wx,wy-ws*6);
+    rotate(frameCount*0.02+i*0.5);
+    let blades=wmColors[i];
+    for(let b=0;b<4;b++){
+      fill(blades[b]); let ba=b*HALF_PI;
+      push(); rotate(ba);
+      beginShape(); vertex(0,0); vertex(-ws*0.6,-ws*4); vertex(0,-ws*3.5); vertex(ws*0.6,-ws*4); endShape(CLOSE);
+      pop();
+    }
+    fill('#fafaf5'); circle(0,0,ws*1.2);
+    pop();
+    fill('#d4b97a');
+    rect(wx-ws*1.5,wy+ws*0.5,ws*3,ws*0.5);
+    rect(wx-ws*1.2,wy+ws,ws*0.4,ws*2); rect(wx+ws*0.8,wy+ws,ws*0.4,ws*2);
+  }
+
+  // ═══════════════ L2 金色稻海（底色 + 风之波纹）══════════════
+  let rR=red(cRice),rG=green(cRice),rB=blue(cRice);
+  fill(cRice); rect(0,horizon,CW,CH-horizon);
+
+  // 风之波纹——稀疏噪声叠加，模拟风吹稻浪
+  fill(red(cRice)+25,green(cRice)+20,blue(cRice)+5);
+  for(let y=horizon+PX;y<CH;y+=PX*4){
+    let depth=(y-horizon)/(CH-horizon);
+    let stepX=PX*(4+depth*8);
+    for(let x=0;x<CW;x+=stepX){
+      let r=getRiver(y,horizon);
+      if(r&&abs(x-r.cx)<r.w/2+PX*2) continue;
+      let n=noise(x*0.008+frameCount*0.03,y*0.02);
+      if(n>0.55){
+        let wLen=PX*(3+depth*10)*n;
+        rect(x,y,wLen,PX*(1+depth));
+      }
+    }
+  }
+
+  // ═══════════════ L2 河流（Y轴遍历 + pow(t,2)透视）══════════════
+  fill(cRiv);
+  beginShape();
+  for(let y=horizon;y<=CH;y+=PX*2){let b=getRiver(y,horizon);if(b)vertex(b.left,y);}
+  for(let y=CH;y>=horizon;y-=PX*2){let b=getRiver(y,horizon);if(b)vertex(b.right,y);}
+  endShape(CLOSE);
+
+  // 河面波纹——水平光带
+  fill(255,255,255,120);
+  for(let i=0;i<6;i++){
+    let t=((frameCount*0.002+i*0.16)%1);
+    let wy=horizon+t*(CH-horizon);
+    let b=getRiver(wy,horizon);
+    if(b){
+      let wx=b.cx+sin(frameCount*0.05+i)*b.w*0.2;
+      rect(wx,wy,PX*(2+t*8),PX*(1+t*2));
+    }
+  }
+
+  // ═══════════════ L2 实体 ═══════════════
+  scarecrow.update(); scarecrow.draw(cRice);
+
+  if(airplane){
+    airplane.update(); airplane.draw();
+    if(airplane.y>CH+50) airplane=null;
+  }
+
+  let dfIntensity=timeProgress<0.5?1:0;
+  dragonflies.forEach(d=>{d.update();d.draw(dfIntensity);});
+
+  // ═══════════════ L3 前景稻穗（bezier 曲线 + 下垂粒簇）══════════════
+  for(let i=0;i<8;i++){
+    let lft=i<4;
+    let bx=lft?i*CW*0.05:CW-(i-4)*CW*0.05;
+    let by=CH;
+    let fh=CH*(0.22+noise(i)*0.12);
+    let bend=lft?fh*0.35:-fh*0.35;
+    let sway=sin(frameCount*0.02+i)*PX*6;
+    noFill(); stroke(rR+30,rG+30,rB); strokeWeight(PX*1.5);
+    bezier(bx,by, bx,by-fh*0.5, bx+bend+sway,by-fh*0.8, bx+bend*1.2+sway,by-fh);
+    // 穗头粒簇
+    noStroke();
+    let ex=bx+bend*1.2+sway, ey=by-fh;
+    fill(rR+35,rG+40,rB+15);
+    rect(ex-PX*2,ey,PX*2,PX*2);
+    rect(ex,ey+PX,PX*2,PX*2);
+    rect(ex-PX,ey+PX*2.5,PX*2,PX*2);
+    rect(ex-PX*3,ey+PX*1.5,PX*1.5,PX*1.5);
+  }
+
+  // ═══════════════ L3 萤火虫（最深夜景在前） ═══════════════
+  let ffIntensity=timeProgress>0.4?smoothstep(0.4,0.75,timeProgress):0;
+  fireflies.forEach(f=>{f.update();f.draw(ffIntensity);});
+}
+
+function smoothstep(a,b,t){let x=constrain((t-a)/(b-a),0,1);return x*x*(3-2*x);}
+function windowResized(){CW=windowWidth;CH=windowHeight;resizeCanvas(CW,CH);pixelDensity(1);}
+
+/* ═══════════════════════════════════════════
+   交互 — DOM pointerdown + 300ms 时间差
+   ══════════════════════════════════════════ */
+let lastTapTime=0,tapTimeout;
+let longPressTimer=null,isLongPress=false;
+
+const interactEl=document.createElement('div');
+interactEl.style.cssText='position:fixed;inset:0;z-index:10;';
+document.body.appendChild(interactEl);
+
+interactEl.addEventListener('pointerdown',(e)=>{
+  resumeAudio();
+  isLongPress=false;
+  longPressTimer=setTimeout(()=>{isLongPress=true;timeSpeed=FAST_SPEED;},450);
+});
+
+interactEl.addEventListener('pointerup',(e)=>{
+  clearTimeout(longPressTimer);
+  timeSpeed=NORMAL_SPEED;
+  if(isLongPress) return;
+
+  let now=Date.now();
+  if(now-lastTapTime<300){clearTimeout(tapTimeout);lastTapTime=0;return;}
+  lastTapTime=now;
+  tapTimeout=setTimeout(()=>{
+    if(airplane) return;
+    airplane=new Airplane(mouseX,mouseY);
+  },300);
+});
+
+document.addEventListener('touchmove',(e)=>e.preventDefault(),{passive:false});
+</script>
+</body>
+</html>
