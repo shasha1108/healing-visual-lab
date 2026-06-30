@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 17,
-  "updated": "2026-06-29",
+  "total": 18,
+  "updated": "2026-06-30",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -503,6 +503,22 @@
         "falling-verse.md",
         "falling-verse_1.gif"
       ]
+    },
+    {
+      "slug": "windmill-valley",
+      "title": "Windmill Valley · 山谷里的风",
+      "tagline": "风车在听，风铃在回答。一个你可以走进去的Frutiger Aero山谷",
+      "tech": [
+        "p5.js",
+        "Canvas2D",
+        "CSS Glassmorphism",
+        "Web Audio API"
+      ],
+      "render": "fullViewport",
+      "audio": true,
+      "touch": true,
+      "healing_domain": "meditation",
+      "pushed": "2026-06-30"
     }
   ]
 }

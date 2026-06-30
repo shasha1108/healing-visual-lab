@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<!--
+  Title: Windmill Valley · 山谷里的风
+  Tech: p5.js, Canvas2D, CSS Glassmorphism, Web Audio API
+  Render: fullViewport
+  Audio: yes
+  Touch: pointermove=感受风, pointerdown=激活音效+狂风
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<!--
+  Title: 山谷里的风 · Windmill Valley
+  Concept: Frutiger Aero techno-optimism — 风车山谷，人可以走进去的世界
+  Summary: 15架彩虹风车 + 4栋错落房屋 + 小路连接 + 蝴蝶Frenetic飞行 + Golden Hour暖光 + 风铃音景 + 5层大气透视
+  Tech: p5.js, Canvas, CSS Glassmorphism, Web Audio API
+  Keywords: windmill, frutiger-aero, pastoral, depth, golden-hour, wind-chime, techno-optimism
+  Render: fullViewport
+  Audio: yes
+  Touch: pointermove=风, pointerdown=激活+狂风
+  Dependencies: p5.js 1.9.0
+  Repo: healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>山谷里的风</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100vw; height: 100vh; overflow: hidden;
+  background: radial-gradient(ellipse 80% 55% at 18% 12%, #fef9ed 0%, #f6e8d0 6%, #c8e8f8 25%, #a8ddf4 50%, #d8f0e8 75%, #eef8f4 100%);
+  font-family: "Noto Serif SC", "Songti SC", "Segoe UI", serif;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+  cursor: none;
+}
+
+/* 环境光斑 z=1 */
+.amb {
+  position: fixed; z-index: 1; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 60%);
+  animation: ambDrift 26s ease-in-out infinite;
+}
+.amb:nth-child(2) { animation-delay: -12s; animation-duration: 30s; }
+.amb:nth-child(3) { animation-delay: -20s; animation-duration: 34s; }
+@keyframes ambDrift {
+  0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(38px,-20px) scale(1.18)} 66%{transform:translate(-25px,14px) scale(0.85)}
+}
+
+/* Golden Hour z=2 */
+.golden-light {
+  position: fixed; z-index: 2; pointer-events: none;
+  background: radial-gradient(ellipse 75% 55% at 18% 10%, rgba(255,235,200,0.25) 0%, rgba(255,220,170,0.1) 28%, transparent 60%);
+  animation: goldenBreath 20s ease-in-out infinite;
+}
+@keyframes goldenBreath { 0%,100%{opacity:.8} 50%{opacity:1} }
+
+/* 云 z=2 */
+.cloud {
+  position: fixed; z-index: 2; pointer-events: none;
+  background: rgba(255,255,255,0.28); border-radius: 50%; filter: blur(15px);
+  animation: cloudDrift 50s linear infinite;
+}
+.cloud:nth-child(7){animation-duration:60s;animation-delay:-18s}
+.cloud:nth-child(8){animation-duration:42s;animation-delay:-30s}
+@keyframes cloudDrift { 0%{transform:translateX(-35vw)} 100%{transform:translateX(115vw)} }
+
+/* 玻璃窗框 z=4 */
+.glass-frame {
+  position: fixed; inset: 0; z-index: 4; pointer-events: none;
+  border-top:3px solid rgba(255,255,255,0.7); border-left:2px solid rgba(255,255,255,0.35);
+  border-right:1px solid rgba(255,255,255,0.14); border-bottom:1px solid rgba(255,255,255,0.05);
+  box-shadow:inset 0 0 50px rgba(255,255,255,0.14),inset 0 0 140px rgba(180,215,240,0.05),inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.glass-frame::after {
+  content:'';position:absolute;top:-8%;left:-5%;width:40%;height:28%;
+  background:linear-gradient(140deg,rgba(255,255,255,.28) 0%,rgba(255,255,255,.04) 55%,transparent 100%);
+  border-radius:50%;transform:rotate(-7deg);
+}
+
+/* 光标 z=99 */
+#spirit-cursor {
+  position:fixed;z-index:99;pointer-events:none;width:16px;height:16px;opacity:0;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,250,235,.8) 0%,rgba(255,245,225,.2) 50%,transparent 75%);
+  transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(255,248,230,.35),0 0 2px rgba(255,255,245,.6);
+}
+#spirit-cursor::after {
+  content:'';position:absolute;top:50%;left:50%;width:2.5px;height:2.5px;
+  background:rgba(255,255,255,.85);border-radius:50%;transform:translate(-50%,-50%);
+}
+
+/* UI z=7 */
+.ui-layer{position:fixed;z-index:7;width:100%;text-align:center;pointer-events:none}
+#title{top:7%;color:rgba(255,255,255,.85);letter-spacing:12px;font-size:22px;font-weight:200;text-shadow:0 1px 4px rgba(0,90,160,.12);margin-left:12px}
+#subtitle{top:12.5%;color:rgba(255,255,255,.65);letter-spacing:8px;font-size:11px;font-weight:200;margin-left:8px}
+.hint{bottom:20px;font-size:10px;letter-spacing:5px;font-weight:200;color:rgba(20,100,140,.35)}
+#il{position:fixed;inset:0;z-index:6;cursor:none}
+</style>
+</head>
+<body>
+<div class="amb" style="width:34vw;height:34vw;top:-5%;left:10%"></div>
+<div class="amb" style="width:22vw;height:22vw;bottom:14%;right:10%"></div>
+<div class="amb" style="width:16vw;height:16vw;top:32%;left:62%"></div>
+<div class="golden-light"></div>
+<div class="cloud" style="width:16vw;height:5.5vw;top:10%;left:22%"></div>
+<div class="cloud" style="width:12vw;height:4vw;top:16%;left:58%"></div>
+<div class="cloud" style="width:20vw;height:6vw;top:7%;left:72%"></div>
+<div class="glass-frame"></div>
+<div id="spirit-cursor"></div>
+<div id="il"></div>
+<div class="ui-layer" id="title">山谷里的风</div>
+<div class="ui-layer hint">划动 · 感受风的形状</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   常量
+═══════════════════════════════════════════════════════════ */
+const CHIME_F = [523.25,587.33,659.25,783.99,880.00,1046.5,1174.7];
+
+// 高饱和彩虹 — 确保在绿草地上有强烈反差
+const RAINBOW = [
+  ['#ff6b6b','#ffb3b3'],['#ff9f43','#ffd0a3'],['#feca57','#ffe9b0'],
+  ['#54d89c','#a8f0d0'],['#48b8f0','#a0d8f8'],['#a888e0','#d0c0f4'],
+  ['#f06098','#f8b0d0'],['#5cd8c8','#a8f0e8'],['#e8a870','#f8d8c0'],
+  ['#e87850','#f8c0a8'],['#68c8c0','#b0e8e4'],['#b890d8','#e0d0f4'],
+];
+
+let W, H, sillY, horizonY, riverStartY;
+let windMag = 1.5, naturalWind = 1.5, mouseWind = 0;
+let prevMX = 0, prevMY = 0;
+let windmills = [], windTrail = [], pollen = [], wildflowers = [], butterflies = [];
+let cx = -100, cy = -100, tcx = -100, tcy = -100;
+const cursorEl = document.getElementById('spirit-cursor');
+
+/* ═══════════════════════════════════════════════════════════
+   Web Audio
+═══════════════════════════════════════════════════════════ */
+let actx = null, mg = null, wng = null, wf = null, ncf = 0;
+function initAudio() {
+  if (actx) return;
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  mg = actx.createGain(); mg.gain.value = 0.26; mg.connect(actx.destination);
+  const bs = 2*actx.sampleRate, buf = actx.createBuffer(1,bs,actx.sampleRate);
+  const d = buf.getChannelData(0); for(let i=0;i<bs;i++) d[i]=Math.random()*2-1;
+  const ns = actx.createBufferSource(); ns.buffer=buf; ns.loop=true;
+  wf = actx.createBiquadFilter(); wf.type='bandpass'; wf.frequency.value=300; wf.Q.value=0.35;
+  wng = actx.createGain(); wng.gain.value=0.01;
+  ns.connect(wf); wf.connect(wng); wng.connect(mg); ns.start();
+}
+function playChime(f) {
+  if(!actx||actx.state!=='running')return;
+  const n=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+  o.type='sine';o.frequency.value=f;o.detune.value=random(-8,8);
+  g.gain.setValueAtTime(0,n);g.gain.linearRampToValueAtTime(.045,n+.01);
+  g.gain.exponentialRampToValueAtTime(.0001,n+4);o.connect(g).connect(mg);
+  o.start(n);o.stop(n+4.1);
+}
+function updateChimes() {
+  if(!actx||actx.state!=='running')return;
+  let iv=round(map(windMag,1,6,220,28)); iv=constrain(iv,26,240);
+  if(frameCount>=ncf){
+    let n=random()<.35?(random()<.3?2:1):1;
+    for(let i=0;i<n;i++)playChime(CHIME_F[floor(random(CHIME_F.length))]);
+    ncf=frameCount+iv+floor(random(-20,20));
+  }
+  if(wng)wng.gain.linearRampToValueAtTime(map(windMag,1,8,.005,.032),actx.currentTime+.5);
+  if(wf)wf.frequency.linearRampToValueAtTime(map(windMag,1,8,240,550),actx.currentTime+.5);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   河流
+═══════════════════════════════════════════════════════════ */
+function rv(y){if(y<riverStartY||y>sillY)return null;let t=pow((y-riverStartY)/(sillY-riverStartY),1.35);return{cx:W*(.5-.05*t+sin(t*PI)*.05),w:W*(.005+.28*t)}}
+
+/* ═══════════════════════════════════════════════════════════
+   风车 — 2x~3x 放大，高饱和色
+═══════════════════════════════════════════════════════════ */
+class Windmill {
+  constructor(x,y,s,ci){this.x=x;this.y=y;this.scale=s;this.angle=random(TWO_PI);this.spd=0;let c=RAINBOW[ci%RAINBOW.length];this.c1=c[0];this.c2=c[1];this.sf=random(.7,1.3)}
+  update(){this.spd=lerp(this.spd,windMag*.035*this.sf,.06);this.angle+=this.spd}
+  draw(){
+    push();translate(round(this.x),round(this.y));scale(this.scale);noStroke();
+    let pw=3.5;
+    fill(228,236,243);rect(-pw,-50,pw,50);
+    fill(252,254,255);rect(-pw+.7,-50,pw*.38,50);
+    fill(198,213,226);rect(pw*.28,-50,pw*.2,50);
+    translate(0,-50);
+    fill(255,255,255);circle(0,0,5.5);fill(242,246,250);circle(0,0,3);
+    push();rotate(this.angle);
+    for(let b=0;b<4;b++){push();rotate(b*HALF_PI);
+      fill(b%2===0?this.c1:this.c2);
+      beginShape();vertex(0,0);vertex(-3.5,-10);vertex(-2,-24);vertex(2,-24);vertex(3.5,-10);endShape(CLOSE);
+      fill(255,255,255,.3);
+      beginShape();vertex(0,0);vertex(-1.5,-9);vertex(-.8,-19);vertex(.8,-19);vertex(1.5,-9);endShape(CLOSE);
+    pop();}
+    pop();pop();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   地形 + 大气透视（远层蓝移明显）
+═══════════════════════════════════════════════════════════ */
+function terrainY(x,baseY,amp,freq){return baseY+sin(x*freq)*amp+cos(x*freq*1.8+1)*amp*.4+sin(x*freq*3.5+2.2)*amp*.12}
+function drawHill(baseY,amp,freq,cHi,cMid,cLo){
+  let ctx=drawingContext,g=ctx.createLinearGradient(0,baseY-amp*1.2,0,H);
+  g.addColorStop(0,cHi);g.addColorStop(.1,cMid);g.addColorStop(1,cLo);
+  ctx.fillStyle=g;noStroke();beginShape();vertex(0,H);
+  for(let x=0;x<=W;x+=25)vertex(x,terrainY(x,baseY,amp,freq));
+  vertex(W,H);endShape(CLOSE);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   房子 — 像素风，暖白墙+红瓦顶+发光窗
+═══════════════════════════════════════════════════════════ */
+function drawHouse(hx,hy,s){
+  push();translate(round(hx),round(hy));scale(s);noStroke();
+  // 墙
+  fill(250,248,242);rect(-12,-16,24,16);
+  fill(232,228,218);rect(12,-16,3,16);
+  // 屋顶
+  fill(210,105,80);beginShape();vertex(-15,-16);vertex(0,-30);vertex(17,-16);endShape(CLOSE);
+  fill(185,90,68);beginShape();vertex(0,-30);vertex(17,-16);vertex(15,-16);endShape(CLOSE);
+  // 窗户（暖黄发光 — 有人在）
+  fill(255,220,140,.9);rect(-7,-13,6,6);
+  fill(255,245,220,.6);rect(-6,-12,4,4);
+  // 门
+  fill(175,135,105);rect(5,-12,5,12);
+  // 烟囱
+  fill(185,155,135);rect(7,-38,4,8);
+  pop();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   小路 — 连接房子，高可见度
+═══════════════════════════════════════════════════════════ */
+function drawPathBetween(x1,y1,x2,y2,segments,baseWidth){
+  noFill();
+  for(let i=0;i<segments;i++){
+    let t1=i/segments,t2=(i+1)/segments;
+    let ax=lerp(x1,x2,t1),ay=lerp(y1,y2,t1);
+    let bx=lerp(x1,x2,t2),by=lerp(y1,y2,t2);
+    let sw=map(ay,H*.5,H*.9,baseWidth*.25,baseWidth);
+    let warm=map(ay,H*.5,H*.9,.55,.9);
+    stroke(195,160,125,warm*.75);strokeWeight(sw);
+    line(ax,ay,bx,by);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   野花
+═══════════════════════════════════════════════════════════ */
+const FC=[[255,240,110],[255,215,140],[255,250,245],[255,175,195],[215,175,250],[255,195,125]];
+function genFlowers(){
+  let baseY=H*.72,amp=11,freq=.0042;
+  for(let i=0;i<80;i++){
+    let fx=random(W*.02,W*.98),ty=terrainY(fx,baseY,amp,freq);
+    // 排除河面
+    let rx=fx/W,rc=rv(ty);if(rc&&abs(rx-rc.cx/W)<rc.w/W*.55)continue;
+    wildflowers.push({x:fx,y:ty-random(1,3),c:FC[floor(random(FC.length))],sz:random(1.8,3.8),ph:random(TWO_PI)});
+  }
+}
+function drawFlowers(wind){
+  noStroke();
+  for(let f of wildflowers){
+    let sw=sin(frameCount*.025+f.ph)*wind*1.5,fx=f.x+sw,fy=f.y+cos(frameCount*.03+f.ph)*.8;
+    fill(f.c[0],f.c[1],f.c[2],210);circle(round(fx),round(fy),f.sz);
+    fill(255,248,130,170);circle(round(fx),round(fy),f.sz*.4);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   蝴蝶 — FSM: 扑翼→急转→扑翼，可辨认形状
+═══════════════════════════════════════════════════════════ */
+class Butterfly {
+  constructor(){
+    this.reset();
+    this.timer=floor(random(40,90));
+    this.targetAngle=random(TWO_PI);
+    this.speed=.6;
+  }
+  reset(){
+    this.x=random(W*.1,W*.9);this.y=random(H*.52,H*.75);
+    this.vx=0;this.vy=0;this.wp=random(TWO_PI);this.timer=floor(random(40,90));
+    this.targetAngle=random(TWO_PI);this.speed=random(.4,.8);
+    const cs=[[240,150,50],[240,190,80],[225,120,70],[245,175,110]];
+    this.color=cs[floor(random(cs.length))];
+    this.size=random(6,10);
+  }
+  update(wind){
+    this.timer--;
+    // FSM: 每隔一段时间随机改变方向
+    if(this.timer<=0||random()<.008){
+      this.targetAngle=this.targetAngle+random(-PI*.7,PI*.7);
+      this.speed=random(.35,.8);
+      this.timer=floor(random(35,80));
+    }
+    let ca=atan2(this.vy,this.vx);
+    let na=lerp(ca,this.targetAngle,.06);
+    this.vx=cos(na)*this.speed+wind*.1;
+    this.vy=sin(na)*this.speed;
+    // 偶尔急转
+    if(random()<.015){this.vx+=random(-.8,.8);this.vy+=random(-.6,.6)}
+    this.x+=this.vx;this.y+=this.vy;
+    if(this.x<-40||this.x>W+40||this.y<H*.3||this.y>sillY)this.reset();
+  }
+  draw(){
+    let r=this.color[0],g=this.color[1],b=this.color[2];
+    push();translate(round(this.x),round(this.y));
+    // 翅膀扑动速度
+    let wf=sin(frameCount*.35+this.wp)*.55;
+    noStroke();
+    // 上翅 — 心形近似
+    push();rotate(-.5+wf);
+    fill(r,g,b,220);ellipse(-this.size*.35,-this.size*.2,this.size*.7,this.size*.55);
+    fill(r,g,b,180);ellipse(-this.size*.25,-this.size*.3,this.size*.45,this.size*.35);
+    pop();
+    push();rotate(.5-wf);
+    fill(r,g,b,220);ellipse(this.size*.35,-this.size*.2,this.size*.7,this.size*.55);
+    fill(r,g,b,180);ellipse(this.size*.25,-this.size*.3,this.size*.45,this.size*.35);
+    pop();
+    // 下翅（较小）
+    push();rotate(-.3+wf*.6);
+    fill(r,g,b,200);ellipse(-this.size*.2,this.size*.15,this.size*.4,this.size*.35);
+    pop();
+    push();rotate(.3-wf*.6);
+    fill(r,g,b,200);ellipse(this.size*.2,this.size*.15,this.size*.4,this.size*.35);
+    pop();
+    // 身体+触角
+    fill(50,40,30,200);rect(-.6,-this.size*.4,.8,this.size*.8);
+    stroke(50,40,30,150);strokeWeight(.4);
+    line(0,-this.size*.35,-this.size*.25,-this.size*.6);
+    line(0,-this.size*.35,this.size*.25,-this.size*.6);
+    pop();
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   花粉+风轨
+═══════════════════════════════════════════════════════════ */
+function updatePollen(){
+  for(let p of pollen){
+    let a=noise(p.x*.003,p.y*.003,frameCount*.002)*TWO_PI*2;
+    p.vx+=cos(a)*.02;p.vy+=sin(a)*.02-.004;
+    p.vx=lerp(p.vx,0,.03);p.vy=lerp(p.vy,0,.03);
+    p.x+=p.vx;p.y+=p.vy;
+    if(p.y<-15){p.y=H+8;p.x=random(W)}if(p.y>H+15){p.y=-8;p.x=random(W)}
+    if(p.x<-15)p.x=W+8;if(p.x>W+15)p.x=-8;
+  }
+}
+function drawPollen(){noStroke();for(let p of pollen){let a=20+sin(frameCount*.03+p.x*.005)*8;fill(255,252,240,a);circle(round(p.x),round(p.y),p.sz)}}
+function updateTrail(){
+  for(let i=windTrail.length-1;i>=0;i--){let t=windTrail[i];t.age++;if(t.age>=16){windTrail.splice(i,1);continue}t.x+=noise(t.x*.02,frameCount*.01)*.35-.17;t.y+=noise(t.y*.02,frameCount*.01+100)*.25-.12}
+}
+function drawTrail(){noStroke();for(let t of windTrail)fill(255,252,242,map(t.age,0,16,100,0)),circle(round(t.x),round(t.y),1.5)}
+
+/* ═══════════════════════════════════════════════════════════
+   setup
+═══════════════════════════════════════════════════════════ */
+function setup(){
+  let c=createCanvas(windowWidth,windowHeight);
+  c.style('position','fixed');c.style('top','0');c.style('left','0');
+  c.style('z-index','3');c.style('pointer-events','none');
+  c.style('filter','drop-shadow(0px 6px 5px rgba(0,70,110,.1))');
+  pixelDensity(1);noSmooth();frameRate(60);
+  W=width;H=height;sillY=H*.87;horizonY=H*.42;riverStartY=H*.55;
+
+  // 15架风车 — 2x~3x放大，高饱和色，4层纵深
+  let sc=[[.12,.475,.42,3],[.30,.48,.48,5],[.52,.47,.40,8],[.74,.48,.50,1],[.92,.47,.44,6],  //L2 远丘
+          [.16,.54,.75,0],[.38,.55,.82,4],[.64,.53,.78,7],[.84,.56,.85,2],                    //L3 中远
+          [.07,.63,1.15,9],[.35,.65,1.25,1],[.58,.64,1.18,5],[.80,.66,1.28,3],                //L4 中近
+          [.22,sillY-18,2.0,10],[.64,sillY-22,2.4,11]];                                        //L5 窗台
+  for(let w of sc)windmills.push(new Windmill(w[0]*W,w[1]*H,w[2],w[3]));
+
+  genFlowers();
+  for(let i=0;i<2;i++)butterflies.push(new Butterfly());
+  for(let i=0;i<80;i++)pollen.push({x:random(W),y:random(H),vx:0,vy:0,sz:random(1.2,2.8)});
+}
+
+/* ═══════════════════════════════════════════════════════════
+   draw — 严格遮挡秩序
+═══════════════════════════════════════════════════════════ */
+function draw(){
+  clear();
+  naturalWind=1+noise(frameCount*.006)*1.5;mouseWind=lerp(mouseWind,0,.04);windMag=naturalWind+mouseWind;
+  for(let w of windmills)w.update();
+  for(let b of butterflies)b.update(windMag);
+
+  // ═══ L1 极远山脊（强烈去饱和+蓝移）═══
+  drawHill(H*.46,30,.0014,'rgba(165,195,205,.55)','rgba(145,180,195,.62)','rgba(130,170,188,.72)');
+
+  // ═══ L2 远丘 + 5架风车 ═══
+  drawHill(H*.50,20,.0018,'rgba(162,210,192,.68)','rgba(142,196,178,.72)','rgba(122,178,162,.8)');
+  for(let i=0;i<5;i++)windmills[i].draw();
+
+  // ═══ L3 中远 + 4架风车 + 2栋房子（远离河面）═══
+  drawHill(H*.565,16,.0024,'rgba(158,220,182,.75)','rgba(130,200,162,.78)','rgba(105,182,142,.85)');
+  // 房子1: 右岸，避开河流
+  let h1x=W*.76,h1y=terrainY(h1x,H*.565,16,.0024)-3;
+  drawHouse(h1x,h1y,.38);
+  // 房子2: 更右岸
+  let h2x=W*.88,h2y=terrainY(h2x,H*.565,16,.0024)-3;
+  drawHouse(h2x,h2y,.33);
+  for(let i=5;i<9;i++)windmills[i].draw();
+
+  // ═══ 河流 ═══
+  let ctx=drawingContext;
+  let rg=ctx.createLinearGradient(0,riverStartY,0,sillY);
+  rg.addColorStop(0,'rgba(135,220,242,.62)');rg.addColorStop(.2,'rgba(110,220,248,.75)');rg.addColorStop(1,'rgba(82,205,242,.82)');
+  ctx.fillStyle=rg;noStroke();beginShape();
+  for(let y=riverStartY;y<=sillY;y+=5){let b=rv(y);vertex(b.cx-b.w/2,y)}
+  for(let y=sillY;y>=riverStartY;y-=5){let b=rv(y);vertex(b.cx+b.w/2,y)}
+  endShape(CLOSE);
+  stroke(255,255,255,.38);strokeWeight(.7);noFill();
+  for(let i=0;i<3;i++){let t=(frameCount*.001+i*.33)%1,y=riverStartY+pow(t,1.2)*(sillY-riverStartY),b=rv(y);if(b){let sw=b.w*.25;line(b.cx-sw,y,b.cx+sw,y)}}
+
+  // ═══ L4 中近 + 4架风车 + 2栋房子 + 小路 ═══
+  drawHill(H*.66,14,.0032,'rgba(152,232,172,.85)','rgba(118,210,148,.85)','rgba(92,190,128,.9)');
+  // 房子3: 左岸
+  let h3x=W*.16,h3y=terrainY(h3x,H*.66,14,.0032)-3;
+  drawHouse(h3x,h3y,.5);
+  // 房子4: 中右岸
+  let h4x=W*.44,h4y=terrainY(h4x,H*.66,14,.0032)-3;
+  drawHouse(h4x,h4y,.5);
+  // 小路: 连接 L4房子 → L3房子
+  drawPathBetween(h3x,h3y,h1x,h1y,40,6);
+  drawPathBetween(h4x,h4y,h2x,h2y,35,5.5);
+  // 小路: 从房子延伸到近景
+  drawPathBetween(h3x,h3y,W*.06,H*.82,40,7);
+  drawPathBetween(h4x,h4y,W*.52,H*.84,35,6);
+  for(let i=9;i<13;i++)windmills[i].draw();
+
+  // ═══ L5 近坡草地 + 野花 + 蝴蝶 ═══
+  drawHill(H*.72,11,.0042,'rgba(148,240,170,1)','rgba(102,215,138,1)','rgba(78,182,118,1)');
+  drawFlowers(windMag);
+  for(let b of butterflies)b.draw();
+
+  // ═══ 花粉+风轨 ═══
+  updatePollen();drawPollen();updateTrail();drawTrail();
+
+  // ═══ L6 窗台 + 2架大风车 ═══
+  noStroke();
+  let sg=ctx.createLinearGradient(0,sillY,0,H);
+  sg.addColorStop(0,'rgba(248,252,255,.85)');sg.addColorStop(.03,'#fff');sg.addColorStop(1,'rgba(240,246,250,.92)');
+  ctx.fillStyle=sg;rect(0,sillY,W,H-sillY);
+  fill(255,255,255,.55);rect(0,sillY,W,1.8);
+  for(let i=13;i<15;i++)windmills[i].draw();
+
+  updateChimes();
+  cx=lerp(cx,tcx,.1);cy=lerp(cy,tcy,.1);
+  cursorEl.style.left=cx+'px';cursorEl.style.top=cy+'px';
+}
+
+function windowResized(){
+  resizeCanvas(windowWidth,windowHeight);pixelDensity(1);noSmooth();
+  W=width;H=height;sillY=H*.87;horizonY=H*.42;riverStartY=H*.55;
+  let allR=[[.12,.475],[.30,.48],[.52,.47],[.74,.48],[.92,.47],[.16,.54],[.38,.55],[.64,.53],[.84,.56],[.07,.63],[.35,.65],[.58,.64],[.80,.66],[.22,0],[.64,0]];
+  for(let i=0;i<13;i++){windmills[i].x=allR[i][0]*W;windmills[i].y=allR[i][1]*H}
+  windmills[13].x=.22*W;windmills[13].y=sillY-18;windmills[14].x=.64*W;windmills[14].y=sillY-22;
+  wildflowers=[];genFlowers();
+}
+
+const il=document.getElementById('il');
+il.addEventListener('pointermove',e=>{
+  tcx=e.clientX;tcy=e.clientY;if(cursorEl.style.opacity==='0')cursorEl.style.opacity='1';
+  let mx=e.clientX,my=e.clientY,dist=sqrt(pow(mx-prevMX,2)+pow(my-prevMY,2));
+  prevMX=mx;prevMY=my;
+  if(dist>2){mouseWind=min(mouseWind+dist*.07,10);windTrail.push({x:mx,y:my,age:0});if(windTrail.length>28)windTrail.shift();}
+});
+il.addEventListener('pointerdown',()=>{initAudio();if(actx&&actx.state==='suspended')actx.resume();mouseWind=10;});
+if(window.innerWidth<768)cursorEl.style.display='none';
+</script>
+</body>
+</html>
