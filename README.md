@@ -10,7 +10,7 @@
   <a href="https://github.com/shasha1108/healing-visual-lab/stargazers"><img src="https://img.shields.io/github/stars/shasha1108/healing-visual-lab?style=for-the-badge&color=7C5CBF" alt="Stars"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
   <a href="https://shasha1108.github.io/healing-visual-lab/"><img src="https://img.shields.io/badge/Live-Demo-4CAF50?style=for-the-badge" alt="Live Demo"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Works-17-ED225D?style=for-the-badge" alt="15 Works"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Works-18-ED225D?style=for-the-badge" alt="15 Works"></a>
 </p>
 
 <p>
@@ -133,15 +133,16 @@ open inkmeditation/inkmeditation.html
 </details>
 
 <details open>
-<summary><b>💻 CSS / GSAP / DOM</b> &ensp;<sub>1 works</sub></summary>
+<summary><b>💻 CSS / GSAP / DOM</b> &ensp;<sub>2 works</sub></summary>
 
 - [过载脑区 / Overthinking Engine](https://shasha1108.github.io/healing-visual-lab/overthinking-engine/overthinking-engine.html) — 过度清醒地审视自己，正在毁掉我们的生活
+- [ / ](https://shasha1108.github.io/healing-visual-lab/windmill-valley/windmill-valley.html) — 风车在听，风铃在回答。一个你可以走进去的Frutiger Aero山谷
 
 </details>
 
 <!-- WORKS_END -->
 
-*Last updated: 2026-06-29 | Works: 17 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
+*Last updated: 2026-06-30 | Works: 18 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
 
 <p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
 
