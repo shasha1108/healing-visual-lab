@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<!--
+  Title: dreamcore-summer-rain · 七里香 Dreamcore夏夜
+  Tech: p5.js, Canvas2D, Web Audio API
+  Render: fullViewport
+  Audio: yes (粉噪雨声 + 虫鸣)
+  Touch: 光标靠近蝴蝶躲避
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<!--
+  Title:  夏夜雨景 · Dreamcore光影 (修正前景剪影)
+  Concept: 极致冷暖光碰撞 — 深黑蓝天 vs 售货机刺眼白光 vs 铁路脉冲红绿灯
+  Summary: L0深黑蓝夜空/L1远山暖窗电车/L2售货机白光铁路红绿灯/L3水洼blur倒影/L4大雨/L5紫阳花萤火虫/L6三蝶/L7算法生成的唯美蕨类与垂柳剪影
+  Tech: p5.js, Canvas2D, Web Audio API
+  Keywords: dreamcore, vending-machine, railway, summer-night, rain, hydrangea, lissajous, contrast
+  Render: fullViewport
+  Audio: yes (粉噪雨声 + 虫鸣)
+  Touch: 首次点击激活音频
+  Dependencies: p5.js 1.9.0
+  Repo: pixel-bloom + healing-space
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>七里香 · Dreamcore夏夜</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    width:100vw;height:100vh;overflow:hidden;
+    background:#010308;
+    user-select:none;-webkit-user-select:none;touch-action:none;
+  }
+  body{animation:fade 3s ease-out both}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  #interact-layer{position:fixed;inset:0;z-index:10}
+</style>
+</head>
+<body>
+<div id="interact-layer"></div>
+
+<script>
+let CW,CH,t=0;
+
+// ============================================================
+// AUDIO — 雨声 + 虫鸣
+// ============================================================
+let audioCtx,masterGain,audioReady=false;
+let cricketTimer=0,cricketNext=0;
+
+function initAudio(){
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  masterGain=audioCtx.createGain();masterGain.gain.value=0;
+  masterGain.connect(audioCtx.destination);
+  const bufSize=audioCtx.sampleRate*2;
+  const buf=audioCtx.createBuffer(1,bufSize,audioCtx.sampleRate);
+  const data=buf.getChannelData(0);
+  let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+  for(let i=0;i<bufSize;i++){
+    let w=Math.random()*2-1;
+    b0=0.99886*b0+w*0.0555179;b1=0.99332*b1+w*0.0750759;
+    b2=0.96900*b2+w*0.1538520;b3=0.86650*b3+w*0.3104856;
+    b4=0.55000*b4+w*0.5329522;b5=-0.7616*b5-w*0.0168980;
+    data[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.06;
+    b6=w*0.115926;
+  }
+  const rainSrc=audioCtx.createBufferSource();rainSrc.buffer=buf;rainSrc.loop=true;
+  const lp=audioCtx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=700;
+  const rainG=audioCtx.createGain();rainG.gain.value=0.2;
+  rainSrc.connect(lp);lp.connect(rainG);rainG.connect(masterGain);rainSrc.start();
+}
+function playCricket(){
+  if(!audioCtx||!audioReady)return;
+  const now=audioCtx.currentTime;
+  const osc=audioCtx.createOscillator();osc.type='square';
+  osc.frequency.setValueAtTime(3700+Math.random()*500,now);
+  const g=audioCtx.createGain();
+  g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(.012,now+.01);
+  g.gain.exponentialRampToValueAtTime(.001,now+.12);
+  const bp=audioCtx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=3500;bp.Q.value=2;
+  osc.connect(bp);bp.connect(g);g.connect(masterGain);osc.start(now);osc.stop(now+.2);
+}
+
+// ============================================================
+// ENTITIES
+// ============================================================
+class Raindrop{
+  constructor(){this.reset(true);}
+  reset(init=false){
+    this.x=random(-CW*.3,CW*1.3);
+    this.y=init?random(-CH,CH):random(-300,-60);
+    this.z=random(.25,1);
+    this.len=this.z*50;        
+    this.vy=this.z*30+15;      
+    this.vx=this.z*2.5;
+    this.alpha=this.z*120+30;
+  }
+  update(){this.x+=this.vx;this.y+=this.vy;if(this.y>CH+60)this.reset();}
+  draw(){
+    stroke(190,210,240,this.alpha);
+    strokeWeight(this.z*2.2);   
+    line(this.x,this.y,this.x-this.vx*.5,this.y+this.len);
+  }
+}
+
+class Ripple{
+  constructor(x,y){this.x=x;this.y=y;this.r=0;this.maxR=random(12,35);this.life=255;}
+  update(){this.r+=(this.maxR-this.r)*.1;this.life-=7;}
+  draw(){
+    if(this.life<=0)return;
+    noFill();stroke(180,210,255,this.life*.3);strokeWeight(1.2);
+    ellipse(this.x,this.y,this.r*2,this.r*.55);
+  }
+}
+
+class Butterfly{
+  constructor(cx,cy,index){
+    this.cx=cx;this.cy=cy;this.index=index;this.seed=random(100);
+    this.rx=55+index*28;this.ry=18+index*9;this.rz=28+index*13;
+    this.sX=.38+index*.13;this.sY=.28+index*.09;this.sZ=.75+index*.17;
+    this.color=[color(130,200,255),color(180,150,255),color(100,255,200)][index];
+  }
+  update(t,cx,cy){
+    let px=sin(t*this.sX+this.seed)*this.rx;
+    let py=cos(t*this.sY+this.seed)*this.ry;
+    let pz=sin(t*this.sZ+this.seed)*this.rz;
+    px+=(noise(t*.5,this.seed)-.5)*38;
+    pz+=(noise(this.seed,t*.5)-.5)*38;
+    this.x=this.cx+px;this.y=this.cy+py*.3-pz;
+    this.scale=map(py,-this.ry,this.ry,.55,1.15);
+    this.wingAngle=t*3+this.seed;
+    if(cx>0){const d=dist(this.x,this.y,cx,cy);if(d<100){this.x+=(this.x-cx)*.35;this.y+=(this.y-cy)*.25;}}
+  }
+  draw(){
+    push();translate(this.x,this.y);scale(this.scale);
+    drawingContext.shadowColor=this.color.toString();drawingContext.shadowBlur=22;
+    noStroke();let flap=abs(cos(this.wingAngle)),w=12*(.3+flap*.7),h=18;
+    fill(this.color.levels[0],this.color.levels[1],this.color.levels[2],230);
+    triangle(0,0,-w,-h*.8,-w*.5,h*.5);triangle(0,0,w,-h*.8,w*.5,h*.5);
+    drawingContext.shadowBlur=0;fill(255,255,255,250);circle(0,0,3);
+    pop();
+  }
+}
+
+class Firefly{
+  constructor(){
+    this.x=random(CW);this.y=random(CH*.55,CH*.9);
+    this.tx=this.x;this.ty=this.y;
+    this.wTimer=0;this.wInterval=random(35,90);
+    this.size=random(2,4.5);this.alpha=random(70,170);this.tAlpha=random(80,190);this.phase=random(TWO_PI);
+  }
+  update(){
+    this.wTimer++;if(this.wTimer>=this.wInterval){this.wTimer=0;this.wInterval=floor(random(35,100));
+      this.tx=this.x+(noise(this.x*.008,t*.3)-.5)*90;this.ty=this.y+(noise(this.y*.008,t*.3+50)-.5)*50;
+      this.ty=constrain(this.ty,CH*.5,CH*.9);}
+    this.x=lerp(this.x,this.tx,.015);this.y=lerp(this.y,this.ty,.015);
+    this.y+=sin(t*1.5+this.phase)*.2;this.alpha=lerp(this.alpha,this.tAlpha,.03);
+    if(random()<.008)this.tAlpha=random(70,190);
+  }
+  draw(){
+    if(this.alpha<12)return;
+    push();blendMode(SCREEN);noStroke();
+    fill(155,235,125,this.alpha*.2);circle(this.x,this.y,this.size*3);
+    fill(175,248,142,this.alpha*.45);circle(this.x,this.y,this.size*1.5);
+    fill(215,255,195,this.alpha*.85);circle(this.x,this.y,this.size*.42);
+    blendMode(BLEND);pop();
+  }
+}
+
+// ============================================================
+// GLOBALS
+// ============================================================
+let drops=[],ripples=[],butterflies=[],fireflies=[];
+let mgGrass=[],fgPlants=[],treeBranches=[]; // 预生成的植物数组
+let mx=0,my=0,hasMouse=false;
+
+function setup(){
+  let cvs=createCanvas(windowWidth,windowHeight);
+  cvs.style('position','fixed');cvs.style('top','0');cvs.style('left','0');
+  cvs.style('z-index','3');cvs.style('pointer-events','none');
+  smooth();pixelDensity(1);
+  CW=width;CH=height;
+  
+  initSceneData(); // 初始化固定的植物位置，防止闪烁
+  
+  for(let i=0;i<200;i++)drops.push(new Raindrop());
+  for(let i=0;i<16;i++)fireflies.push(new Firefly());
+  let bushX=CW*.65,bushY=CH*.84;
+  for(let i=0;i<3;i++)butterflies.push(new Butterfly(bushX,bushY,i));
+  cricketNext=random(800,2000);
+}
+
+function initSceneData() {
+  mgGrass = []; fgPlants = []; treeBranches = [];
+  // 中景草地
+  for(let i=0; i<60; i++) {
+    mgGrass.push({
+      x: random(CW), y: random(CH*.56, CH*.78),
+      h: random(5, 18), w: random(1.3, 2.5),
+      c: random(['#091a0e','#0e2214','#08160c','#102818']),
+      rot: random(-0.06, 0.06)
+    });
+  }
+  // 左侧前景蕨类与芒草
+  for(let i=0; i<45; i++) {
+    fgPlants.push({
+      type: random() < 0.25 ? 'fern' : 'blade',
+      x: random(-CW*0.05, CW*0.35), y: CH + random(0, 20),
+      h: CH * random(0.15, 0.45), w: random(3, 8),
+      bend: random(20, 90), angle: random(-0.2, 0.1)
+    });
+  }
+  // 右侧前景蕨类与芒草
+  for(let i=0; i<40; i++) {
+    fgPlants.push({
+      type: random() < 0.25 ? 'fern' : 'blade',
+      x: random(CW*0.6, CW*1.05), y: CH + random(0, 20),
+      h: CH * random(0.15, 0.45), w: random(3, 8),
+      bend: random(-90, -20), angle: random(-0.1, 0.2)
+    });
+  }
+  // 右上角垂柳枝条
+  for(let i=0; i<15; i++) {
+    treeBranches.push({
+      x: CW + random(-80, 20), y: random(-20, CH*0.35),
+      h: random(100, 300), bend: random(-100, -30)
+    });
+  }
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function draw(){
+  t=millis()*.001;
+  background(1,4,12);
+
+  drawL0_Sky();
+  drawL1_DistantHills();
+  drawL2_DreamcoreLights();   
+  drawL3_GroundAndPuddle();
+  drawL4_Rain();
+  drawL5_HydrangeaAndFireflies();
+  drawL6_Butterflies();
+  drawL7_ForegroundSilhouette();
+
+  cricketTimer+=16.67;
+  if(cricketTimer>=cricketNext&&audioReady){cricketTimer=0;cricketNext=random(500,2200);if(random()<.55)playCricket();}
+}
+
+// === L0: 深黑蓝夜空 ===
+function drawL0_Sky(){
+  let ctx=drawingContext;
+  let grad=ctx.createLinearGradient(0,0,0,CH*.65);
+  grad.addColorStop(0,'#010612');     
+  grad.addColorStop(.15,'#030e24');
+  grad.addColorStop(.35,'#061838');
+  grad.addColorStop(.55,'#0c2248');
+  grad.addColorStop(.75,'#142e55');
+  grad.addColorStop(1,'#1e3862');     
+  ctx.fillStyle=grad;ctx.fillRect(0,0,CW,CH);
+
+  let beam=ctx.createLinearGradient(CW*.8,0,CW*.25,CH*.55);
+  beam.addColorStop(0,'rgba(140,170,210,.035)');
+  beam.addColorStop(.4,'rgba(120,155,195,.015)');
+  beam.addColorStop(1,'transparent');
+  ctx.fillStyle=beam;ctx.fillRect(0,0,CW,CH*.58);
+}
+
+// === L1: 远山 + 暖窗 ===
+function drawL1_DistantHills(){
+  let hY=CH*.5;
+  fill(10,18,36,150);noStroke();
+  beginShape();vertex(0,CH);
+  for(let x=0;x<=CW;x+=10){let n1=noise(x*.0018+.5),n2=noise(x*.0035+1.8);vertex(x,hY+10-n1*30-n2*16);}
+  vertex(CW,CH);endShape(CLOSE);
+  fill(6,12,26,210);
+  beginShape();vertex(0,CH);
+  for(let x=0;x<=CW;x+=10){let n1=noise(x*.002+2),n2=noise(x*.004+.3),n3=noise(x*.007+1.5);vertex(x,hY-10-n1*38-n2*20-n3*10);}
+  vertex(CW,CH);endShape(CLOSE);
+
+  let hs=[{x:CW*.14,y:hY-24},{x:CW*.19,y:hY-20},{x:CW*.25,y:hY-26},{x:CW*.31,y:hY-19},{x:CW*.37,y:hY-22},{x:CW*.43,y:hY-27},{x:CW*.49,y:hY-18},{x:CW*.54,y:hY-24},{x:CW*.59,y:hY-20},{x:CW*.65,y:hY-25},{x:CW*.7,y:hY-19},{x:CW*.76,y:hY-22},{x:CW*.82,y:hY-26},{x:CW*.87,y:hY-20},{x:CW*.92,y:hY-23}];
+  for(let h of hs){
+    let hw=random(5,9),hh=random(5,9);
+    fill(4,9,18);rect(h.x,h.y,hw,hh);
+    let br=sin(t*1.3+h.x*5)*.3+.7;
+    fill(255,205,130,140*br);
+    for(let wy=h.y+1;wy<h.y+hh-1;wy+=2.2)for(let wx=h.x+1;wx<h.x+hw-1;wx+=2.5)if(random()>.4)rect(wx,wy,1.3,1.5);
+  }
+  let tx=CW*.3,ty=hY-75;
+  fill(4,9,18);rect(tx-1,ty,2,hY-ty);
+  if(sin(t*4)>0){drawingContext.shadowColor='red';drawingContext.shadowBlur=14;fill(255,30,30);circle(tx,ty,3);drawingContext.shadowBlur=0;}
+  
+  let trainX=(CW*.18+sin(t*.07)*CW*.38)%(CW*.5)+CW*.25,trainY=hY-15;
+  let tg=drawingContext.createRadialGradient(trainX,trainY,1,trainX,trainY,18);
+  tg.addColorStop(0,'rgba(255,220,140,.5)');tg.addColorStop(.4,'rgba(255,190,100,.14)');tg.addColorStop(1,'transparent');
+  drawingContext.fillStyle=tg;drawingContext.fillRect(trainX-22,trainY-14,44,28);
+  fill(255,220,150,200);circle(trainX,trainY,4);circle(trainX+10,trainY,3.5);
+}
+
+// === L2: Dreamcore灯光 ===
+function drawL2_DreamcoreLights(){
+  let gY=CH*.56; 
+
+  let vmX=CW*.42,vmY=gY-42; 
+  let glow=drawingContext.createRadialGradient(vmX+12,vmY+10,3,vmX+12,vmY+10,70);
+  glow.addColorStop(0,'rgba(200,235,255,.35)');
+  glow.addColorStop(.2,'rgba(180,225,255,.18)');
+  glow.addColorStop(.5,'rgba(140,200,240,.05)');
+  glow.addColorStop(1,'transparent');
+  drawingContext.fillStyle=glow;drawingContext.fillRect(vmX-60,vmY-50,140,130);
+
+  noStroke();fill(3,5,12);rect(vmX,vmY,24,42,2);
+  drawingContext.shadowColor='#cceeff';drawingContext.shadowBlur=30;
+  fill(235,248,255);rect(vmX+2,vmY+2,20,18,1);
+  drawingContext.shadowColor='#ffcc88';drawingContext.shadowBlur=20;
+  fill(255,210,140);rect(vmX+2,vmY+22,20,11,1);
+  drawingContext.shadowBlur=0;
+
+  let sigX=CW*.56,sigY=CH*.5-22; 
+  fill(3,5,12);rect(sigX,sigY,3,34);rect(sigX-9,sigY-12,21,7);
+
+  let flash=sin(t*3.5)>0;
+  let activeX = flash ? sigX-5 : sigX+7;
+  let activeColor = flash ? '255,30,20' : '30,255,50';
+  let lightGlow=drawingContext.createRadialGradient(activeX,sigY-8,2,activeX,sigY-8,40);
+  lightGlow.addColorStop(0,`rgba(${activeColor},.45)`);
+  lightGlow.addColorStop(.4,`rgba(${activeColor},.15)`);
+  lightGlow.addColorStop(1,'transparent');
+  drawingContext.fillStyle=lightGlow;drawingContext.fillRect(sigX-40,sigY-50,80,80);
+
+  drawingContext.shadowBlur=22;
+  drawingContext.shadowColor='red';
+  fill(flash?'#ff2020':'#1a0000');circle(sigX-5,sigY-8,5.5);
+  drawingContext.shadowColor='#20ff30';
+  fill(!flash?'#20ff30':'#001a05');circle(sigX+7,sigY-8,5.5);
+  drawingContext.shadowBlur=0;
+}
+
+// === L3: 地面 + 水洼倒影 ===
+function drawL3_GroundAndPuddle(){
+  let gY=CH*.56;
+  fill(5,10,8,185);noStroke();rect(0,gY,CW,CH-gY);
+
+  for (let g of mgGrass) {
+    let sway = sin(t*1.2 + g.x*0.02) * (1 + (g.h%2));
+    fill(g.c);
+    push(); translate(g.x, g.y); rotate(g.rot + sway*0.015);
+    rect(0, -g.h, g.w, g.h, 1); pop();
+  }
+
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.moveTo(CW*.06,gY+24);
+  drawingContext.bezierCurveTo(CW*.32,gY+8,CW*.62,gY+30,CW*.94,gY+16);
+  drawingContext.bezierCurveTo(CW*1.12,CH*.74,CW*.78,CH*.9,CW*.4,CH*.84);
+  drawingContext.bezierCurveTo(CW*.06,CH*.78,-CW*.12,CH*.64,CW*.06,gY+24);
+  drawingContext.closePath();drawingContext.clip();
+
+  let ctx=drawingContext;
+  let grad=ctx.createLinearGradient(0,gY,0,CH);
+  grad.addColorStop(0,'#142540');grad.addColorStop(1,'#081020');
+  ctx.fillStyle=grad;ctx.fillRect(0,0,CW,CH);
+
+  ctx.filter='blur(7px)';
+  let vmX=CW*.42, vmBaseY=gY; 
+  fill(235,248,255,140);rect(vmX+2,vmBaseY,20,18);
+  fill(255,210,140,140);rect(vmX+2,vmBaseY+20,20,11);
+  
+  let sigX=CW*.56, flash=sin(t*3.5)>0;
+  fill(flash?'rgba(255,30,20,.6)':'rgba(0,0,0,0)');circle(sigX-5,vmBaseY+20,7);
+  fill(!flash?'rgba(30,255,50,.6)':'rgba(0,0,0,0)');circle(sigX+7,vmBaseY+20,7);
+  
+  let trainX=(CW*.18+sin(t*.07)*CW*.38)%(CW*.5)+CW*.25;
+  fill(255,220,150,60);circle(trainX,vmBaseY+10,5);
+  ctx.filter='none';drawingContext.restore();
+
+  noFill();stroke(6,10,8,100);strokeWeight(3);
+  drawingContext.beginPath();
+  drawingContext.moveTo(CW*.06,gY+24);drawingContext.bezierCurveTo(CW*.32,gY+8,CW*.62,gY+30,CW*.94,gY+16);
+  drawingContext.bezierCurveTo(CW*1.12,CH*.74,CW*.78,CH*.9,CW*.4,CH*.84);
+  drawingContext.bezierCurveTo(CW*.06,CH*.78,-CW*.12,CH*.64,CW*.06,gY+24);
+  drawingContext.closePath();drawingContext.stroke();
+
+  if(random()<.35)ripples.push(new Ripple(random(CW*.06,CW*.94),random(gY+24,CH*.84)));
+  if(ripples.length>30)ripples.shift();
+  for(let r of ripples){r.update();r.draw();}
+}
+
+// === L4: 大雨 ===
+function drawL4_Rain(){for(let d of drops){d.update();d.draw();}}
+
+// === L5: 紫阳花 + 萤火虫 ===
+function drawL5_HydrangeaAndFireflies(){
+  let cx=CW*.68,cy=CH*.82;
+  fill(3,8,7);noStroke();ellipse(cx,cy+14,155,65);ellipse(cx-30,cy+4,95,50);
+
+  const drawCluster=(hx,hy,r,r2,g2,b2)=>{
+    for(let i=0;i<40;i++){
+      let a=random(TWO_PI),d=random(r),px=hx+cos(a)*d,py=hy+sin(a)*d*.8;
+      let br=map(d,0,r,1,.35);
+      fill(r2*br,g2*br,b2*br,200);noStroke();circle(px,py,random(7,14));
+      fill(255,255,255,100);circle(px,py,1.5);
+    }
+  };
+  drawingContext.shadowColor='rgba(100,150,255,.32)';drawingContext.shadowBlur=13;
+  drawCluster(cx-26,cy-8,38,85,136,255);
+  drawCluster(cx+33,cy,33,140,90,255);
+  drawCluster(cx,cy+10,42,70,175,255);
+  drawingContext.shadowBlur=0;
+
+  for(let f of fireflies){f.update();f.draw();}
+}
+
+// === L6: 三蝶 ===
+function drawL6_Butterflies(){
+  for(let b of butterflies){b.update(t,hasMouse?mx:0,hasMouse?my:0);b.draw();}
+}
+
+// === L7: 前景算法生成蕨类与芒草 (彻底重构) ===
+function drawL7_ForegroundSilhouette() {
+  fill(1, 3, 2); noStroke();
+  
+  // 底部两角的基底暗块 (画框)
+  beginShape(); vertex(0, CH); vertex(0, CH*0.75); quadraticVertex(CW*0.15, CH*0.85, CW*0.35, CH); endShape(CLOSE);
+  beginShape(); vertex(CW, CH); vertex(CW, CH*0.75); quadraticVertex(CW*0.85, CH*0.85, CW*0.65, CH); endShape(CLOSE);
+
+  // 渲染蕨类和芒草
+  for (let p of fgPlants) {
+    let sway = sin(t * 1.5 + p.x * 0.05) * 15; // 自然微风摇摆
+    let bend = p.bend + sway;
+    if (p.type === 'fern') {
+      drawFern(p.x, p.y, p.h, p.angle, bend);
+    } else {
+      drawBlade(p.x, p.y, p.h, p.w, bend);
+    }
+  }
+
+  // 渲染右上角的垂柳枝条
+  for (let b of treeBranches) {
+    let sway = sin(t * 1.2 + b.y * 0.1) * 8;
+    drawWillowBranch(b.x, b.y, b.h, b.bend + sway);
+  }
+}
+
+// 辅助绘图：弯曲的草叶
+function drawBlade(x, y, h, w, bend) {
+  fill(1, 3, 2); noStroke();
+  beginShape();
+  vertex(x, y);
+  quadraticVertex(x + bend/2, y - h/2, x + bend, y - h); 
+  quadraticVertex(x + bend/2 + w, y - h/2, x + w, y);    
+  endShape(CLOSE);
+}
+
+// 辅助绘图：精细的蕨类植物
+function drawFern(x, y, h, angle, bend) {
+  push();
+  translate(x, y);
+  rotate(angle);
+  
+  // 主茎
+  noFill(); stroke(1, 3, 2); strokeWeight(2.5);
+  bezier(0, 0, bend*0.3, -h*0.3, bend*0.8, -h*0.7, bend, -h);
+  
+  // 两侧复叶
+  noStroke(); fill(1, 3, 2);
+  let steps = 14;
+  for (let i = 1; i <= steps; i++) {
+    let pct = i / steps;
+    let bx = bezierPoint(0, bend*0.3, bend*0.8, bend, pct);
+    let by = bezierPoint(0, -h*0.3, -h*0.7, -h, pct);
+    let tx = bezierTangent(0, bend*0.3, bend*0.8, bend, pct);
+    let ty = bezierTangent(0, -h*0.3, -h*0.7, -h, pct);
+    let a = atan2(ty, tx);
+    
+    let leafW = (1 - pct) * h * 0.18; // 叶片往顶端逐渐变小
+    push(); translate(bx, by); rotate(a);
+    triangle(0, 0, leafW, -leafW*0.25, 0, -1.5);
+    triangle(0, 0, leafW,  leafW*0.25, 0,  1.5);
+    pop();
+  }
+  pop();
+}
+
+// 辅助绘图：垂下的柳枝
+function drawWillowBranch(x, y, h, bend) {
+  noFill(); stroke(1, 3, 2); strokeWeight(2);
+  bezier(x, y, x+bend*0.3, y+h*0.3, x+bend*0.8, y+h*0.7, x+bend, y+h);
+  
+  noStroke(); fill(1, 3, 2);
+  let steps = Math.floor(h / 15);
+  for(let i = 1; i <= steps; i++) {
+    let pct = i / steps;
+    let bx = bezierPoint(x, x+bend*0.3, x+bend*0.8, x+bend, pct);
+    let by = bezierPoint(y, y+h*0.3, y+h*0.7, y+h, pct);
+    push(); translate(bx, by); 
+    rotate(sin(i * 77) * 0.2); // 使用固定伪随机确保不闪烁
+    ellipse(0, 6, 3, 16);
+    pop();
+  }
+}
+
+// ============================================================
+// INTERACTION
+// ============================================================
+const layer=document.getElementById('interact-layer');
+layer.addEventListener('pointerdown',()=>{
+  if(!audioReady){initAudio();audioCtx.resume().then(()=>{masterGain.gain.linearRampToValueAtTime(.7,audioCtx.currentTime+1.5);audioReady=true;});}
+});
+layer.addEventListener('pointermove',e=>{mx=e.clientX;my=e.clientY;hasMouse=true;});
+function windowResized(){
+  resizeCanvas(windowWidth,windowHeight);
+  pixelDensity(1);
+  CW=width;CH=height;
+  initSceneData(); // 窗口调整时重新生成植物位置
+}
+</script>
+</body>
+</html>
