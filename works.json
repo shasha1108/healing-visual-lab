@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 19,
-  "updated": "2026-07-01",
+  "total": 20,
+  "updated": "2026-07-02",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -26,7 +26,8 @@
       "silent-translator",
       "sky-through-glass",
       "pixel-aquarium",
-      "aero-slime"
+      "aero-slime",
+      "drift-bottle"
     ],
     "webgl_glsl": [
       "breath-mirror",
@@ -51,7 +52,8 @@
       "unbound-mind",
       "sky-through-glass",
       "aero-slime",
-      "falling-verse"
+      "falling-verse",
+      "drift-bottle"
     ],
     "css_3d_gsap": [
       "cosmic-recollection",
@@ -86,7 +88,8 @@
       "sky-through-glass",
       "pixel-aquarium",
       "aero-slime",
-      "falling-verse"
+      "falling-verse",
+      "drift-bottle"
     ],
     "zero_dependency": [
       "silent-translator"
@@ -94,7 +97,8 @@
     "p5js": [
       "sky-through-glass",
       "pixel-aquarium",
-      "aero-slime"
+      "aero-slime",
+      "drift-bottle"
     ]
   },
   "works": [
@@ -532,6 +536,31 @@
       "has_audio": true,
       "has_touch": true,
       "date": "2026-07-01"
+    },
+    {
+      "slug": "drift-bottle",
+      "title_en": "Drift Bottle",
+      "title_zh": "平行世界 · 漂流瓶生态系统",
+      "tagline": "轻触漂流瓶，唤醒瓶中平行世界",
+      "tech": [
+        "p5.js",
+        "Canvas 2D Wave Physics",
+        "Clip Pipeline",
+        "BlendMode Screen",
+        "Web Audio API",
+        "CSS Keyframes"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "20+ (plankton + ripples)",
+      "files": [
+        "drift-bottle.html",
+        "drift-bottle.md",
+        "drift-bottle_1.gif"
+      ]
     }
   ]
 }

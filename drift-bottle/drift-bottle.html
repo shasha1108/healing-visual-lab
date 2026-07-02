@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<!--
+  Title: drift-bottle · 平行世界 · 漂流瓶生态系统
+  Tech: p5.js, Canvas 2D Wave Physics & Clip Pipeline, BlendMode Screen, Web Audio API, CSS Keyframes
+  Render: fixedCanvas (640×960)
+  Audio: yes
+  Touch: yes
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>平行世界 · 漂流瓶生态系统</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    width:100vw;height:100vh;overflow:hidden;
+    background:linear-gradient(155deg,#7ed2f4 0%,#b5e8f7 35%,#d5f2ea 70%,#ebf8f5 100%);
+    font-family:"Segoe UI","PingFang SC",sans-serif;
+    user-select:none;-webkit-user-select:none;touch-action:none;
+  }
+  #pixel-stage{
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    overflow:hidden;
+    box-shadow:0 30px 70px rgba(0,75,120,.22);
+    border-radius:20px;
+  }
+  .ambient-light{
+    position:fixed;z-index:0;pointer-events:none;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,255,255,.55) 0%,transparent 60%);
+    filter:blur(35px);
+  }
+  .ambient-light.a{width:34vw;height:32vw;top:-6%;left:-2%;animation:orbA 20s ease-in-out infinite;}
+  .ambient-light.b{width:24vw;height:24vw;bottom:6%;right:4%;animation:orbB 24s ease-in-out infinite;}
+  @keyframes orbA{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(25px,-18px) scale(1.15)}66%{transform:translate(-12px,12px) scale(.9)}}
+  @keyframes orbB{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-28px,16px) scale(1.2)}}
+
+  #interact-layer{position:fixed;inset:0;z-index:5}
+
+  .hint{
+    position:fixed;z-index:6;pointer-events:none;
+    bottom:3.5%;left:50%;transform:translateX(-50%);
+    font-size:12px;letter-spacing:5px;
+    color:rgba(10,80,120,.6);
+    text-shadow:0 1px 3px rgba(255,255,255,.8);
+    opacity:0;animation:hintIn 3s ease-in-out 1.5s forwards;
+  }
+  @keyframes hintIn{to{opacity:.85}}
+
+  .knock-ripple{
+    position:fixed;z-index:6;pointer-events:none;
+    border-radius:50%;border:2px solid rgba(255,255,255,.9);
+    background:radial-gradient(circle,rgba(255,255,255,.55) 0%,transparent 60%);
+    animation:ripple .85s cubic-bezier(.1,.8,.2,1) forwards;
+    transform:translate(-50%,-50%);
+  }
+  @keyframes ripple{0%{width:0;height:0;opacity:1;border-width:5px}100%{width:220px;height:220px;opacity:0;border-width:1px}}
+</style>
+</head>
+<body>
+
+<div id="pixel-stage"></div>
+<div class="ambient-light a"></div>
+<div class="ambient-light b"></div>
+<div id="interact-layer"></div>
+
+<script>
+let CW=640, CH=960;
+const PX=2;
+
+// ═══════════════════════════════════════════════════════════
+// AUDIO (空灵和弦 + 水泡涌动)
+// ═══════════════════════════════════════════════════════════
+let audioCtx=null, masterGain=null, audioReady=false;
+function initAudio(){
+  if(audioCtx)return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  masterGain=audioCtx.createGain();masterGain.gain.value=0;
+  masterGain.connect(audioCtx.destination);
+}
+function playEcosystemSound(){
+  if(!audioCtx||!audioReady)return;
+  const now=audioCtx.currentTime;
+  const freqs=[523.25, 659.25, 783.99, 987.77, 1046.50, 1318.51, 1567.98]; 
+  
+  for(let i=0; i<3; i++){
+    const f = freqs[Math.floor(Math.random() * freqs.length)];
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.type = 'sine';
+    const delay = i * 0.08;
+    osc.frequency.setValueAtTime(f, now + delay);
+    g.gain.setValueAtTime(0, now + delay);
+    g.gain.linearRampToValueAtTime(0.12, now + delay + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0005, now + delay + 2.2);
+    osc.connect(g); g.connect(masterGain);
+    osc.start(now + delay); osc.stop(now + delay + 2.4);
+  }
+
+  const bubbleOsc = audioCtx.createOscillator();
+  const bubbleG = audioCtx.createGain();
+  bubbleOsc.type = 'sine';
+  bubbleOsc.frequency.setValueAtTime(180, now);
+  bubbleOsc.frequency.exponentialRampToValueAtTime(520, now + 0.12);
+  bubbleG.gain.setValueAtTime(0.14, now);
+  bubbleG.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+  bubbleOsc.connect(bubbleG); bubbleG.connect(masterGain);
+  bubbleOsc.start(now); bubbleOsc.stop(now + 0.18);
+}
+
+// ═══════════════════════════════════════════════════════════
+// 外海天空、耀斑与翱翔的大海鸥
+// ═══════════════════════════════════════════════════════════
+let outerSeagulls = [
+  { x: 80, y: 140, vx: 1.1, vy: -0.12, phase: 0, scale: 0.95 },
+  { x: 260, y: 180, vx: 0.85, vy: 0.08, phase: 1.8, scale: 0.7 },
+  { x: 480, y: 100, vx: 1.3, vy: -0.06, phase: 3.5, scale: 1.1 }
+];
+
+function drawOuterSkyAndSeagulls(time) {
+  const dc = drawingContext;
+  const sg = dc.createLinearGradient(0,0,0,CH*.37);
+  sg.addColorStop(0, '#8ed4f5');
+  sg.addColorStop(.5, '#c5eef8');
+  sg.addColorStop(1, '#e3f7f2');
+  dc.fillStyle = sg; dc.fillRect(0,0,CW,CH*.37);
+
+  // 太阳辐射耀斑
+  const sunX = CW * 0.82, sunY = CH * 0.10;
+  const sunGlow = dc.createRadialGradient(sunX, sunY, 10, sunX, sunY, 210);
+  sunGlow.addColorStop(0, 'rgba(255, 255, 250, 0.98)');
+  sunGlow.addColorStop(.2, 'rgba(255, 242, 185, 0.45)');
+  sunGlow.addColorStop(.55, 'rgba(180, 235, 255, 0.18)');
+  sunGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  dc.fillStyle = sunGlow; dc.fillRect(0, 0, CW, CH*.37);
+
+  // 云朵
+  fill(255, 255, 255, 175); noStroke();
+  for(let i=0; i<3; i++) {
+    const cx = (80 + i*230 + time*10) % (CW+180) - 90;
+    const cy = 60 + i*35 + sin(time*0.4 + i)*5;
+    rect(round(cx), round(cy), PX*30, PX*6, 4);
+    rect(round(cx+PX*5), round(cy-PX*3), PX*20, PX*5, 3);
+  }
+
+  // 外海翱翔大海鸥
+  for (let g of outerSeagulls) {
+    g.x += g.vx; g.y += sin(time * 0.8 + g.phase) * 0.35 + g.vy;
+    if (g.x > CW + 50) g.x = -50;
+    if (g.y < 40 || g.y > CH * 0.30) g.vy *= -1;
+
+    push();
+    translate(g.x, g.y);
+    scale(g.scale);
+    
+    stroke(220, 235, 245, 220); strokeWeight(2.2); noFill();
+    let wingY = sin(time * 3.5 + g.phase) * 8;
+    
+    beginShape();
+    vertex(-12, wingY*0.8);
+    bezierVertex(-6, -3, 0, 1, 0, 2);
+    bezierVertex(0, 1, 6, -3, 12, wingY*0.8);
+    endShape();
+
+    stroke(255, 255, 255, 255); strokeWeight(2.0);
+    beginShape();
+    vertex(-13, wingY);
+    bezierVertex(-7, -4, 0, 0, 0, 0);
+    bezierVertex(0, 0, 7, -4, 13, wingY);
+    endShape();
+
+    fill(255, 200, 80); noStroke();
+    triangle(0, 1, 2, 4, -1, 3);
+    pop();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 拟真外海浪涌 (Trochoidal Waves & Caustics Sparkles)
+// ═══════════════════════════════════════════════════════════
+function getWaveHeight(x, time) {
+  return sin(x * 0.012 + time * 2.2) * 10 
+       + sin(x * 0.025 + time * 1.5) * 5 
+       + cos(x * 0.008 + time * 0.9) * 8;
+}
+
+function drawOuterOcean(horizonY, shoreY, time){
+  const dc = drawingContext;
+  const h = shoreY - horizonY;
+  const og = dc.createLinearGradient(0, horizonY, 0, shoreY);
+  og.addColorStop(0, '#7bcbeb');
+  og.addColorStop(.35, '#3ea7d8');
+  og.addColorStop(1, '#125292');
+  dc.fillStyle = og; dc.fillRect(0, horizonY, CW, shoreY - horizonY);
+
+  // 5 层高精波浪
+  const colors = ['#88d4f2', '#58b6e2', '#3298d0', '#1c7cb8', '#105a96'];
+  for (let i = 0; i < 5; i++) {
+    let layerY = horizonY + (h * (i + 1) / 5) * 0.85;
+    fill(colors[i]); noStroke();
+    beginShape();
+    vertex(0, CH);
+    for (let x = 0; x <= CW; x += 6) {
+      let wH = getWaveHeight(x + i * 50, time + i * 0.4) * (0.5 + i * 0.25);
+      vertex(x, layerY + wH);
+    }
+    vertex(CW, CH);
+    endShape(CLOSE);
+  }
+
+  // 海面波光闪烁点
+  for (let i = 0; i < 22; i++) {
+    let sx = (i * 37 + time * 25) % CW;
+    let sy = horizonY + 30 + (i * 27) % (h - 50);
+    let spark = sin(time * 6 + i * 2.5) * 0.5 + 0.5;
+    if (spark > 0.4) {
+      fill(255, 255, 255, spark * 220); noStroke();
+      ellipse(sx, sy, 3 + spark * 3, 1 + spark * 1.5);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 瓶内平行生态系统成员 (Ship, Angler Shark, Seagulls)
+// ═══════════════════════════════════════════════════════════
+
+// 1. 巡航帆船
+let ship = { x: -20, y: 10, vx: 0.25, dir: 1 };
+function updateAndDrawShip(time, slosh) {
+  ship.x += ship.vx * ship.dir;
+  if (ship.x > 52) { ship.dir = -1; }
+  if (ship.x < -52) { ship.dir = 1; }
+
+  push();
+  let shipY = 10 + sin(time * 2.5 + ship.x * 0.05) * 3 + slosh * 4;
+  translate(ship.x, shipY);
+  rotate(ship.dir * 0.08 + sin(time * 3) * 0.06 + slosh * 0.2);
+  scale(ship.dir, 1);
+
+  fill(90, 52, 28); noStroke();
+  beginShape();
+  vertex(-20, -5); vertex(20, -5); vertex(13, 5); vertex(-13, 5);
+  endShape(CLOSE);
+  fill(125, 78, 42); rect(-18, -9, 36, 4);
+
+  stroke(60, 35, 18); strokeWeight(1.5);
+  line(0, -9, 0, -38); line(10, -9, 10, -28); noStroke();
+
+  fill(252, 248, 235);
+  beginShape();
+  vertex(1, -11); quadraticVertex(12, -24, 1, -36); quadraticVertex(-5, -24, 1, -11);
+  endShape(CLOSE);
+
+  beginShape();
+  vertex(11, -11); quadraticVertex(17, -20, 11, -27); quadraticVertex(6, -20, 11, -11);
+  endShape(CLOSE);
+
+  fill(225, 55, 55);
+  triangle(0, -38, -9, -34, 0, -30);
+
+  pop();
+}
+
+// 2. 深海发光鲨鱼灯
+let shark = { x: 0, y: 75, vx: 0.38, dir: 1, tailPhase: 0 };
+function updateAndDrawShark(time) {
+  shark.x += shark.vx * shark.dir;
+  if (shark.x > 58) { shark.dir = -1; }
+  if (shark.x < -58) { shark.dir = 1; }
+  shark.tailPhase += 0.08;
+
+  push();
+  translate(shark.x, shark.y + sin(time * 1.5) * 4);
+  scale(shark.dir, 1);
+
+  fill(22, 50, 75); noStroke();
+  ellipse(0, 0, 38, 18);
+  triangle(-2, -8, 6, -18, 8, -6);
+  triangle(-2, 2, 8, 12, 10, 2);
+
+  fill(135, 180, 205); ellipse(2, 3, 26, 8);
+
+  let tailWag = sin(shark.tailPhase) * 6;
+  fill(22, 50, 75);
+  push();
+  translate(-17, 0); rotate(tailWag * 0.05);
+  triangle(0, 0, -12, -10, -8, 0); triangle(0, 0, -12, 10, -8, 0);
+  pop();
+
+  fill(255); circle(11, -3, 3);
+  fill(10); circle(12, -3, 1.5);
+
+  stroke(80, 220, 240); strokeWeight(1.2); noFill();
+  beginShape(); vertex(14, -4); quadraticVertex(24, -16, 28, -6); endShape();
+
+  drawingContext.save();
+  drawingContext.globalCompositeOperation = 'screen';
+  let glow = drawingContext.createRadialGradient(28, -6, 1, 28, -6, 45);
+  glow.addColorStop(0, 'rgba(255, 245, 170, 0.95)');
+  glow.addColorStop(0.35, 'rgba(60, 230, 255, 0.45)');
+  glow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  drawingContext.fillStyle = glow;
+  drawingContext.fillRect(-20, -50, 90, 80);
+  drawingContext.restore();
+
+  fill(255, 255, 210); noStroke(); circle(28, -6, 4.5);
+  pop();
+}
+
+// 3. 瓶内微型海鸥
+let innerSeagulls = [
+  { x: -35, y: -60, vx: 0.3, phase: 0 },
+  { x: 25, y: -88, vx: 0.2, phase: 2.1 }
+];
+function updateAndDrawInnerSeagulls(time) {
+  for (let g of innerSeagulls) {
+    g.x += g.vx; if (g.x > 70) g.x = -70;
+    push();
+    translate(g.x, g.y + sin(time * 2 + g.phase) * 3);
+    stroke(255, 255, 255, 230); strokeWeight(1.5); noFill();
+    let wingY = sin(time * 6 + g.phase) * 5;
+    beginShape(); vertex(-6, wingY); quadraticVertex(-3, -2, 0, 0); quadraticVertex(3, -2, 6, wingY); endShape();
+    pop();
+  }
+}
+
+// 4. 浮游荧光粒子
+let plankton = [];
+function updateAndDrawPlankton(time) {
+  if (frameCount % 12 === 0 && plankton.length < 15) {
+    plankton.push({ x: random(-65, 65), y: random(30, 110), vy: random(-0.3, -0.8), alpha: 255, size: random(1.5, 3) });
+  }
+  for (let i = plankton.length - 1; i >= 0; i--) {
+    let p = plankton[i]; p.y += p.vy; p.x += sin(time * 2 + i) * 0.3; p.alpha -= 2;
+    if (p.alpha <= 0 || p.y < 12) { plankton.splice(i, 1); continue; }
+    fill(120, 240, 255, p.alpha); noStroke(); circle(p.x, p.y, p.size);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 优雅药剂瓶（Apothecary Flask）几何曲线
+// ═══════════════════════════════════════════════════════════
+function defineBottlePath(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(-30, -170); 
+  ctx.lineTo(-30, -105); 
+  ctx.bezierCurveTo(-30, -60, -108, -35, -108, 30); 
+  ctx.lineTo(-108, 135); 
+  ctx.quadraticCurveTo(-108, 178, -58, 178); 
+  ctx.quadraticCurveTo(0, 188, 58, 178);     
+  ctx.quadraticCurveTo(108, 178, 108, 135);  
+  ctx.lineTo(108, 30);   
+  ctx.bezierCurveTo(108, -35, 30, -60, 30, -105);   
+  ctx.lineTo(30, -170);  
+  ctx.closePath();
+}
+
+// ═══════════════════════════════════════════════════════════
+// 漂流瓶 3.0 (完美位于全屏绝对中央 320, 480)
+// ═══════════════════════════════════════════════════════════
+let sloshImpulse = 0;
+
+function drawEcoBottle(time) {
+  const dc = drawingContext;
+  
+  // ★ 精确计算：让漂流瓶的悬浮中心稳定在屏幕绝对中央 X:320, Y:480 ★
+  const waveBaseY = CH * 0.47; // 451px
+  const waveH = getWaveHeight(320, time);
+  const waveSlope = (getWaveHeight(325, time) - getWaveHeight(315, time)) * 0.05;
+
+  const floatY = waveBaseY + waveH + 15; // 刚好在 480px 上下平滑摇曳
+  const tiltAngle = -0.68 + waveSlope + sin(time * 1.5) * 0.05 + sloshImpulse * 0.15;
+  sloshImpulse = lerp(sloshImpulse, 0, 0.05);
+
+  push();
+  translate(320, floatY);
+  rotate(tiltAngle);
+  scale(0.68);
+
+  // ── Pass 1: 瓶后体块 ──
+  dc.save();
+  defineBottlePath(dc);
+  const backG = dc.createRadialGradient(-20, -40, 30, 0, 40, 260);
+  backG.addColorStop(0, 'rgba(230, 250, 255, 0.22)');
+  backG.addColorStop(0.5, 'rgba(150, 230, 220, 0.28)');
+  backG.addColorStop(1, 'rgba(20, 110, 100, 0.48)');
+  dc.fillStyle = backG; dc.fill();
+  dc.restore();
+
+  // ── Pass 2: Clip 遮罩 → 重力解耦平行生态 ──
+  dc.save();
+  defineBottlePath(dc); dc.clip();
+
+  push();
+  rotate(-tiltAngle); // ★ 重力解耦：瓶内水面保持与真实地平线平行！ ★
+
+  const innerSky = dc.createLinearGradient(0, -180, 0, 12);
+  innerSky.addColorStop(0, '#90dbf5');
+  innerSky.addColorStop(1, '#e1f7f2');
+  dc.fillStyle = innerSky; dc.fillRect(-200, -200, 400, 215);
+
+  const innerWaterY = 12;
+  const wg = dc.createLinearGradient(0, innerWaterY, 0, 180);
+  wg.addColorStop(0, 'rgba(55, 225, 245, 0.78)');
+  wg.addColorStop(0.35, 'rgba(28, 160, 215, 0.88)');
+  wg.addColorStop(1, 'rgba(6, 68, 128, 0.96)');
+  dc.fillStyle = wg; dc.fillRect(-200, innerWaterY, 400, 200);
+
+  dc.fillStyle = 'rgba(210, 250, 255, 0.62)';
+  dc.beginPath(); dc.moveTo(-200, innerWaterY);
+  for (let lx = -200; lx <= 200; lx += 4) {
+    let ly = innerWaterY + sin(lx * 0.04 + time * 3) * 3 + sin(lx * 0.08 + time * 2) * 1.5;
+    dc.lineTo(lx, ly);
+  }
+  dc.lineTo(200, 200); dc.lineTo(-200, 200); dc.closePath(); dc.fill();
+
+  updateAndDrawInnerSeagulls(time);
+  updateAndDrawShark(time);
+  updateAndDrawShip(time, sloshImpulse);
+  updateAndDrawPlankton(time);
+
+  pop();
+
+  dc.restore(); // ★ 结束 Clip Mask
+
+  // ── Pass 3: 前曲面高光与翡翠玻璃底 ──
+  
+  // 3a. 瓶底沉淀厚度
+  dc.save();
+  const baseG = dc.createLinearGradient(0, 120, 0, 185);
+  baseG.addColorStop(0, 'rgba(0, 0, 0, 0)');
+  baseG.addColorStop(0.5, 'rgba(15, 85, 70, 0.42)');
+  baseG.addColorStop(1, 'rgba(2, 42, 32, 0.78)');
+  dc.fillStyle = baseG;
+  dc.beginPath(); dc.ellipse(0, 165, 98, 13, 0, 0, PI * 2); dc.fill();
+  dc.restore();
+
+  // 3b. 菲涅尔边缘描边
+  dc.save();
+  defineBottlePath(dc);
+  const edgeG = dc.createLinearGradient(-110, 0, 110, 0);
+  edgeG.addColorStop(0, 'rgba(10, 68, 58, 0.62)');
+  edgeG.addColorStop(0.04, 'rgba(255, 255, 255, 0.85)');
+  edgeG.addColorStop(0.2, 'rgba(255, 255, 255, 0.05)');
+  edgeG.addColorStop(0.8, 'rgba(255, 255, 255, 0.05)');
+  edgeG.addColorStop(0.96, 'rgba(255, 255, 255, 0.55)');
+  edgeG.addColorStop(1, 'rgba(8, 52, 42, 0.52)');
+  dc.strokeStyle = edgeG; dc.lineWidth = 3.5; dc.stroke();
+  dc.restore();
+
+  // 3c. 强抛光双重高光条 (Screen 模式)
+  dc.save();
+  dc.globalCompositeOperation = 'screen';
+  const sg = dc.createLinearGradient(-100, 0, -20, 0);
+  sg.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  sg.addColorStop(0.22, 'rgba(255, 255, 255, 0.90)');
+  sg.addColorStop(0.55, 'rgba(200, 245, 255, 0.35)');
+  sg.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  dc.fillStyle = sg;
+  dc.beginPath();
+  dc.moveTo(-38, -155);
+  dc.bezierCurveTo(-42, -80, -100, -20, -100, 40);
+  dc.lineTo(-100, 130);
+  dc.quadraticCurveTo(-96, 168, -60, 155);
+  dc.lineTo(-60, 40);
+  dc.bezierCurveTo(-60, -20, -23, -70, -23, -155);
+  dc.closePath(); dc.fill();
+  dc.restore();
+
+  // 3d. 瓶口金丝麻绳缠绕与软木塞
+  dc.save();
+  stroke(180, 140, 80); strokeWeight(3);
+  line(-30, -115, 30, -115);
+  stroke(210, 170, 100); strokeWeight(2);
+  line(-30, -112, 30, -112);
+  noStroke();
+
+  const ckW = 58, ckH = 22;
+  const ckG = dc.createLinearGradient(-ckW/2, 0, ckW/2, 0);
+  ckG.addColorStop(0, '#6e4322');
+  ckG.addColorStop(0.3, '#c89260');
+  ckG.addColorStop(0.7, '#a67242');
+  ckG.addColorStop(1, '#4a2612');
+  dc.fillStyle = ckG;
+  rect(-ckW/2, -185, ckW, ckH, 4);
+  dc.restore();
+
+  pop();
+}
+
+// ═══════════════════════════════════════════════════════════
+// 涟漪
+// ═══════════════════════════════════════════════════════════
+let ripples=[];
+function addRipple(x,y){
+  ripples.push({x,y,r:0,life:0,alpha:180});
+  if(ripples.length>5)ripples.shift();
+}
+function updateRipples(){
+  for(let i=ripples.length-1; i>=0; i--){
+    const r=ripples[i]; r.r+=1.4; r.life++; r.alpha=map(r.life,0,22,180,0);
+    if(r.alpha<=0){ripples.splice(i,1);continue;}
+    noFill(); stroke(255,255,255,r.alpha); strokeWeight(1.8);
+    circle(round(r.x), round(r.y), r.r*2);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// P5 SETUP & DRAW
+// ═══════════════════════════════════════════════════════════
+function setup(){
+  let cvs=createCanvas(CW,CH);
+  cvs.parent('pixel-stage');
+  cvs.style('display','block');cvs.style('position','absolute');
+  cvs.style('top','0');cvs.style('left','0');
+  cvs.style('width','100%');cvs.style('height','100%');
+  cvs.style('z-index','3');cvs.style('pointer-events','none');
+  cvs.style('image-rendering','pixelated');
+  cvs.style('filter','drop-shadow(0px 10px 15px rgba(0,70,110,.16))');
+  noSmooth(); pixelDensity(1);
+  sizeStage();
+}
+
+function sizeStage(){
+  const stage=document.getElementById('pixel-stage');
+  const scale=min(windowWidth/CW, windowHeight/CH);
+  stage.style.width=floor(CW*scale)+'px';
+  stage.style.height=floor(CH*scale)+'px';
+}
+
+function draw(){
+  clear();
+  const t=millis()*.001;
+
+  drawOuterSkyAndSeagulls(t);
+  drawOuterOcean(CH*.37, CH, t); // ★ 海水占比提升至 63% ★
+  drawEcoBottle(t);             // ★ 漂流瓶位于画面绝对正中心 ★
+  updateRipples();
+}
+
+function windowResized(){ sizeStage(); }
+
+// ═══════════════════════════════════════════════════════════
+// INTERACTION (唤醒平行世界)
+// ═══════════════════════════════════════════════════════════
+const layer=document.getElementById('interact-layer');
+layer.addEventListener('pointerdown',(e)=>{
+  if(!audioReady){
+    initAudio();
+    audioCtx.resume().then(()=>{
+      masterGain.gain.linearRampToValueAtTime(.6, audioCtx.currentTime+1);
+      audioReady=true;
+    });
+  }
+
+  playEcosystemSound();
+
+  sloshImpulse = 1.0;
+  shark.vx = 1.25; setTimeout(() => { shark.vx = 0.38; }, 1200);
+
+  const stage=document.getElementById('pixel-stage');
+  const sr=stage.getBoundingClientRect();
+  const sx=(e.clientX-sr.left)/sr.width*CW;
+  const sy=(e.clientY-sr.top)/sr.height*CH;
+  addRipple(sx,sy);
+
+  for(let i=0; i<6; i++) {
+    plankton.push({ x: random(-40, 40), y: random(40, 90), vy: random(-1.2, -2.5), alpha: 255, size: random(2, 4) });
+  }
+
+  const ripple=document.createElement('div');
+  ripple.className='knock-ripple';
+  ripple.style.left=e.clientX+'px'; ripple.style.top=e.clientY+'px';
+  document.body.appendChild(ripple);
+  setTimeout(()=>ripple.remove(), 850);
+});
+</script>
+</body>
+</html>
