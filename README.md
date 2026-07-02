@@ -10,7 +10,7 @@
   <a href="https://github.com/shasha1108/healing-visual-lab/stargazers"><img src="https://img.shields.io/github/stars/shasha1108/healing-visual-lab?style=for-the-badge&color=7C5CBF" alt="Stars"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License"></a>
   <a href="https://shasha1108.github.io/healing-visual-lab/"><img src="https://img.shields.io/badge/Live-Demo-4CAF50?style=for-the-badge" alt="Live Demo"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Works-20-ED225D?style=for-the-badge" alt="15 Works"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Works-21-ED225D?style=for-the-badge" alt="15 Works"></a>
 </p>
 
 <p>
@@ -123,13 +123,14 @@ open inkmeditation/inkmeditation.html
 </details>
 
 <details open>
-<summary><b>🎨 Canvas / p5.js</b> &ensp;<sub>5 works</sub></summary>
+<summary><b>🎨 Canvas / p5.js</b> &ensp;<sub>6 works</sub></summary>
 
 - [无声的翻译官 / Silent Translator](https://shasha1108.github.io/healing-visual-lab/silent-translator/silent-translator.html) — 身体替你说了说不出的话
 - [玻璃天空 / Sky Through Glass](https://shasha1108.github.io/healing-visual-lab/sky-through-glass/sky-through-glass.html) — 蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。
 - [像素水族箱 / Pixel Aquarium](https://shasha1108.github.io/healing-visual-lab/pixel-aquarium/pixel-aquarium.html) — 晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。
 - [电子情绪宠物 / Aero Slime](https://shasha1108.github.io/healing-visual-lab/aero-slime/aero-slime.html) — 点击色块投喂情绪，双击玻璃释放惊吓——一只住在亚克力盒子里的电子史莱姆，用颜文字回应你的每一种心情
 - [平行世界 · 漂流瓶生态系统 / Drift Bottle](https://shasha1108.github.io/healing-visual-lab/drift-bottle/drift-bottle.html) — 轻触漂流瓶，唤醒瓶中平行世界
+- [沉水 MP3 / Sunken iPod](https://shasha1108.github.io/healing-visual-lab/sunken-ipod/sunken-ipod.html) — 深海之底，一首七里香。触碰水面，音符如气泡升起。
 
 </details>
 
@@ -144,7 +145,7 @@ open inkmeditation/inkmeditation.html
 
 <!-- WORKS_END -->
 
-*Last updated: 2026-07-02 | Works: 20 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
+*Last updated: 2026-07-02 | Works: 21 | Languages: 中文 · English | Tech: Three.js · WebGL · Canvas · Web Audio · GSAP*
 
 <p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
 
