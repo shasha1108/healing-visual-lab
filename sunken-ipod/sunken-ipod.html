@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<!--
+  Title: Sunken iPod · 沉水 MP3
+  Tech: p5.js, Canvas 2D, BlendMode Screen/Overlay, Web Audio API
+  Render: fixedCanvas (640×960)
+  Audio: yes
+  Touch: yes
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>沉水 MP3 · Sunken iPod</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{
+  width:100vw;height:100vh;overflow:hidden;
+  background:#05254d;
+  font-family:"Segoe UI","PingFang SC",sans-serif;
+  user-select:none;-webkit-user-select:none;touch-action:none;
+}
+#pixel-stage{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  overflow:hidden;
+  box-shadow:0 30px 80px rgba(0,20,50,0.6);
+  border-radius:16px;
+}
+#interact-layer{position:absolute;inset:0;z-index:10;cursor:pointer;}
+</style>
+</head>
+<body>
+
+<div id="pixel-stage">
+  <div id="interact-layer"></div>
+</div>
+
+<script>
+const CW = 640, CH = 960;
+let t = 0;
+
+// ── MP3 物理与位置 ──
+let mp3 = {
+  x: CW / 2,
+  y: CH * 0.44,
+  w: 220,
+  h: 360,
+  r: 28,
+  vy: 0,
+  angle: 0,
+  pushImpulse: 0
+};
+
+// ── 实体数组 ──
+let bubbles = [];
+let ripples = [];
+let bgParticles = [];
+let playGlow = 0;
+let isPlaying = true;
+
+// ── 音频 ──
+let actx = null, mg = null;
+
+function setup() {
+  let c = createCanvas(CW, CH);
+  c.parent('pixel-stage');
+  sizeStage();
+
+  // 初始化水下环境粒子
+  for(let i=0; i<30; i++) {
+    bgParticles.push({
+      x: random(CW),
+      y: random(CH),
+      z: random(0.3, 1.5),
+      size: random(2, 6),
+      speed: random(0.2, 0.7)
+    });
+  }
+
+  // 初始化常态上升气泡
+  for(let i=0; i<15; i++) {
+    bubbles.push({
+      x: random(CW),
+      y: random(CH),
+      r: random(3, 8),
+      vy: random(-1.0, -2.5),
+      vx: random(-0.3, 0.3),
+      alpha: random(0.4, 0.8)
+    });
+  }
+}
+
+function sizeStage() {
+  let s = document.getElementById('pixel-stage');
+  let sc = Math.min(windowWidth / CW, windowHeight / CH);
+  s.style.width = Math.floor(CW * sc) + 'px';
+  s.style.height = Math.floor(CH * sc) + 'px';
+}
+function windowResized() { sizeStage(); }
+
+// ═══════════════════════════════════════════════════════════════
+// 主渲染循环
+// ═══════════════════════════════════════════════════════════════
+function draw() {
+  t = millis() * 0.001;
+  clear();
+  let ctx = drawingContext;
+
+  // 常态补给气泡
+  if (frameCount % 18 === 0 && bubbles.length < 35) {
+    bubbles.push({
+      x: random(40, CW - 40),
+      y: CH + 20,
+      r: random(3, 9),
+      vy: random(-1.2, -2.8),
+      vx: random(-0.4, 0.4),
+      alpha: random(0.5, 0.9)
+    });
+  }
+
+  // 1. Frutiger Aero 高饱和水下背景与太阳耀斑光轴
+  drawUnderwaterBackground(ctx, t);
+
+  // 2. 水下焦散光影与投影 (Caustics Shadow)
+  drawUnderwaterCausticsShadow(ctx, t);
+
+  // 3. Y型真实的柔顺耳机线 (主线 -> 分线器 -> 左右分线)
+  drawAquaticCords(ctx, t);
+
+  // 4. 2.5D 水晶体块 iPod 主体
+  updateMP3Physics(t);
+  draw2D5iPod(ctx, t);
+
+  // 5. iPod 身上的水波反光层 (Overlay)
+  drawWaterOverlayOniPod(ctx, t);
+
+  // 6. 气泡 + 水下波纹 + 景深模糊粒子
+  updateAndDrawBubbles(ctx, t);
+  updateAndDrawRipples(ctx);
+  drawForegroundBokeh(ctx, t);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 1. 高饱和 Frutiger Aero 水下背景
+// ═══════════════════════════════════════════════════════════════
+function drawUnderwaterBackground(ctx, t) {
+  let wg = ctx.createLinearGradient(0, 0, 0, CH);
+  wg.addColorStop(0, '#00d4ff');   // 浅水纯青
+  wg.addColorStop(0.3, '#0090e0');
+  wg.addColorStop(0.65, '#055090');
+  wg.addColorStop(1, '#05254d');   // 深海深蓝
+  ctx.fillStyle = wg; ctx.fillRect(0, 0, CW, CH);
+
+  // 强阳光束 (God Rays)
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for(let i=0; i<4; i++) {
+    let rx = CW * 0.65 + i * 45 + sin(t * 0.8 + i) * 20;
+    let rayG = ctx.createLinearGradient(rx, 0, rx - 120, CH);
+    rayG.addColorStop(0, 'rgba(220, 250, 255, 0.28)');
+    rayG.addColorStop(0.5, 'rgba(120, 220, 255, 0.08)');
+    rayG.addColorStop(1, 'transparent');
+    ctx.fillStyle = rayG;
+    ctx.beginPath();
+    ctx.moveTo(rx, 0); ctx.lineTo(rx + 50, 0);
+    ctx.lineTo(rx - 90, CH); ctx.lineTo(rx - 150, CH);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+
+  // 背景微光粒子
+  noStroke();
+  for(let p of bgParticles) {
+    p.y -= p.speed;
+    p.x += sin(t + p.y*0.01) * 0.4;
+    if(p.y < -10) p.y = CH + 10;
+    fill(200, 245, 255, 120 * p.z);
+    circle(p.x, p.y, p.size * p.z);
+  }
+}
+
+// 2. 水下焦散光斑与投射阴影
+function drawUnderwaterCausticsShadow(ctx, t) {
+  ctx.save();
+  let shadowY = mp3.y + mp3.h * 0.42;
+  let shadowG = ctx.createRadialGradient(mp3.x, shadowY, 20, mp3.x, shadowY, mp3.w * 0.95);
+  shadowG.addColorStop(0, 'rgba(2, 20, 45, 0.65)');
+  shadowG.addColorStop(0.6, 'rgba(5, 30, 60, 0.25)');
+  shadowG.addColorStop(1, 'transparent');
+  ctx.fillStyle = shadowG;
+  ctx.beginPath();
+  ctx.ellipse(mp3.x, shadowY + 35, mp3.w * 0.85, 45, mp3.angle, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalCompositeOperation = 'screen';
+  let causticG = ctx.createRadialGradient(mp3.x, shadowY + 35, mp3.w * 0.4, mp3.x, shadowY + 35, mp3.w * 0.9);
+  causticG.addColorStop(0, 'transparent');
+  causticG.addColorStop(0.5, 'rgba(100, 230, 255, 0.2)');
+  causticG.addColorStop(1, 'transparent');
+  ctx.fillStyle = causticG;
+  ctx.beginPath();
+  ctx.ellipse(mp3.x, shadowY + 35, mp3.w * 0.9, 50, mp3.angle, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 3. 真实 Y 型结构耳机线 (金属插头 -> 主线 -> 分线器 -> L/R分线)
+// ═══════════════════════════════════════════════════════════════
+function drawAquaticCords(ctx, t) {
+  push();
+  let jX = mp3.x;
+  let jY = mp3.y - mp3.h/2 + 6;
+
+  ctx.save();
+  // 1. 顶部金属插头基座
+  fill(210, 230, 245); noStroke();
+  rect(jX - 4, jY - 12, 8, 12, 2);
+  fill(160, 180, 200);
+  rect(jX - 2, jY - 16, 4, 4);
+
+  // 2. 主线缆 (从插孔延伸到水下的分线器)
+  let splitX = jX - 25 + sin(t * 1.1) * 16;
+  let splitY = jY + 110 + cos(t * 0.9) * 12;
+
+  // 主线阴影
+  ctx.strokeStyle = 'rgba(2, 25, 55, 0.25)';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(jX + 3, jY - 8 + 4);
+  ctx.bezierCurveTo(jX - 15 + 3, jY + 40 + 4, splitX + 3, splitY - 30 + 4, splitX + 3, splitY + 4);
+  ctx.stroke();
+
+  // 主线白色主体
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(jX, jY - 8);
+  ctx.bezierCurveTo(jX - 15, jY + 40, splitX, splitY - 30, splitX, splitY);
+  ctx.stroke();
+
+  // 3. 分线器 (Y-Splitter 塑料小圆柱)
+  fill(210, 230, 245); noStroke();
+  rect(splitX - 3.5, splitY - 4, 7, 9, 2);
+
+  // 4. 左/右两条分支线缆
+  drawBranchCord(ctx, splitX, splitY + 4, -1, t);
+  drawBranchCord(ctx, splitX, splitY + 4, 1, t);
+
+  ctx.restore();
+  pop();
+}
+
+function drawBranchCord(ctx, startX, startY, side, t) {
+  let c1x = startX + side * 45 + sin(t * 1.4 + side) * 18;
+  let c1y = startY + 50 + cos(t * 1.1) * 12;
+  let endX = startX + side * 95 + sin(t * 0.9 + side * 2) * 25;
+  let endY = startY + 130 + cos(t * 0.8 + side) * 18;
+
+  // 阴影
+  ctx.strokeStyle = 'rgba(2, 25, 55, 0.25)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(startX + 3, startY + 4);
+  ctx.bezierCurveTo(c1x + 3, c1y + 4, endX + 3, endY + 4, endX + 3, endY + 4);
+  ctx.stroke();
+
+  // 分支线
+  ctx.strokeStyle = side === -1 ? 'rgba(255, 255, 255, 0.88)' : 'rgba(235, 245, 255, 0.75)';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.bezierCurveTo(c1x, c1y, endX - side * 12, endY - 18, endX, endY);
+  ctx.stroke();
+
+  // 耳塞 (Earbud)
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(endX, endY, 6.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#70b5e0';
+  ctx.beginPath(); ctx.arc(endX, endY, 3.5, 0, Math.PI * 2); ctx.fill();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 4. 2.5D 水晶 iPod 主体
+// ═══════════════════════════════════════════════════════════════
+function updateMP3Physics(t) {
+  mp3.pushImpulse = lerp(mp3.pushImpulse, 0, 0.05);
+  mp3.y = CH * 0.44 + sin(t * 1.8) * 10 + mp3.pushImpulse * 12;
+  mp3.angle = sin(t * 1.2) * 0.035 + mp3.pushImpulse * 0.04;
+  playGlow *= 0.92;
+}
+
+function draw2D5iPod(ctx, t) {
+  push();
+  translate(mp3.x, mp3.y);
+  rotate(mp3.angle);
+
+  let w = mp3.w, h = mp3.h, r = mp3.r;
+
+  // 2.5D 厚度侧面 (背板金属边)
+  ctx.save();
+  ctx.fillStyle = '#a2b8cc';
+  roundRectPath(ctx, -w/2 + 5, -h/2 + 6, w, h, r);
+  ctx.fill();
+  ctx.restore();
+
+  // 正面纯白亚克力外壳
+  ctx.save();
+  let bodyGrad = ctx.createLinearGradient(-w/2, -h/2, w/2, h/2);
+  bodyGrad.addColorStop(0, '#ffffff');
+  bodyGrad.addColorStop(0.5, '#f2f7fb');
+  bodyGrad.addColorStop(1, '#d8e2eb');
+  ctx.fillStyle = bodyGrad;
+  roundRectPath(ctx, -w/2, -h/2, w, h, r);
+  ctx.fill();
+
+  // 镀铬金属极细包边
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // 屏幕区域 (液晶屏)
+  let scrW = w * 0.84, scrH = h * 0.28;
+  let scrX = -scrW / 2, scrY = -h / 2 + 28;
+
+  ctx.save();
+  // 屏幕外框暗边
+  ctx.fillStyle = '#0a1828';
+  roundRectPath(ctx, scrX - 2, scrY - 2, scrW + 4, scrH + 4, 8);
+  ctx.fill();
+
+  // 液晶屏底色
+  let lcdGrad = ctx.createLinearGradient(0, scrY, 0, scrY + scrH);
+  lcdGrad.addColorStop(0, '#0a2e40');
+  lcdGrad.addColorStop(1, '#041828');
+  ctx.fillStyle = lcdGrad;
+  roundRectPath(ctx, scrX, scrY, scrW, scrH, 6);
+  ctx.fill();
+
+  // 屏幕 UI
+  drawScreenUI(ctx, scrX, scrY, scrW, scrH, t);
+
+  // 屏幕斜向半透明玻璃反光
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.beginPath();
+  ctx.moveTo(scrX, scrY); ctx.lineTo(scrX + scrW, scrY);
+  ctx.lineTo(scrX + scrW, scrY + 22); ctx.lineTo(scrX, scrY + 50);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // iPod 转盘 (Click Wheel)
+  let wheelR = w * 0.25;
+  let wheelCY = h * 0.18;
+  drawClickWheel(ctx, 0, wheelCY, wheelR, t);
+
+  // 贯穿全身的高光条 (Screen Mode)
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  let specG = ctx.createLinearGradient(-w, -h, w, h);
+  specG.addColorStop(0, 'rgba(255,255,255,0)');
+  specG.addColorStop(0.3, 'rgba(255,255,255,0.75)');
+  specG.addColorStop(0.55, 'rgba(200,240,255,0.2)');
+  specG.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = specG;
+  roundRectPath(ctx, -w/2, -h/2, w, h, r);
+  ctx.fill();
+  ctx.restore();
+
+  pop();
+}
+
+// 转盘渲染 (已修复为全小写 center/middle 正确中心对齐)
+function drawClickWheel(ctx, cx, cy, r, t) {
+  ctx.save();
+  let wg = ctx.createRadialGradient(cx - r*0.2, cy - r*0.2, r*0.1, cx, cy, r);
+  wg.addColorStop(0, '#ffffff');
+  wg.addColorStop(0.85, '#e8eef4');
+  wg.addColorStop(1, '#d2dc85');
+  ctx.fillStyle = wg;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = 'rgba(100, 130, 160, 0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ★ 核心修复：转换为全小写，触发严格居中对齐 ★
+  ctx.fillStyle = '#788d9e';
+  ctx.font = 'bold 11px sans-serif';
+  ctx.textAlign = 'center'; 
+  ctx.textBaseline = 'middle';
+  
+  ctx.fillText('MENU', cx, cy - r * 0.68);
+  ctx.fillText('▶▍▍', cx, cy + r * 0.68);
+  ctx.fillText('◀◀', cx - r * 0.68, cy);
+  ctx.fillText('▶▶', cx + r * 0.68, cy);
+
+  // OK 中心按钮
+  let btnR = r * 0.32;
+  ctx.fillStyle = '#f2f6fa';
+  ctx.beginPath(); ctx.arc(cx, cy, btnR, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(100, 130, 160, 0.25)';
+  ctx.stroke();
+
+  // 绿色脉冲光晕
+  if(playGlow > 0.01) {
+    ctx.globalCompositeOperation = 'screen';
+    let pg = ctx.createRadialGradient(cx, cy, btnR, cx, cy, r * 1.5);
+    pg.addColorStop(0, `rgba(80, 255, 140, ${playGlow * 0.85})`);
+    pg.addColorStop(0.5, `rgba(0, 210, 255, ${playGlow * 0.4})`);
+    pg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = pg;
+    ctx.beginPath(); ctx.arc(cx, cy, r * 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// 屏幕 UI 版式 (对齐修复)
+function drawScreenUI(ctx, sx, sy, sw, sh, t) {
+  ctx.save();
+  let padX = 14;
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+
+  // 1. 顶部状态栏文字
+  ctx.fillStyle = '#00f0ff';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.fillText('NOW PLAYING', sx + padX, sy + 12);
+
+  // 2. 电池图标
+  let batX = sx + sw - padX - 16, batY = sy + 12;
+  ctx.strokeStyle = '#00f0ff'; ctx.lineWidth = 1;
+  ctx.strokeRect(batX, batY, 14, 7);
+  ctx.fillRect(batX + 14, batY + 2, 2, 3);
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillRect(batX + 2, batY + 2, 9, 3);
+
+  // 3. 歌名
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 15px "Segoe UI", sans-serif';
+  ctx.fillText('七里香', sx + padX, sy + 30);
+
+  // 4. 歌手名
+  ctx.fillStyle = '#70d0f0';
+  ctx.font = '11px "Segoe UI", sans-serif';
+  ctx.fillText('周杰伦 · 下一首 外婆', sx + padX, sy + 52);
+
+  // 5. 等响度频谱条
+  let eqRightX = sx + sw - padX;
+  for(let i=0; i<7; i++) {
+    let barH = isPlaying ? (sin(t * 9 + i * 1.1) * 0.5 + 0.5) * 18 + 3 : 3;
+    let bx = eqRightX - (7 - i) * 6;
+    let by = sy + 64 - barH;
+    ctx.fillStyle = i > 4 ? '#ff5577' : (i > 2 ? '#ffdd55' : '#55ff99');
+    ctx.fillRect(bx, by, 4, barH);
+  }
+
+  // 6. 底部进度条
+  let pbY = sy + sh - 14;
+  let pbW = sw - padX * 2, pbX = sx + padX;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+  ctx.fillRect(pbX, pbY, pbW, 3);
+
+  let prog = (t * 0.04) % 1;
+  ctx.fillStyle = '#00f0ff';
+  ctx.fillRect(pbX, pbY, pbW * prog, 3);
+
+  ctx.restore();
+}
+
+// 5. iPod 身上的水波纹叠加
+function drawWaterOverlayOniPod(ctx, t) {
+  push();
+  translate(mp3.x, mp3.y);
+  rotate(mp3.angle);
+
+  ctx.save();
+  roundRectPath(ctx, -mp3.w/2, -mp3.h/2, mp3.w, mp3.h, mp3.r);
+  ctx.clip();
+
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.fillStyle = 'rgba(180, 240, 255, 0.22)';
+
+  for(let i=0; i<4; i++) {
+    let wy = -mp3.h/2 + i * 90 + sin(t*2 + i) * 20;
+    ctx.beginPath();
+    ctx.moveTo(-mp3.w, wy);
+    ctx.bezierCurveTo(-mp3.w/2, wy - 30, mp3.w/2, wy + 30, mp3.w, wy);
+    ctx.lineTo(mp3.w, wy + 15);
+    ctx.bezierCurveTo(mp3.w/2, wy + 45, -mp3.w/2, wy - 15, -mp3.w, wy + 15);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+  pop();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 6. 交互粒子：常态/动态气泡 + 3D 涟漪 + 景深
+// ═══════════════════════════════════════════════════════════════
+function updateAndDrawBubbles(ctx, t) {
+  for(let i = bubbles.length - 1; i >= 0; i--) {
+    let b = bubbles[i];
+    b.y += b.vy;
+    b.x += sin(t * 3 + b.y * 0.05) * 1.2;
+    b.alpha -= 0.006;
+
+    if(b.alpha <= 0 || b.y < -20) { bubbles.splice(i, 1); continue; }
+
+    ctx.save();
+    ctx.fillStyle = `rgba(200, 245, 255, ${b.alpha * 0.45})`;
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = `rgba(255, 255, 255, ${b.alpha * 0.95})`;
+    ctx.beginPath(); ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.35, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function updateAndDrawRipples(ctx) {
+  for(let i = ripples.length - 1; i >= 0; i--) {
+    let r = ripples[i];
+    r.size += 3.5; r.alpha -= 0.022;
+    if(r.alpha <= 0) { ripples.splice(i, 1); continue; }
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(200, 245, 255, ${r.alpha})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(r.x, r.y, r.size, r.size * 0.4, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawForegroundBokeh(ctx, t) {
+  ctx.save();
+  ctx.filter = 'blur(8px)';
+  for(let i=0; i<3; i++) {
+    let bx = CW * 0.15 + i * 210 + sin(t + i) * 40;
+    let by = (CH + 100 - (t * 45 + i * 280) % (CH + 200));
+    fill(200, 245, 255, 50); noStroke();
+    circle(bx, by, 38 + i * 12);
+  }
+  ctx.filter = 'none';
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 全局点击交互
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('interact-layer').addEventListener('pointerdown', function(e) {
+  e.preventDefault();
+  let rect = document.querySelector('canvas').getBoundingClientRect();
+  let scaleX = CW / rect.width, scaleY = CH / rect.height;
+  let mx = (e.clientX - rect.left) * scaleX;
+  let my = (e.clientY - rect.top) * scaleY;
+
+  ripples.push({ x: mx, y: my, size: 10, alpha: 0.85 });
+  mp3.pushImpulse = -16;
+
+  for(let i=0; i<10; i++) {
+    bubbles.push({
+      x: mx + random(-20, 20),
+      y: my + random(-10, 10),
+      r: random(4, 11),
+      vy: random(-2.5, -5.5),
+      alpha: random(0.7, 1.0)
+    });
+  }
+
+  playGlow = 1.0;
+  playPentatonicChime();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// 音频引擎
+// ═══════════════════════════════════════════════════════════════
+function initAudio() {
+  if (actx) return;
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  mg = actx.createGain(); mg.gain.value = 0;
+  mg.connect(actx.destination);
+}
+
+function playPentatonicChime() {
+  if (!actx) initAudio();
+  if (actx.state === 'suspended') actx.resume();
+
+  let now = actx.currentTime;
+  mg.gain.setValueAtTime(0.4, now);
+  mg.gain.linearRampToValueAtTime(0, now + 2.0);
+
+  let notes = [523.25, 659.25, 783.99, 880.00, 1046.50];
+  for(let i=0; i<3; i++) {
+    let f = notes[Math.floor(Math.random() * notes.length)];
+    let o = actx.createOscillator();
+    let g = actx.createGain();
+    o.type = 'sine';
+    let delay = i * 0.08;
+    o.frequency.setValueAtTime(f, now + delay);
+
+    g.gain.setValueAtTime(0, now + delay);
+    g.gain.linearRampToValueAtTime(0.12, now + delay + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0005, now + delay + 1.8);
+
+    o.connect(g); g.connect(mg);
+    o.start(now + delay); o.stop(now + delay + 2.0);
+  }
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+</script>
+</body>
+</html>
