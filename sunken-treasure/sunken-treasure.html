@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<!--
+  Title: Sunken Treasure · Console Spawned Ecosystem
+  Tech: p5.js, Canvas 2D, CSS3
+  Render: Canvas 2D (p5.js)
+  Audio: no
+  Touch: yes
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sunken Treasure — Console Spawned Ecosystem</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100vw; height: 100vh; overflow: hidden;
+    background: #000D26;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  #canvas-container { position: absolute; inset: 0; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  Sunken Treasure — Frutiger Aero Crystal Aqua World
+// ═══════════════════════════════════════════════════════════════
+
+// 纯净 Frutiger Aero Aqua 极光色板
+const PAL = {
+  waterSky:   '#A0F0FF', // 顶级冰晶光
+  waterCyan:  '#00C8FF', // 清亮电光青
+  waterBlue:  '#0072FF', // 蓝宝石水体
+  waterDeep:  '#003880', // 深海靛蓝
+  waterAbyss: '#000D26', // 四周暗角
+};
+
+let fishes = [], bubbles = [], ripples = [], seaweeds = [], corals = [], lightDust = [], cartridges = [];
+
+// 鼠标视角平滑控制 (POV Camera)
+let targetCamX = 0, targetCamY = 0;
+let camX = 0, camY = 0;
+
+// 定时从掌机逃逸/诞生矢量鱼
+let lastSpawnTime = 0;
+let spawnInterval = 3200; // 每 3.2 秒掌机诞生一条新鱼
+let maxVectorFish = 24;   // 水中矢量鱼最大数量上限
+
+const FISH_STATE = { WANDER: 0, FLEE: 1, RETURN: 2 };
+
+function setup() {
+  let cvs = createCanvas(windowWidth, windowHeight);
+  cvs.parent('canvas-container');
+  pixelDensity(window.devicePixelRatio || 1);
+  initEntities();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  initEntities();
+}
+
+function initEntities() {
+  fishes = []; bubbles = []; seaweeds = []; corals = []; lightDust = []; cartridges = [];
+
+  // 1. 初始只有少量矢量鱼（后续会不断从掌机里逃逸诞生，鱼群越来越多！）
+  let fishDefs = [
+    { type: 'angel',    g1: '#FF4081', g2: '#FFEB3B', fin: 'rgba(255, 64, 129, 0.7)', sz: 1.25, layer: 'mid' },
+    { type: 'disk',     g1: '#FF9100', g2: '#FFEA00', fin: 'rgba(255, 145, 0, 0.7)',  sz: 1.3,  layer: 'mid' },
+    { type: 'goldfish', g1: '#FF3D00', g2: '#FFAB91', fin: 'rgba(255, 171, 145, 0.8)', sz: 1.15, layer: 'mid' },
+  ];
+  for (let i = 0; i < fishDefs.length; i++) {
+    let d = fishDefs[i];
+    fishes.push({
+      x: random(width * 0.2, width * 0.8),
+      y: random(height * 0.25, height * 0.75),
+      vx: random(-0.9, 0.9), vy: random(-0.4, 0.4),
+      ...d, state: FISH_STATE.WANDER, fleeTimer: 0,
+      wanderSeed: random(1000), phase: random(TWO_PI)
+    });
+  }
+
+  // 2. 水晶气泡
+  for (let i = 0; i < 50; i++) {
+    bubbles.push({
+      x: random(width), y: random(height),
+      r: random(3, 12), speed: random(0.6, 1.8),
+      wobbleAmp: random(0.5, 2.5), wobbleSeed: random(1000)
+    });
+  }
+
+  // 3. 散斑光尘
+  for (let i = 0; i < 60; i++) {
+    lightDust.push({
+      x: random(width), y: random(height),
+      r: random(1.5, 4), alpha: random(0.2, 0.8),
+      speedY: random(-0.2, -0.6), speedX: random(-0.2, 0.2)
+    });
+  }
+
+  // 4. 透明游戏卡带（6张，分散漂浮）
+  let cartColors = ['rgba(0,229,255,0.5)', 'rgba(255,64,129,0.45)', 'rgba(170,0,255,0.5)', 'rgba(0,230,118,0.45)', 'rgba(255,145,0,0.45)', 'rgba(24,255,255,0.5)'];
+  let cartPositions = [
+    {x: width * 0.18, y: height * 0.55},
+    {x: width * 0.78, y: height * 0.42},
+    {x: width * 0.15, y: height * 0.65},
+    {x: width * 0.82, y: height * 0.58},
+    {x: width * 0.22, y: height * 0.38},
+    {x: width * 0.75, y: height * 0.68},
+  ];
+  for (let i = 0; i < 6; i++) {
+    let pos = cartPositions[i];
+    cartridges.push({
+      x: pos.x + random(-20, 20),
+      y: pos.y + random(-15, 15),
+      vx: random(-0.25, 0.25), vy: random(-0.15, 0.15),
+      color: cartColors[i], phase: random(TWO_PI), size: 1.1 + i * 0.08
+    });
+  }
+
+  // 5. 水草
+  for (let i = 0; i < 8; i++) {
+    seaweeds.push({
+      x: i < 4 ? random(30, width * 0.22) : random(width * 0.78, width - 30),
+      baseY: height + 20,
+      height: random(height * 0.55, height * 0.85),
+      swayAmp: random(20, 38), phase: random(TWO_PI),
+      width: random(40, 65),
+      color: i % 2 === 0 ? 'rgba(0, 230, 118, 0.85)' : 'rgba(29, 233, 182, 0.85)'
+    });
+  }
+
+  // 6. 底部珊瑚
+  let cc = [
+    { main: '#FF4081', sub: '#FF80AB' }, { main: '#AA00FF', sub: '#E040FB' },
+    { main: '#FF6D00', sub: '#FFAB40' }, { main: '#00E5FF', sub: '#80D8FF' },
+  ];
+  let coralCount = Math.floor(width / 160);
+  for (let i = 0; i < coralCount; i++) {
+    corals.push({
+      x: (i + 0.5) * (width / coralCount) + random(-30, 30),
+      y: height - 15, height: random(65, 120),
+      branches: Math.floor(random(4, 7)), colors: cc[i % 4], phase: random(TWO_PI)
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 主渲染循环
+// ═══════════════════════════════════════════════════════════════
+function draw() {
+  clear();
+  let t = frameCount * 0.02, ctx = drawingContext;
+
+  // 鼠标 POV 平滑视角
+  let mx = (mouseX - width / 2) / (width / 2);
+  let my = (mouseY - height / 2) / (height / 2);
+  if (mouseX === 0 && mouseY === 0) { mx = 0; my = 0; }
+  targetCamX = mx * 45;
+  targetCamY = my * 60;
+  camX += (targetCamX - camX) * 0.05;
+  camY += (targetCamY - camY) * 0.05;
+
+  // L0: 水体渐变
+  drawCrystalWaterBG(ctx, t);
+
+  // L1: 阳光带
+  drawSoftSunbeams(ctx, t);
+
+  // L2: 液体光池
+  drawLiquidCaustics(ctx, t);
+
+  // L3: 底沙与软体珊瑚
+  ctx.save();
+  ctx.translate(camX * 0.45, camY * 0.45);
+  drawSandyFloor(ctx, t);
+  for (let c of corals) drawCoral(ctx, c, t);
+  ctx.restore();
+
+  // L4: 主角 3D 立体水晶掌机 (放大尺寸，清晰展现屏幕游戏)
+  let consoleX = width * 0.5;
+  let consoleY = height * 0.5 + Math.sin(t * 0.8) * 10;
+  let consoleRot = -0.15 + Math.sin(t * 0.5) * 0.025;
+
+  ctx.save();
+  ctx.translate(camX * 0.65, camY * 0.65);
+  draw3DGameBoyConsole(ctx, consoleX, consoleY, consoleRot, t);
+  ctx.restore();
+
+
+  // 定时监测：从掌机屏幕里诞生并逃逸出新的矢量鱼！
+  checkConsoleFishEscape(consoleX + camX * 0.65, consoleY + camY * 0.65, consoleRot, t);
+
+  // L5: 水里游动的矢量鱼群（随着时间推移，越来越多！）
+  ctx.save();
+  ctx.translate(camX * 0.85, camY * 0.85);
+  for (let f of fishes) { updateFish(f, t); drawFish(ctx, f, t); }
+  ctx.restore();
+
+  // L6: 优雅宽叶水草、发光光尘与水晶气泡、卡带
+  ctx.save();
+  ctx.translate(camX * 1.05, camY * 1.05);
+  for (let s of seaweeds) drawWideSeaweed(ctx, s, t);
+  for (let d of lightDust) updateDrawDust(ctx, d);
+  for (let ct of cartridges) { updateCartridge(ct, t); drawCartridge(ctx, ct, t); }
+  for (let b of bubbles) updateDrawBubble(ctx, b, t);
+  drawRipples(ctx);
+  ctx.restore();
+
+  // L7: 水面漫反射 (Snell's Window)
+  drawSnellsWaterSurface(ctx, t);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 水线与光线渲染
+// ═══════════════════════════════════════════════════════════════
+function drawCrystalWaterBG(ctx, t) {
+  let centerX = width * 0.5 - camX * 0.4;
+  let centerY = -60 - camY * 0.8;
+
+  let g = ctx.createRadialGradient(centerX, centerY, 40, width * 0.5, height * 0.5, Math.max(width, height) * 0.9);
+  g.addColorStop(0.0, PAL.waterSky);
+  g.addColorStop(0.2, PAL.waterCyan);
+  g.addColorStop(0.55, PAL.waterBlue);
+  g.addColorStop(0.82, PAL.waterDeep);
+  g.addColorStop(1.0, PAL.waterAbyss);
+
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, width, height);
+}
+
+function drawSoftSunbeams(ctx, t) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  let sunX = width * 0.5 - camX * 0.5;
+  let sunY = -40 - camY * 0.8;
+
+  for (let i = 0; i < 5; i++) {
+    let cx = sunX + (i - 2) * width * 0.08 + Math.sin(t * 0.5 + i) * 15;
+    let cy = sunY + 55 + Math.cos(t * 0.4 + i) * 8;
+    let rx = 15 + Math.sin(t + i) * 8;
+    let ry = 6 + Math.cos(t * 1.2 + i) * 4;
+    let cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+    cg.addColorStop(0.0, 'rgba(255, 255, 255, 0.55)');
+    cg.addColorStop(0.3, 'rgba(200, 245, 255, 0.18)');
+    cg.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawLiquidCaustics(ctx, t) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  for (let i = 0; i < 8; i++) {
+    let cx = width * (0.12 + i * 0.125) + Math.sin(t * 0.7 + i * 1.5) * 50;
+    let cy = height * (0.22 + (i % 3) * 0.24) + Math.cos(t * 0.5 + i) * 40;
+    let rx = 100 + Math.sin(t + i) * 35;
+    let ry = 50 + Math.cos(t * 1.2 + i) * 20;
+
+    let cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+    cg.addColorStop(0.0, 'rgba(210, 255, 255, 0.20)');
+    cg.addColorStop(0.5, 'rgba(100, 225, 255, 0.08)');
+    cg.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, Math.sin(t * 0.4 + i) * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawSnellsWaterSurface(ctx, t) {
+  let sunX = width * 0.5 - camX * 0.5;
+  let sunY = -40 - camY * 0.8;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  let glassGrad = ctx.createRadialGradient(sunX, sunY + 50, 10, sunX, sunY + 50, width * 0.35);
+  glassGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.35)');
+  glassGrad.addColorStop(0.3, 'rgba(160, 240, 255, 0.10)');
+  glassGrad.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = glassGrad;
+  ctx.beginPath();
+  ctx.ellipse(sunX, sunY + 50, width * 0.35, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 放大版 3D 透明掌机 + 参考图按键 + NES 复古像素鱼游戏画面
+// ═══════════════════════════════════════════════════════════════
+function draw3DGameBoyConsole(ctx, cx, cy, rot, t) {
+  let w = 210, h = 320; // 适当放大掌机与屏幕尺寸
+  let x = -w / 2, y = -h / 2;
+  let ext = 15; // 3D 厚度
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+
+
+  // 1. 3D 侧壁厚度
+  let sideGrad = ctx.createLinearGradient(x + w, y, x + w + ext, y + h + ext);
+  sideGrad.addColorStop(0.0, 'rgba(140, 230, 255, 0.7)');
+  sideGrad.addColorStop(0.5, 'rgba(40, 150, 200, 0.5)');
+  sideGrad.addColorStop(1.0, 'rgba(10, 60, 110, 0.8)');
+
+  ctx.fillStyle = sideGrad;
+  ctx.beginPath();
+  ctx.moveTo(x + w - 10, y + 20); ctx.lineTo(x + w + ext - 10, y + 20 + ext);
+  ctx.lineTo(x + w + ext - 10, y + h + ext - 20); ctx.lineTo(x + w - 10, y + h - 20);
+  ctx.closePath(); ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(x + 20, y + h - 10); ctx.lineTo(x + 20 + ext, y + h + ext - 10);
+  ctx.lineTo(x + w + ext - 20, y + h + ext - 10); ctx.lineTo(x + w - 20, y + h - 10);
+  ctx.closePath(); ctx.fill();
+
+  // 2. 正面水晶亚克力外壳
+  let shellGrad = ctx.createLinearGradient(x, y, x + w, y + h);
+  shellGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.95)');
+  shellGrad.addColorStop(0.18, 'rgba(210, 250, 255, 0.65)');
+  shellGrad.addColorStop(0.70, 'rgba(90, 210, 245, 0.40)');
+  shellGrad.addColorStop(1.0, 'rgba(20, 125, 175, 0.75)');
+  
+  ctx.fillStyle = shellGrad;
+  roundRectPath(ctx, x, y, w, h, 28);
+  ctx.fill();
+
+  ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // 3. 深嵌 PCB 电路板
+  let pcbX = x + 12, pcbY = y + 12, pcbW = w - 24, pcbH = h - 24;
+  ctx.fillStyle = 'rgba(0, 30, 60, 0.5)';
+  roundRectPath(ctx, pcbX - 2, pcbY - 2, pcbW + 4, pcbH + 4, 20);
+  ctx.fill();
+
+  let pcbGrad = ctx.createLinearGradient(pcbX, pcbY, pcbX + pcbW, pcbY + pcbH);
+  pcbGrad.addColorStop(0.0, '#00E58B'); pcbGrad.addColorStop(1.0, '#005C37');
+  ctx.fillStyle = pcbGrad;
+  roundRectPath(ctx, pcbX, pcbY, pcbW, pcbH, 18);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)'; ctx.lineWidth = 1.2;
+  for (let i = 0; i < 7; i++) {
+    let lx = pcbX + 22 + i * 25;
+    ctx.beginPath();
+    ctx.moveTo(lx, pcbY + 150); ctx.lineTo(lx, pcbY + 185 + i * 4);
+    ctx.lineTo(lx + 8, pcbY + 193 + i * 4); ctx.lineTo(lx + 8, pcbY + pcbH - 22);
+    ctx.stroke();
+  }
+
+  let leds = [
+    { lx: pcbX + 18, ly: pcbY + 142, color: '#00E5FF' },
+    { lx: pcbX + pcbW - 18, ly: pcbY + 142, color: '#FF007F' },
+    { lx: pcbX + 24, ly: pcbY + pcbH - 24, color: '#76FF03' },
+  ];
+  for (let l of leds) {
+    ctx.save();
+    ctx.shadowColor = l.color; ctx.shadowBlur = 14 + Math.sin(t * 4) * 4;
+    ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(l.lx, l.ly, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // 4. 放大的像素游戏屏幕 (清晰可见像素鱼游动关卡)
+  let scrX = x + 20, scrY = y + 22, scrW = w - 40, scrH = 130;
+  ctx.fillStyle = '#1C1F26';
+  roundRectPath(ctx, scrX - 5, scrY - 5, scrW + 10, scrH + 10, 9);
+  ctx.fill();
+
+  ctx.save();
+  ctx.beginPath();
+  roundRectPath(ctx, scrX, scrY, scrW, scrH, 5);
+  ctx.clip();
+
+  // 16-Bit 《魂斗罗》风像素鱼游戏场景
+  let PX = 3.5;
+  // 暗黑/夜空舞台背景
+  ctx.fillStyle = '#050811';
+  ctx.fillRect(scrX, scrY, scrW, scrH);
+
+  // 像素山脉 (背景)
+  ctx.fillStyle = '#2A3440';
+  ctx.beginPath();
+  ctx.moveTo(scrX + 12, scrY + 65); ctx.lineTo(scrX + 40, scrY + 30); ctx.lineTo(scrX + 68, scrY + 65);
+  ctx.moveTo(scrX + 55, scrY + 65); ctx.lineTo(scrX + 90, scrY + 25); ctx.lineTo(scrX + 125, scrY + 65);
+  ctx.fill();
+  ctx.fillStyle = '#8090A0'; // 雪顶
+  ctx.beginPath();
+  ctx.moveTo(scrX + 40, scrY + 30); ctx.lineTo(scrX + 32, scrY + 40); ctx.lineTo(scrX + 48, scrY + 40);
+  ctx.moveTo(scrX + 90, scrY + 25); ctx.lineTo(scrX + 82, scrY + 35); ctx.lineTo(scrX + 98, scrY + 35);
+  ctx.fill();
+
+  // 魂斗罗岩石关卡平台 (黄褐色岩石 + 鲜绿草地顶层)
+  let groundY = scrY + scrH - 42;
+  ctx.fillStyle = '#997A15';
+  ctx.fillRect(scrX, groundY, scrW, 42);
+  ctx.fillStyle = '#66500B';
+  for (let rx = scrX; rx < scrX + scrW; rx += 14) {
+    ctx.fillRect(rx, groundY + 10, 9, 14);
+    ctx.fillRect(rx + 7, groundY + 25, 7, 12);
+  }
+  ctx.fillStyle = '#76FF03'; // 鲜绿草地
+  ctx.fillRect(scrX, groundY, scrW, 7);
+
+  // 悬空绿色小平台
+  ctx.fillRect(scrX + 35, groundY - 22, 55, 6);
+  ctx.fillStyle = '#997A15';
+  ctx.fillRect(scrX + 35, groundY - 16, 55, 4);
+
+  // 飞行 R 胶囊 / 像素飞行物 (Top Right)
+  ctx.fillStyle = '#FF1744';
+  ctx.fillRect(scrX + scrW - 50, scrY + 20, 20, 11);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(scrX + scrW - 43, scrY + 23, 7, 5);
+
+  // 屏幕里游动的像素小鱼玩家
+  let fishAnimX = scrX + 40 + (Math.floor(t * 20) % (scrW - 60));
+  ctx.fillStyle = '#FF9100';
+  ctx.fillRect(fishAnimX, groundY - 35, 12, 7);
+  ctx.fillStyle = '#00E5FF';
+  ctx.fillRect(fishAnimX - 5, groundY - 33, 5, 4);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(fishAnimX + 8, groundY - 34, 3, 3);
+
+  // 【逃逸传送门 (Pixel Escape Portal)】：右侧跨界传送门
+  let portalCX = scrX + scrW - 20;
+  let portalCY = scrY + scrH * 0.45;
+  let portalR = 22 + Math.sin(t * 3) * 3;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = '#00E5FF';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(portalCX - portalR, portalCY - portalR, portalR * 2, portalR * 2);
+
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  for (let i = 0; i < 5; i++) {
+    let px = portalCX - portalR + (i * 8 + Math.floor(t * 15)) % (portalR * 2);
+    ctx.fillRect(px, portalCY - portalR + 3, 3, portalR * 2 - 6);
+  }
+  ctx.restore();
+
+  // 屏幕斜切高光
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.32)';
+  ctx.beginPath(); ctx.moveTo(scrX, scrY); ctx.lineTo(scrX + scrW * 0.7, scrY); ctx.lineTo(scrX, scrY + scrH * 0.85); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // 5. 【参考图片同款功能键布局】
+  // RESET 按键 (屏幕下方正中央)
+  let resetX = 0, resetY = y + 165;
+  ctx.fillStyle = '#C0C4CC';
+  ctx.beginPath(); ctx.arc(resetX, resetY + 1, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath(); ctx.arc(resetX, resetY, 5.5, 0, Math.PI * 2); ctx.fill();
+  ctx.font = 'bold 7px sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.textAlign = 'center';
+  ctx.fillText('RESET', resetX, resetY + 14);
+
+  // 3D 十字方向键 (D-Pad，带刻印)
+  let dpX = x + 44, dpY = y + 202;
+  ctx.fillStyle = '#0B121A';
+  ctx.fillRect(dpX - 15, dpY - 4, 30, 14); ctx.fillRect(dpX - 4, dpY - 15, 14, 30);
+  ctx.fillStyle = '#18222D';
+  ctx.fillRect(dpX - 17, dpY - 6, 30, 12); ctx.fillRect(dpX - 6, dpY - 17, 12, 30);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.fillRect(dpX - 13, dpY - 2, 5, 2);  // 左
+  ctx.fillRect(dpX + 8, dpY - 2, 5, 2);   // 右
+  ctx.fillRect(dpX - 2, dpY - 13, 2, 5);  // 上
+  ctx.fillRect(dpX - 2, dpY + 8, 2, 5);   // 下
+
+  // 4 色钻石布局按键 (ABXY: 红/绿/蓝/黄 - 参考图片同款)
+  let btnCenterX = x + w - 48, btnCenterY = y + 202;
+  let btnDist = 16;
+
+  function drawColored3DButton(bx, by, colorMain, colorHi) {
+    ctx.fillStyle = '#1A042B';
+    ctx.beginPath(); ctx.arc(bx + 1.5, by + 1.5, 10.5, 0, Math.PI * 2); ctx.fill();
+    let btnGrad = ctx.createRadialGradient(bx - 2, by - 2, 1, bx, by, 10);
+    btnGrad.addColorStop(0.0, colorHi);
+    btnGrad.addColorStop(0.8, colorMain);
+    btnGrad.addColorStop(1.0, '#330000');
+    ctx.fillStyle = btnGrad;
+    ctx.beginPath(); ctx.arc(bx, by, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.beginPath(); ctx.arc(bx - 3, by - 3, 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // 上=红, 左=绿, 右=蓝, 下=黄 (图片同款)
+  drawColored3DButton(btnCenterX, btnCenterY - btnDist, '#FF3B30', '#FF7A73'); // 上: 红
+  drawColored3DButton(btnCenterX - btnDist, btnCenterY, '#34C759', '#73E693'); // 左: 绿
+  drawColored3DButton(btnCenterX + btnDist, btnCenterY, '#007AFF', '#66B2FF'); // 右: 蓝
+  drawColored3DButton(btnCenterX, btnCenterY + btnDist, '#FFCC00', '#FFEA66'); // 下: 黄
+
+  // SELECT & START 胶囊按键 (下方)
+  let selY = y + 262;
+  function drawPillButton(px, py) {
+    ctx.fillStyle = '#111822';
+    ctx.beginPath(); ctx.ellipse(px, py + 1, 10, 4.5, -Math.PI * 0.08, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2C3B4E';
+    ctx.beginPath(); ctx.ellipse(px, py, 9, 4, -Math.PI * 0.08, 0, Math.PI * 2); ctx.fill();
+  }
+  let selectX = x + 60, startX = x + 100;
+  drawPillButton(selectX, selY);
+  drawPillButton(startX, selY);
+
+  ctx.font = 'bold 8px sans-serif';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.textAlign = 'center';
+  ctx.fillText('SELECT', selectX, selY - 8);
+  ctx.fillText('START', startX, selY - 8);
+
+  // 斜向扬声器栅格 (右下角)
+  ctx.save();
+  ctx.fillStyle = '#091520';
+  ctx.translate(x + w - 42, y + h - 38);
+  ctx.rotate(-Math.PI * 0.25);
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 4; col++) {
+      ctx.fillRect(col * 7 - 10, row * 6 - 5, 4, 3);
+    }
+  }
+  ctx.restore();
+
+  // 6. 机面焦散
+  ctx.save();
+  roundRectPath(ctx, x, y, w, h, 28);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let cx = x - 20; cx < x + w + 20; cx += 22) {
+    for (let cy = y - 20; cy < y + h + 20; cy += 22) {
+      let nx = cx + Math.sin(cy * 0.03 + t * 1.8) * 10;
+      let ny = cy + Math.cos(cx * 0.03 + t * 1.5) * 10;
+      if (cx === x - 20) ctx.moveTo(nx, ny); else ctx.lineTo(nx, ny);
+    }
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 核心逃逸检测：像素鱼从掌机屏幕逃出，蜕变为水族箱矢量鱼！
+// ═══════════════════════════════════════════════════════════════
+function checkConsoleFishEscape(cx, cy, rot, t) {
+  let now = millis();
+  if (now - lastSpawnTime > spawnInterval && fishes.length < maxVectorFish) {
+    lastSpawnTime = now;
+
+    // 计算掌机屏幕传送门的 3D 世界坐标
+    let w = 210, h = 320;
+    let localPx = (w - 40) * 0.5 - 20; // 屏幕传送门 x
+    let localPy = -h / 2 + 22 + 130 * 0.45; // 屏幕传送门 y
+
+    let spawnX = cx + localPx * Math.cos(rot) - localPy * Math.sin(rot);
+    let spawnY = cy + localPx * Math.sin(rot) + localPy * Math.cos(rot);
+
+    // 随机挑选即将蜕变而成的矢量鱼种
+    let fishTemplates = [
+      { type: 'angel',    g1: '#FF4081', g2: '#FFEB3B', fin: 'rgba(255, 64, 129, 0.7)', sz: 1.25, layer: 'mid' },
+      { type: 'angel',    g1: '#00E5FF', g2: '#1DE9B6', fin: 'rgba(0, 229, 255, 0.7)',  sz: 0.9, layer: 'mid' },
+      { type: 'disk',     g1: '#FF9100', g2: '#FFEA00', fin: 'rgba(255, 145, 0, 0.7)',  sz: 1.3, layer: 'mid' },
+      { type: 'goldfish', g1: '#FF3D00', g2: '#FFAB91', fin: 'rgba(255, 171, 145, 0.8)', sz: 1.15, layer: 'mid' },
+      { type: 'angel',    g1: '#E040FB', g2: '#00E5FF', fin: 'rgba(224, 64, 251, 0.7)', sz: 0.8, layer: 'far' },
+      { type: 'disk',     g1: '#00E676', g2: '#00B0FF', fin: 'rgba(0, 230, 118, 0.7)',  sz: 1.05, layer: 'mid' },
+      { type: 'goldfish', g1: '#FF6D00', g2: '#FFE082', fin: 'rgba(255, 109, 0, 0.75)', sz: 1.1, layer: 'mid' },
+    ];
+    let template = random(fishTemplates);
+
+    // 逃逸出来的向外初始冲力
+    let vx = random(1.0, 2.0);
+    let vy = random(-0.8, 0.8);
+
+    fishes.push({
+      x: spawnX, y: spawnY,
+      vx: vx, vy: vy,
+      ...template,
+      state: FISH_STATE.WANDER, fleeTimer: 0,
+      wanderSeed: random(1000), phase: random(TWO_PI)
+    });
+
+    // 在传送门出口产生跨界发光涟漪与光尘
+    ripples.push({ x: spawnX, y: spawnY, r: 8, alpha: 0.95 });
+    for (let i = 0; i < 10; i++) {
+      lightDust.push({
+        x: spawnX + random(-12, 12),
+        y: spawnY + random(-12, 12),
+        r: random(2.5, 5.5),
+        alpha: 0.95,
+        speedY: random(-1.2, 1.2),
+        speedX: random(0.8, 2.2)
+      });
+    }
+  }
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 漂浮卡带
+// ═══════════════════════════════════════════════════════════════
+function updateCartridge(ct, t) {
+  ct.x += ct.vx + Math.sin(t * 0.6 + ct.phase) * 0.15;
+  ct.y += ct.vy + Math.cos(t * 0.5 + ct.phase) * 0.1;
+  ct.vx += (noise(ct.phase + t * 0.2) - 0.5) * 0.02;
+  ct.vy += (noise(ct.phase + 50 + t * 0.2) - 0.5) * 0.015;
+  ct.vx = constrain(ct.vx, -0.4, 0.4); ct.vy = constrain(ct.vy, -0.3, 0.3);
+  ct.x = constrain(ct.x, width * 0.1, width * 0.88);
+  ct.y = constrain(ct.y, height * 0.3, height * 0.72);
+}
+
+function drawCartridge(ctx, ct, t) {
+  ctx.save(); ctx.translate(ct.x, ct.y);
+  ctx.rotate(Math.sin(t * 0.4 + ct.phase) * 0.08);
+  let cw = 50 * ct.size, ch = 38 * ct.size;
+  let cx = -cw/2, cy = -ch/2;
+
+  let shellG = ctx.createLinearGradient(cx, cy, cx + cw, cy + ch);
+  shellG.addColorStop(0, ct.color);
+  shellG.addColorStop(1, 'rgba(255,255,255,0.3)');
+  ctx.fillStyle = shellG;
+  ctx.beginPath(); ctx.moveTo(cx + 5, cy); ctx.lineTo(cx + cw - 5, cy);
+  ctx.lineTo(cx + cw - 5, cy + ch - 8); ctx.lineTo(cx + cw - 12, cy + ch);
+  ctx.lineTo(cx + 12, cy + ch); ctx.lineTo(cx + 5, cy + ch - 8);
+  ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillRect(cx + cw * 0.3, cy - 1, cw * 0.4, 4);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillRect(cx + 8, cy + 8, cw - 16, ch * 0.45);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.beginPath(); ctx.moveTo(cx + 3, cy + 2); ctx.lineTo(cx + cw * 0.6, cy + 2);
+  ctx.lineTo(cx + 3, cy + ch * 0.7); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 底沙与投影
+// ═══════════════════════════════════════════════════════════════
+function drawSandyFloor(ctx, t) {
+  let fY = height - 55;
+  let sg = ctx.createLinearGradient(0, fY, 0, height);
+  sg.addColorStop(0.0, 'rgba(0, 200, 220, 0.0)');
+  sg.addColorStop(0.4, 'rgba(180, 170, 110, 0.25)');
+  sg.addColorStop(1.0, 'rgba(120, 95, 50, 0.65)');
+  ctx.fillStyle = sg;
+  ctx.fillRect(0, fY, width, height - fY);
+}
+
+function drawConsoleShadow(ctx, cx, cy, rot, t) {
+  let shadowY = height - 25;
+  let sW = 115, sH = 20;
+
+  ctx.save();
+  ctx.translate(cx, shadowY);
+  ctx.rotate(rot * 0.3);
+
+  let sg = ctx.createRadialGradient(0, 0, 2, 0, 0, sW);
+  sg.addColorStop(0.0, 'rgba(0, 15, 35, 0.75)');
+  sg.addColorStop(0.5, 'rgba(0, 25, 50, 0.35)');
+  sg.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = sg;
+  ctx.beginPath(); ctx.ellipse(0, 0, sW, sH, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 水中游动的矢量鱼群 (从掌机逃逸诞生)
+// ═══════════════════════════════════════════════════════════════
+function updateFish(f, t) {
+  if (f.state === FISH_STATE.WANDER) {
+    f.vx += (noise(f.wanderSeed + t * 0.3) - 0.5) * 0.08;
+    f.vy += (noise(f.wanderSeed + 100 + t * 0.3) - 0.5) * 0.05;
+    f.vx = constrain(f.vx, -1.2, 1.2); f.vy = constrain(f.vy, -0.6, 0.6);
+  } else if (f.state === FISH_STATE.FLEE) {
+    f.fleeTimer -= 0.016;
+    if (f.fleeTimer <= 0) f.state = FISH_STATE.RETURN;
+  } else if (f.state === FISH_STATE.RETURN) {
+    f.vx *= 0.95; f.vy *= 0.95;
+    if (Math.abs(f.vx) < 0.2) f.state = FISH_STATE.WANDER;
+  }
+  f.x += f.vx; f.y += f.vy;
+  f.x = constrain(f.x, 60, width - 60);
+  f.y = constrain(f.y, max(50, height * 0.1), height - 80);
+}
+
+function drawFish(ctx, f, t) {
+  ctx.save();
+  ctx.translate(f.x, f.y);
+  if (f.vx < 0) ctx.scale(-1, 1);
+
+  let s = f.sz;
+  let tailSway = Math.sin(t * 7 + f.phase) * 6;
+  let bodyGrad = ctx.createLinearGradient(0, -10 * s, 0, 10 * s);
+  bodyGrad.addColorStop(0, f.g1); bodyGrad.addColorStop(1, f.g2);
+
+  if (f.type === 'angel') {
+    ctx.fillStyle = f.fin;
+    ctx.beginPath(); ctx.moveTo(-5 * s, -8 * s); ctx.quadraticCurveTo(-15 * s, -38 * s + tailSway, -2 * s, -12 * s); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-5 * s, 8 * s); ctx.quadraticCurveTo(-15 * s, 38 * s + tailSway, -2 * s, 12 * s); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-15 * s, 0); ctx.quadraticCurveTo(-32 * s, -20 * s + tailSway, -28 * s, tailSway); ctx.quadraticCurveTo(-32 * s, 20 * s + tailSway, -15 * s, 0); ctx.fill();
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, 16 * s, 12 * s, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (f.type === 'goldfish') {
+    ctx.fillStyle = f.fin;
+    ctx.beginPath(); ctx.moveTo(-10 * s, 0); ctx.bezierCurveTo(-25 * s, -24 * s + tailSway, -36 * s, -12 * s + tailSway, -26 * s, 5 * s + tailSway); ctx.bezierCurveTo(-36 * s, 22 * s + tailSway, -22 * s, 26 * s + tailSway, -10 * s, 0); ctx.fill();
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, 15 * s, 11 * s, 0, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.fillStyle = f.fin;
+    ctx.beginPath(); ctx.moveTo(-12 * s, 0); ctx.lineTo(-25 * s, -14 * s + tailSway); ctx.lineTo(-20 * s, tailSway); ctx.lineTo(-25 * s, 14 * s + tailSway); ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath(); ctx.ellipse(0, 0, 16 * s, 15 * s, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // 眼睛
+  ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(8 * s, -3 * s, 3.5 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#002244'; ctx.beginPath(); ctx.arc(9.5 * s, -3 * s, 1.8 * s, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 高质感宽叶水草与珊瑚
+// ═══════════════════════════════════════════════════════════════
+function drawWideSeaweed(ctx, s, t) {
+  ctx.save();
+  let seg = 6, segH = s.height / seg;
+  let points = [{x: s.x, y: s.baseY}];
+
+  for (let i = 1; i <= seg; i++) {
+    let frac = i / seg;
+    let nx = s.x + Math.sin(t * 1.2 + s.phase + i * 0.55) * s.swayAmp * frac;
+    let ny = s.baseY - i * segH;
+    points.push({x: nx, y: ny});
+  }
+
+  for (let i = 0; i < points.length - 1; i++) {
+    let frac = i / (points.length - 1);
+    let halfW = s.width * (1 - frac * 0.85) * 0.5;
+    let p0 = points[i], p1 = points[i + 1];
+    let dx = p1.x - p0.x, dy = p1.y - p0.y;
+    let len = Math.sqrt(dx * dx + dy * dy) || 1;
+    let nx = -dy / len, ny = dx / len;
+
+    let topAlpha = 0.55 + frac * 0.3;
+
+    ctx.fillStyle = `rgba(0, 230, 118, ${topAlpha})`;
+    ctx.beginPath();
+    ctx.moveTo(p0.x + nx * halfW, p0.y + ny * halfW);
+    ctx.lineTo(p1.x + nx * halfW * 0.85, p1.y + ny * halfW * 0.85);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.lineTo(p1.x - nx * halfW * 0.85, p1.y - ny * halfW * 0.85);
+    ctx.lineTo(p0.x - nx * halfW, p0.y - ny * halfW);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(180, 255, 200, ${0.15 + frac * 0.1})`;
+    ctx.beginPath();
+    ctx.moveTo(p0.x + nx * halfW * 0.3, p0.y + ny * halfW * 0.3);
+    ctx.lineTo(p1.x + nx * halfW * 0.2, p1.y + ny * halfW * 0.2);
+    ctx.lineTo(p1.x - nx * halfW * 0.2, p1.y - ny * halfW * 0.2);
+    ctx.lineTo(p0.x - nx * halfW * 0.3, p0.y - ny * halfW * 0.3);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.strokeStyle = 'rgba(0, 160, 80, 0.4)'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawCoral(ctx, c, t) {
+  ctx.save();
+  ctx.translate(c.x, c.y);
+  let coralGrad = ctx.createLinearGradient(0, 0, 0, -c.height);
+  coralGrad.addColorStop(0.0, c.colors.main); coralGrad.addColorStop(1.0, c.colors.sub);
+
+  ctx.strokeStyle = coralGrad; ctx.fillStyle = c.colors.sub; ctx.lineCap = 'round';
+  for (let i = 0; i < c.branches; i++) {
+    let angle = -Math.PI * 0.5 + (i - (c.branches - 1) / 2) * 0.35;
+    let branchLen = c.height * (0.65 + (i % 3) * 0.2);
+    let sway = Math.sin(t * 1.2 + c.phase + i) * 6;
+
+    ctx.lineWidth = Math.max(3.5, 11 - i * 1.3);
+    ctx.beginPath(); ctx.moveTo(0, 0);
+    let endX = Math.cos(angle) * branchLen + sway;
+    let endY = Math.sin(angle) * branchLen;
+    ctx.quadraticCurveTo(Math.cos(angle) * branchLen * 0.5, endY * 0.5, endX, endY);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(endX, endY, ctx.lineWidth * 0.7, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 散斑光尘与气泡
+// ═══════════════════════════════════════════════════════════════
+function updateDrawDust(ctx, d) {
+  d.y += d.speedY; d.x += d.speedX;
+  if (d.y < 0) d.y = height;
+  ctx.save();
+  ctx.fillStyle = `rgba(220, 255, 255, ${d.alpha})`;
+  ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function updateDrawBubble(ctx, b, t) {
+  b.y -= b.speed;
+  b.x += Math.sin(t * 1.2 + b.wobbleSeed) * b.wobbleAmp * 0.5;
+  if (b.y < -20) { b.y = height + 20; b.x = random(width); }
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)'; ctx.lineWidth = 1.2;
+  ctx.fillStyle = 'rgba(200, 245, 255, 0.22)';
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#FFFFFF'; ctx.beginPath(); ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawRipples(ctx) {
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    let r = ripples[i];
+    r.r += 2.5; r.alpha *= 0.92;
+    if (r.alpha < 0.01) { ripples.splice(i, 1); continue; }
+    ctx.strokeStyle = `rgba(255, 255, 255, ${r.alpha})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2); ctx.stroke();
+  }
+}
+
+window.addEventListener('pointerdown', function(e) {
+  ripples.push({ x: e.clientX, y: e.clientY, r: 5, alpha: 0.85 });
+  for (let f of fishes) {
+    let dx = f.x - e.clientX, dy = f.y - e.clientY;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 200) {
+      f.state = FISH_STATE.FLEE; f.fleeTimer = 1.2;
+      f.vx = (dx / dist) * random(4, 6); f.vy = (dy / dist) * random(2, 5);
+    }
+  }
+});
+</script>
+</body>
+</html>

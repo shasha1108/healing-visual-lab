@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 22,
+  "total": 23,
   "updated": "2026-07-04",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -29,7 +29,8 @@
       "aero-slime",
       "drift-bottle",
       "sunken-ipod",
-      "crystal-turntable"
+      "crystal-turntable",
+      "sunken-treasure"
     ],
     "webgl_glsl": [
       "breath-mirror",
@@ -95,7 +96,8 @@
       "falling-verse",
       "drift-bottle",
       "sunken-ipod",
-      "crystal-turntable"
+      "crystal-turntable",
+      "sunken-treasure"
     ],
     "zero_dependency": [
       "silent-translator"
@@ -106,7 +108,8 @@
       "aero-slime",
       "drift-bottle",
       "sunken-ipod",
-      "crystal-turntable"
+      "crystal-turntable",
+      "sunken-treasure"
     ]
   },
   "works": [
@@ -618,6 +621,31 @@
         "crystal-turntable.html",
         "crystal-turntable.md",
         "crystal-turntable_1.gif"
+      ]
+    },
+    {
+      "slug": "sunken-treasure",
+      "title_en": "Sunken Treasure",
+      "title_zh": "Console Spawned Ecosystem",
+      "tagline": "像素鱼游进掌机传送门，逃逸到 3D 水晶水体中，蜕变为优雅的矢量鱼",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Frutiger Aero",
+        "Procedural Ecosystem",
+        "Pixel-to-Vector Metamorphosis",
+        "Mouse POV Parallax"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D (p5.js)",
+      "has_audio": false,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "140+ (bubbles + lightDust + fish + ripples)",
+      "files": [
+        "sunken-treasure.html",
+        "sunken-treasure.md",
+        "sunken-treasure_1.gif"
       ]
     }
   ]
