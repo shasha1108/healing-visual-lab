@@ -57,12 +57,26 @@ def validate_and_fix(data):
                     t = m.group(1)
                     if "—" in t:
                         parts = t.split("—", 1)
-                        w["title_zh"] = parts[0].strip()
-                        w["title_en"] = parts[1].strip()
+                        left, right = parts[0].strip(), parts[1].strip()
+                        # Detect if left part is Chinese or English
+                        has_cn = bool(re.search(r'[一-鿿]', left))
+                        if has_cn:
+                            w["title_zh"] = left
+                            w["title_en"] = right
+                        else:
+                            # Entirely English title with em-dash subtitle
+                            w["title_en"] = left
+                            w["title_zh"] = left  # fallback: use English as zh
                     elif "·" in t:
                         parts = t.split("·", 1)
-                        w["title_zh"] = parts[0].strip()
-                        w["title_en"] = parts[1].strip()
+                        left, right = parts[0].strip(), parts[1].strip()
+                        has_cn = bool(re.search(r'[一-鿿]', left))
+                        if has_cn:
+                            w["title_zh"] = left
+                            w["title_en"] = right
+                        else:
+                            w["title_en"] = left
+                            w["title_zh"] = left
                     else:
                         w["title_zh"] = t
                         w["title_en"] = t

@@ -161,7 +161,7 @@
     {
       "slug": "sunken-treasure",
       "title_en": "Sunken Treasure",
-      "title_zh": "Console Spawned Ecosystem",
+      "title_zh": "Sunken Treasure",
       "tagline": "像素鱼游进掌机传送门，逃逸到 3D 水晶水体中，蜕变为优雅的矢量鱼",
       "tech": [
         "p5.js",
