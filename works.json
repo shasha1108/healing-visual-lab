@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 21,
-  "updated": "2026-07-02",
+  "total": 22,
+  "updated": "2026-07-04",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -28,7 +28,8 @@
       "pixel-aquarium",
       "aero-slime",
       "drift-bottle",
-      "sunken-ipod"
+      "sunken-ipod",
+      "crystal-turntable"
     ],
     "webgl_glsl": [
       "breath-mirror",
@@ -55,7 +56,8 @@
       "aero-slime",
       "falling-verse",
       "drift-bottle",
-      "sunken-ipod"
+      "sunken-ipod",
+      "crystal-turntable"
     ],
     "css_3d_gsap": [
       "cosmic-recollection",
@@ -92,7 +94,8 @@
       "aero-slime",
       "falling-verse",
       "drift-bottle",
-      "sunken-ipod"
+      "sunken-ipod",
+      "crystal-turntable"
     ],
     "zero_dependency": [
       "silent-translator"
@@ -102,7 +105,8 @@
       "pixel-aquarium",
       "aero-slime",
       "drift-bottle",
-      "sunken-ipod"
+      "sunken-ipod",
+      "crystal-turntable"
     ]
   },
   "works": [
@@ -589,6 +593,31 @@
         "sunken-ipod.html",
         "sunken-ipod.md",
         "sunken-ipod_1.gif"
+      ]
+    },
+    {
+      "slug": "crystal-turntable",
+      "title_en": "Crystal Turntable",
+      "title_zh": "雪夜晶莹唱片机",
+      "tagline": "屋外雪花纷飞，这里的旋律永远为你温暖。",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API",
+        "Lo-fi Processing (LPF + Tape Wow + Reverb)",
+        "CSS3 Acrylic Glassmorphism",
+        "Frutiger Aero"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 2,
+      "particle_count": "120 (snow flakes x3 layers)",
+      "files": [
+        "crystal-turntable.html",
+        "crystal-turntable.md",
+        "crystal-turntable_1.gif"
       ]
     }
   ]

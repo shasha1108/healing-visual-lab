@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<!--
+  Title: Crystal Turntable · 雪夜晶莹唱片机
+  Tech: p5.js, Canvas 2D, Web Audio API, CSS3
+  Render: Canvas 2D (p5.js)
+  Audio: yes (Web Audio API real-time synthesis)
+  Touch: yes
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>雪夜晶莹唱片机 — Frutiger Aero Vector Edition</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  body{
+    width:100vw;height:100vh;overflow:hidden;
+    background:#0a3a5c;
+    display:flex;justify-content:center;align-items:center;
+    font-family:-apple-system,"Segoe UI","PingFang SC",sans-serif;
+    user-select:none;-webkit-user-select:none;touch-action:none;
+    transition:background 1s ease;
+  }
+  #stage-wrapper{
+    position:relative;width:480px;height:640px;
+    border-radius:32px;overflow:hidden;
+    box-shadow:0 30px 90px rgba(80,200,255,0.4),0 15px 40px rgba(0,0,0,0.7);
+  }
+  #canvas-container{position:absolute;inset:0}
+  #canvas-container canvas{display:block;width:100%;height:100%}
+  .acrylic-box{
+    position:absolute;top:75px;left:55px;width:370px;height:380px;
+    border-radius:36px;
+    background:linear-gradient(135deg,rgba(255,255,255,0.5) 0%,rgba(220,245,255,0.1) 45%,rgba(120,220,255,0.22) 100%);
+    border:2px solid rgba(255,255,255,0.8);
+    box-shadow:0 25px 60px rgba(40,140,220,0.4),inset 0 0 35px rgba(255,255,255,0.6),inset 0 -20px 40px rgba(60,160,220,0.3);
+    pointer-events:none;z-index:10;
+  }
+  .acrylic-box::before{
+    content:'';position:absolute;top:8px;left:10%;width:80%;height:95px;
+    border-radius:50%;background:linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(255,255,255,0) 100%);
+  }
+  .acrylic-box::after{
+    content:'';position:absolute;bottom:12px;right:12%;width:65%;height:32px;
+    border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,0.7) 0%,rgba(255,255,255,0) 80%);
+  }
+  #interact-layer{position:absolute;inset:0;z-index:20;cursor:pointer}
+  #diegetic-controls{
+    position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
+    display:flex;gap:36px;align-items:center;z-index:30;
+  }
+  .aero-unit{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+  .aero-dial{
+    width:48px;height:48px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,rgba(255,255,255,0.95),rgba(100,220,255,0.5) 60%,rgba(40,150,210,0.8));
+    border:1.5px solid rgba(255,255,255,0.9);
+    box-shadow:0 8px 20px rgba(0,100,180,0.4),inset 0 2px 4px rgba(255,255,255,0.9);
+    position:relative;transition:transform 0.2s ease;
+  }
+  .aero-dial::after{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);width:4px;height:10px;background:#fff;border-radius:2px;box-shadow:0 0 8px #40d8ff}
+  .aero-dial:active{transform:scale(0.92) rotate(30deg)}
+  .aero-crystal-slot{
+    width:50px;height:46px;border-radius:14px;
+    background:radial-gradient(circle at 40% 30%,rgba(255,255,255,0.95),rgba(255,140,200,0.55) 70%);
+    border:1.5px solid rgba(255,255,255,0.9);
+    box-shadow:0 8px 20px rgba(255,80,160,0.4),inset 0 0 10px rgba(255,255,255,0.9);
+    display:flex;justify-content:center;align-items:center;font-size:18px;transition:transform 0.2s;
+  }
+  .aero-crystal-slot:active{transform:scale(0.92)}
+  .aero-label{font-size:11px;font-weight:800;color:rgba(255,255,255,0.95);text-shadow:0 2px 4px rgba(0,20,50,0.8);letter-spacing:1px}
+  #mood-modal{
+    position:fixed;inset:0;z-index:50;background:rgba(3,20,34,0.88);
+    backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    opacity:0;pointer-events:none;transition:opacity 0.4s ease;padding:24px;text-align:center;color:#fff;
+  }
+  #mood-modal.active{opacity:1;pointer-events:auto}
+  .card-box{
+    background:linear-gradient(135deg,rgba(255,255,255,0.35),rgba(255,255,255,0.08));
+    border:1.5px solid rgba(255,255,255,0.7);border-radius:24px;
+    padding:32px 24px;max-width:320px;width:100%;box-shadow:0 20px 60px rgba(0,100,200,0.5);
+  }
+  .card-title{font-size:12px;letter-spacing:2px;color:#60d8ff;margin-bottom:16px;font-weight:bold}
+  .card-quote{font-size:16px;font-weight:600;line-height:1.6;margin-bottom:20px}
+  .close-card-btn{margin-top:20px;background:#60d8ff;color:#031422;border:none;padding:10px 32px;border-radius:20px;font-weight:bold;cursor:pointer;box-shadow:0 4px 15px rgba(96,216,255,0.4)}
+</style>
+</head>
+<body>
+<div id="stage-wrapper">
+  <div id="canvas-container"></div>
+  <div class="acrylic-box"></div>
+  <div id="interact-layer"></div>
+  <div id="diegetic-controls">
+    <div class="aero-unit" onclick="nextTheme()" title="切换冰雪氛围">
+      <div class="aero-dial"></div><span class="aero-label">冰雪光彩</span>
+    </div>
+    <div class="aero-unit" onclick="showMoodCard()" title="抽取解忧签">
+      <div class="aero-crystal-slot">❄️</div><span class="aero-label">解忧签</span>
+    </div>
+  </div>
+</div>
+<div id="mood-modal">
+  <div class="card-box">
+    <div class="card-title" id="mood-track-title">✦ 雪夜解忧唱片机 ✦</div>
+    <div class="card-quote" id="mood-quote">"屋外雪花纷飞，这里的旋律永远为你温暖。"</div>
+  </div>
+  <button class="close-card-btn" onclick="closeMood()">收下治愈 🐾</button>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// 雪夜晶莹唱片机 — Frutiger Aero 纯矢量版
+// ═══════════════════════════════════════════════════════════════
+const VW=480,VH=640;
+
+// ── 6 套 Frutiger Aero 通透色板 ──
+const THEMES=[
+  {name:'冰晶水蓝',glow:'rgba(80,220,255,0.55)',accent:'#40d8ff',specCol:'rgba(100,230,255,0.45)',bodyBg:'radial-gradient(ellipse at 50% 30%,#2888b8 0%,#0a3a5c 50%,#041a2e 100%)'},
+  {name:'极光冰薄荷',glow:'rgba(60,240,180,0.55)',accent:'#30e8b0',specCol:'rgba(80,250,200,0.45)',bodyBg:'radial-gradient(ellipse at 50% 30%,#1a6858 0%,#0a3028 50%,#031210 100%)'},
+  {name:'晨露珊瑚',glow:'rgba(255,150,130,0.55)',accent:'#ff9888',specCol:'rgba(255,180,160,0.45)',bodyBg:'radial-gradient(ellipse at 50% 30%,#6a3838 0%,#301a18 50%,#120808 100%)'},
+  {name:'月光紫罗兰',glow:'rgba(180,140,255,0.55)',accent:'#b090ff',specCol:'rgba(200,160,255,0.45)',bodyBg:'radial-gradient(ellipse at 50% 30%,#4a3880 0%,#201838 50%,#0c0818 100%)'},
+  {name:'晴空蔚蓝',glow:'rgba(100,200,255,0.55)',accent:'#60c8ff',specCol:'rgba(130,220,255,0.45)',bodyBg:'radial-gradient(ellipse at 50% 30%,#2080b8 0%,#0a3858 50%,#031828 100%)'},
+  {name:'初雪银白',glow:'rgba(220,230,255,0.55)',accent:'#d8e8ff',specCol:'rgba(240,245,255,0.45)',bodyBg:'radial-gradient(ellipse at 50% 30%,#5888a8 0%,#284860 50%,#0e2030 100%)'},
+];
+let themeIdx=0;
+
+// ── 固定曲目（单曲循环，Lo-fi 爵士和弦进行）──
+const CHORD_PROGRESSION=[
+  [261.63,329.63,392.0,493.88], // Cmaj7
+  [220.0,261.63,329.63,392.0], // Am7
+  [293.66,349.23,440.0,523.25], // Dm7
+  [196.0,246.94,293.66,369.99], // G7
+  [261.63,329.63,392.0,493.88], // Cmaj7
+  [220.0,261.63,329.63,415.30], // Am9
+  [174.61,220.0,261.63,349.23], // Fmaj7
+  [246.94,311.13,369.99,466.16], // Bm7b5
+];
+const CHORD_TEMPO=2100;
+
+const FORTUNES=[
+  {t:'✦ 雪夜解忧签 ✦',q:'"屋外雪花纷飞，这里的旋律永远为你温暖。"'},
+  {t:'✦ 雪夜解忧签 ✦',q:'"落在窗上的雪，像不说话的问候。"'},
+  {t:'✦ 雪夜解忧签 ✦',q:'"音符像壁炉里的柴火，慢慢烘热冬天。"'},
+  {t:'✦ 雪夜解忧签 ✦',q:'"黑胶在转，雪花在飘，时间变慢。"'},
+  {t:'✦ 雪夜解忧签 ✦',q:'"不说话的时候，音乐替你说。"'},
+  {t:'✦ 雪夜解忧签 ✦',q:'"这张唱片，只为你一个人转。"'},
+  {t:'✦ 雪夜解忧签 ✦',q:'"雪停了，音乐还在继续。"'},
+];
+
+let audioCtx=null,snowGain=null,crackleGain=null,chordTimer=0,chordStep=0;
+let lofiFilter=null,wowLFO=null,wowGain=null,reverbNode=null;
+let snowFar=[],snowMid=[],snowNear=[],snowCap=[],notes=[];
+
+// ═══════════════════════════════════════════════════════════════
+// p5 初始化
+// ═══════════════════════════════════════════════════════════════
+function setup(){
+  let cvs=createCanvas(VW,VH);cvs.parent('canvas-container');
+  smooth();drawingContext.imageSmoothingEnabled=true;
+  initSnow();
+  const il=document.getElementById('interact-layer');
+  il.addEventListener('pointerdown',()=>{playGlassTap();if(!audioCtx)initAudio();});
+}
+function windowResized(){}
+
+// ═══════════════════════════════════════════════════════════════
+// 三层景深真实雪花（不规则形状 + 景深虚化）
+// ═══════════════════════════════════════════════════════════════
+function initSnow(){
+  snowFar=[];snowMid=[];snowNear=[];snowCap=[];
+  for(let i=0;i<70;i++)snowFar.push({x:Math.random()*VW,y:Math.random()*VH,r:0.6+Math.random()*1.2,vy:0.25+Math.random()*0.35,vx:(Math.random()-0.5)*0.15,swayS:0.6+Math.random()*0.5,swayA:1+Math.random()*1,alpha:0.15+Math.random()*0.2,ph:Math.random()*Math.PI*2,irr:0.6+Math.random()*0.4});
+  for(let i=0;i<35;i++)snowMid.push({x:Math.random()*VW,y:Math.random()*VH,r:1.5+Math.random()*2.5,vy:0.5+Math.random()*0.5,vx:(Math.random()-0.5)*0.3,swayS:0.8+Math.random()*0.6,swayA:1.5+Math.random()*1.5,alpha:0.35+Math.random()*0.35,ph:Math.random()*Math.PI*2,irr:0.5+Math.random()*0.5});
+  for(let i=0;i<15;i++)snowNear.push({x:Math.random()*VW,y:Math.random()*VH,r:3+Math.random()*4,vy:0.8+Math.random()*0.7,vx:(Math.random()-0.5)*0.45,swayS:1+Math.random()*0.5,swayA:2+Math.random()*2,alpha:0.5+Math.random()*0.4,ph:Math.random()*Math.PI*2,irr:0.4+Math.random()*0.6});
+}
+function drawAllSnow(t){
+  const ctx=drawingContext;noStroke();
+  // 远景 — 小、半透明、微不规则
+  for(let s of snowFar){updateSnowflake(s,t,true);fill(`rgba(210,230,250,${s.alpha})`);drawFlake(s.x,s.y,s.r,s.irr,0);}
+  // 中景 — 不规则椭圆
+  for(let s of snowMid){updateSnowflake(s,t,true);fill(`rgba(235,245,255,${s.alpha})`);drawFlake(s.x,s.y,s.r,s.irr,Math.sin(t+s.ph)*0.3);}
+  // 近景 — 大、带柔光晕（景深虚化）
+  for(let s of snowNear){
+    updateSnowflake(s,t,true);
+    ctx.save();ctx.filter=`blur(${s.r*0.6}px)`;fill(`rgba(250,252,255,${s.alpha*0.7})`);drawFlake(s.x,s.y,s.r*1.2,s.irr,Math.sin(t*0.5+s.ph)*0.4);ctx.filter='none';ctx.restore();
+    fill(`rgba(255,255,255,${s.alpha*0.85})`);drawFlake(s.x,s.y,s.r*0.5,s.irr,Math.sin(t*0.5+s.ph)*0.4);
+  }
+  // 盒顶积雪
+  fill('rgba(255,255,255,0.95)');for(let p of snowCap)circle(p.x,p.y,p.r||4);
+}
+// 不规则雪花形状：压扁椭圆 + 微旋转
+function drawFlake(x,y,r,irr,rot){
+  push();translate(x,y);rotate(rot);
+  const rx=r,ry=r*irr;ellipse(0,0,rx*2,ry*2);
+  pop();
+}
+function updateSnowflake(s,t,accumulate){
+  s.y+=s.vy;s.x+=Math.sin(t*s.swayS+s.ph)*s.swayA*0.35+s.vx;
+  if(s.y>VH){s.y=-15;s.x=Math.random()*VW;}
+  if(accumulate&&s.y>=72&&s.y<=82&&s.x>=55&&s.x<=425&&Math.random()<0.04&&snowCap.length<100){snowCap.push({x:s.x,y:73+Math.random()*5,r:2+Math.random()*4});}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 矢量黑胶 + 旋转扇形高光
+// ═══════════════════════════════════════════════════════════════
+function drawVinyl(t){
+  push();translate(240,265);const R=110;const ctx=drawingContext;
+  noStroke();fill('#10141e');circle(0,0,R*2);
+  noFill();
+  for(let r=40;r<106;r+=2.5){stroke(r%5===0?'rgba(255,255,255,0.16)':'rgba(255,255,255,0.04)');strokeWeight(1);circle(0,0,r*2);}
+  push();rotate(t*0.8);
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(let ao of[0,Math.PI]){
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,106,ao-0.42,ao+0.42);ctx.closePath();
+    let g=ctx.createRadialGradient(0,0,35,0,0,106);
+    g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(0.5,THEMES[themeIdx].specCol);g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=g;ctx.fill();
+  }
+  ctx.restore();pop();
+  drawSticker(0,0);
+  pop();
+}
+function drawSticker(cx,cy){
+  const ctx=drawingContext;noStroke();
+  let g=ctx.createLinearGradient(cx-30,cy-30,cx+30,cy+30);
+  g.addColorStop(0,THEMES[themeIdx].accent);g.addColorStop(1,'#ffffff');
+  ctx.fillStyle=g;circle(cx,cy,64);
+  fill('#ffffff');circle(cx,cy,56);
+  fill(THEMES[themeIdx].accent);circle(cx,cy,24);
+  fill('#ffffff');circle(cx+6,cy-4,20);
+  fill('#ffffff');circle(cx,cy,12);fill('#1e293b');circle(cx,cy,6);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 唱片机底座 + 双真空管
+// ═══════════════════════════════════════════════════════════════
+function drawBase(t){
+  const ctx=drawingContext,cx=240,cy=265;
+  let bgG=ctx.createLinearGradient(cx-160,cy-130,cx+160,cy+130);
+  bgG.addColorStop(0,'#1a364a');bgG.addColorStop(0.5,'#0f2334');bgG.addColorStop(1,'#07121c');
+  ctx.fillStyle=bgG;noStroke();rectMode(CENTER);rect(cx,cy,320,260,24);rectMode(CORNER);
+  stroke(THEMES[themeIdx].accent);strokeWeight(1.5);noFill();rectMode(CENTER);rect(cx,cy,320,260,24);rectMode(CORNER);
+  drawTube(cx-120,cy-90,t);drawTube(cx+120,cy-90,t);
+  const ga=0.65+Math.sin(t*3)*0.3;noStroke();
+  fill(THEMES[themeIdx].accent);circle(cx+135,cy+100,6);
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  const lg=ctx.createRadialGradient(cx+135,cy+100,1,cx+135,cy+100,14);
+  lg.addColorStop(0,THEMES[themeIdx].glow);lg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=lg;circle(cx+135,cy+100,14);ctx.restore();
+}
+function drawTube(tx,ty,t){
+  const ctx=drawingContext,ga=0.65+Math.sin(t*3)*0.3;
+  noStroke();fill('#1e293b');circle(tx,ty+12,18);
+  let tg=ctx.createLinearGradient(tx-8,ty-10,tx+8,ty+14);
+  tg.addColorStop(0,'rgba(180,200,220,0.5)');tg.addColorStop(0.5,'rgba(255,255,255,0.15)');tg.addColorStop(1,'rgba(100,130,160,0.6)');
+  ctx.fillStyle=tg;ctx.beginPath();ctx.ellipse(tx,ty,10,24,0,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  let ig=ctx.createRadialGradient(tx,ty,1,tx,ty,12);
+  ig.addColorStop(0,THEMES[themeIdx].accent.replace(')',`,${ga*0.8})`).replace('rgb','rgba'));ig.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=ig;ctx.beginPath();ctx.ellipse(tx,ty,8,18,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  stroke(`rgba(255,220,160,${ga})`);strokeWeight(1);noFill();
+  ctx.beginPath();ctx.moveTo(tx-2,ty-10);ctx.lineTo(tx-1,ty-2);ctx.lineTo(tx+2,ty+6);ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 镀铬唱臂
+// ═══════════════════════════════════════════════════════════════
+function drawTonearm(t){
+  const ctx=drawingContext,ax=360,ay=175,tipX=290+Math.sin(t*0.5)*2,tipY=245;
+  fill('#94a3b8');circle(ax,ay,24);fill('#ffffff');circle(ax,ay,14);
+  stroke('#ffffff');strokeWeight(3.5);noFill();
+  ctx.beginPath();ctx.moveTo(ax,ay);ctx.bezierCurveTo(ax+15,ay+45,tipX+25,tipY-25,tipX,tipY);ctx.stroke();
+  noStroke();fill('#0f172a');rect(tipX-6,tipY-4,12,8,2);
+  fill(THEMES[themeIdx].accent);circle(tipX,tipY,4);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 音频 — 单曲 Lo-fi 爵士循环 + 雪风声 + 黑胶噼啪
+// ═══════════════════════════════════════════════════════════════
+function initAudio(){
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();const sr=audioCtx.sampleRate;
+
+  // 雪风声（白噪→低通）
+  const bs=sr*2,buf=audioCtx.createBuffer(1,bs,sr),d=buf.getChannelData(0);
+  for(let i=0;i<bs;i++)d[i]=(Math.random()*2-1)*0.04;
+  const ss=audioCtx.createBufferSource();ss.buffer=buf;ss.loop=true;
+  const windLP=audioCtx.createBiquadFilter();windLP.type='lowpass';windLP.frequency.value=350;
+  snowGain=audioCtx.createGain();snowGain.gain.value=0.05;ss.connect(windLP);windLP.connect(snowGain);snowGain.connect(audioCtx.destination);ss.start();
+
+  // 黑胶噼啪
+  const cb=audioCtx.createBuffer(1,sr,sr),cd=cb.getChannelData(0);
+  for(let i=0;i<sr;i++)cd[i]=(Math.random()*2-1)*(Math.random()>0.98?0.35:0.01);
+  const cs=audioCtx.createBufferSource();cs.buffer=cb;cs.loop=true;
+  crackleGain=audioCtx.createGain();crackleGain.gain.value=0.018;cs.connect(crackleGain);crackleGain.connect(audioCtx.destination);cs.start();
+
+  // ★ Lo-fi 处理总线
+  // 1. 低通滤波 — 模拟老磁带/暖音箱（核心 lofi 特征）
+  lofiFilter=audioCtx.createBiquadFilter();lofiFilter.type='lowpass';
+  lofiFilter.frequency.value=2200;lofiFilter.Q.value=0.45;
+  // 2. 简单混响（反馈延迟 → 空间感）
+  const revDelay=audioCtx.createDelay(0.5);revDelay.delayTime.value=0.32;
+  const revGain=audioCtx.createGain();revGain.gain.value=0.22;
+  lofiFilter.connect(revDelay);revDelay.connect(revGain);revGain.connect(lofiFilter);
+  lofiFilter.connect(audioCtx.destination);
+
+  // ★ 磁带颤音（Tape Wow — 极慢速音高漂移）
+  wowLFO=audioCtx.createOscillator();wowLFO.type='sine';wowLFO.frequency.value=0.32;
+  wowGain=audioCtx.createGain();wowGain.gain.value=2.8;
+  wowLFO.connect(wowGain);wowLFO.start();
+}
+function playWarmChord(freqs){
+  if(!audioCtx)return;const now=audioCtx.currentTime;
+  // 子贝斯（低八度正弦 — 填充低频暖感）
+  const subO=audioCtx.createOscillator(),subG=audioCtx.createGain();
+  subO.type='sine';subO.frequency.setValueAtTime(freqs[0]*0.5*(0.995+Math.random()*0.01),now);
+  subG.gain.setValueAtTime(0,now);subG.gain.linearRampToValueAtTime(0.035,now+0.2);subG.gain.exponentialRampToValueAtTime(0.0001,now+1.6);
+  wowGain.connect(subO.frequency);subO.connect(subG);subG.connect(lofiFilter);
+  subO.start(now);subO.stop(now+2.0);
+
+  freqs.forEach((f,i)=>{
+    let o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=i%2===0?'sine':'triangle';
+    o.frequency.setValueAtTime(f*(0.994+Math.random()*0.012),now);
+    // wow LFO 连接到每个振荡器频率
+    wowGain.connect(o.frequency);
+    g.gain.setValueAtTime(0,now);
+    g.gain.linearRampToValueAtTime(0.04,now+0.18+i*0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001,now+2.2);
+    o.connect(g);g.connect(lofiFilter);
+    o.start(now+i*0.05);o.stop(now+2.5);
+  });
+}
+function playGlassTap(){
+  if(!audioCtx)return;
+  let o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(1300,audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(400,audioCtx.currentTime+0.15);
+  g.gain.setValueAtTime(0.12,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.15);
+  o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+0.15);
+}
+function updateMusic(){
+  if(!audioCtx)return;if(audioCtx.state==='suspended')audioCtx.resume();
+  if(millis()-chordTimer>CHORD_TEMPO){playWarmChord(CHORD_PROGRESSION[chordStep%CHORD_PROGRESSION.length]);chordStep++;chordTimer=millis();spawnNote();}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 矢量发光音符
+// ═══════════════════════════════════════════════════════════════
+function spawnNote(){notes.push({x:290+(Math.random()*20-10),y:235,vy:-0.4-Math.random()*0.4,vx:(Math.random()-0.5)*0.5,life:1.0,scale:0.8+Math.random()*0.4});}
+function drawNotes(t){
+  for(let i=notes.length-1;i>=0;i--){
+    let n=notes[i];n.y+=n.vy;n.x+=Math.sin(t*0.8+n.y*0.02)*0.12;n.life-=0.004;if(n.life<=0){notes.splice(i,1);continue;}
+    push();translate(n.x,n.y);noStroke();
+    fill(THEMES[themeIdx].accent);circle(0,0,5*n.scale);circle(6,-4,4*n.scale);
+    stroke(THEMES[themeIdx].accent);strokeWeight(1.5);
+    line(2,0,2,-10);line(8,-4,8,-14);line(2,-10,8,-14);pop();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 主循环
+// ═══════════════════════════════════════════════════════════════
+function draw(){
+  clear();const t=millis()*0.001;updateMusic();
+  drawAllSnow(t);
+  drawInteriorGlow(t);
+  drawBase(t);
+  drawVinyl(t);
+  drawTonearm(t);
+  drawNotes(t);
+}
+function drawInteriorGlow(t){
+  const ctx=drawingContext,alpha=0.35+Math.sin(t*1.5)*0.05;
+  const g=ctx.createRadialGradient(240,260,20,240,260,180);
+  g.addColorStop(0,THEMES[themeIdx].glow);g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,VW,VH);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════════════════════
+function nextTheme(){themeIdx=(themeIdx+1)%THEMES.length;document.body.style.background=THEMES[themeIdx].bodyBg;}
+function showMoodCard(){
+  const f=FORTUNES[Math.floor(Math.random()*FORTUNES.length)];
+  document.getElementById('mood-track-title').innerText=f.t;
+  document.getElementById('mood-quote').innerText=f.q;
+  document.getElementById('mood-modal').classList.add('active');
+}
+function closeMood(){document.getElementById('mood-modal').classList.remove('active');}
+</script>
+</body>
+</html>
