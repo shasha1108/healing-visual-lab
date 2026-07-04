@@ -123,25 +123,19 @@ open inkmeditation/inkmeditation.html
 </details>
 
 <details open>
-<summary><b>🎨 Canvas / p5.js</b> &ensp;<sub>8 works</sub></summary>
+<summary><b>🎨 Canvas / p5.js</b> &ensp;<sub>11 works</sub></summary>
 
 - [无声的翻译官 / Silent Translator](https://shasha1108.github.io/healing-visual-lab/silent-translator/silent-translator.html) — 身体替你说了说不出的话
+- [过载脑区 / Overthinking Engine](https://shasha1108.github.io/healing-visual-lab/overthinking-engine/overthinking-engine.html) — 过度清醒地审视自己，正在毁掉我们的生活
 - [玻璃天空 / Sky Through Glass](https://shasha1108.github.io/healing-visual-lab/sky-through-glass/sky-through-glass.html) — 蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。
 - [像素水族箱 / Pixel Aquarium](https://shasha1108.github.io/healing-visual-lab/pixel-aquarium/pixel-aquarium.html) — 晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。
 - [电子情绪宠物 / Aero Slime](https://shasha1108.github.io/healing-visual-lab/aero-slime/aero-slime.html) — 点击色块投喂情绪，双击玻璃释放惊吓——一只住在亚克力盒子里的电子史莱姆，用颜文字回应你的每一种心情
+- [山谷里的风 / Windmill Valley](https://shasha1108.github.io/healing-visual-lab/windmill-valley/windmill-valley.html) — 风车在听，风铃在回答。一个你可以走进去的Frutiger Aero山谷
+- [七里香 / Dreamcore Summer Night](https://shasha1108.github.io/healing-visual-lab/dreamcore-summer-rain/dreamcore-summer-rain.html) — 极致冷暖光碰撞 — 深黑蓝天 vs 售货机刺眼白光 vs 铁路脉冲红灯
 - [平行世界 · 漂流瓶生态系统 / Drift Bottle](https://shasha1108.github.io/healing-visual-lab/drift-bottle/drift-bottle.html) — 轻触漂流瓶，唤醒瓶中平行世界
 - [沉水 MP3 / Sunken iPod](https://shasha1108.github.io/healing-visual-lab/sunken-ipod/sunken-ipod.html) — 深海之底，一首七里香。触碰水面，音符如气泡升起。
 - [雪夜晶莹唱片机 / Crystal Turntable](https://shasha1108.github.io/healing-visual-lab/crystal-turntable/crystal-turntable.html) — 屋外雪花纷飞，这里的旋律永远为你温暖。
 - [Console Spawned Ecosystem / Sunken Treasure](https://shasha1108.github.io/healing-visual-lab/sunken-treasure/sunken-treasure.html) — 像素鱼游进掌机传送门，逃逸到 3D 水晶水体中，蜕变为优雅的矢量鱼
-
-</details>
-
-<details open>
-<summary><b>💻 CSS / GSAP / DOM</b> &ensp;<sub>3 works</sub></summary>
-
-- [过载脑区 / Overthinking Engine](https://shasha1108.github.io/healing-visual-lab/overthinking-engine/overthinking-engine.html) — 过度清醒地审视自己，正在毁掉我们的生活
-- [ / ](https://shasha1108.github.io/healing-visual-lab/windmill-valley/windmill-valley.html) — 风车在听，风铃在回答。一个你可以走进去的Frutiger Aero山谷
-- [ / ](https://shasha1108.github.io/healing-visual-lab/dreamcore-summer-rain/dreamcore-summer-rain.html) — 极致冷暖光碰撞 — 深黑蓝天 vs 售货机刺眼白光 vs 铁路脉冲红灯
 
 </details>
 

@@ -19,23 +19,20 @@ def update_readme(data):
     today = date.today().isoformat()
     pages_base = data.get("pages", "https://shasha1108.github.io/healing-visual-lab/")
 
-    # Group works by render type
+    # Group works by render type — only two categories
     groups = {
         "Three.js / WebGL": [],
         "Canvas / p5.js": [],
-        "CSS / GSAP / DOM": [],
     }
     for w in works:
         render = w.get("render", "")
         if "Three.js" in render or "WebGL" in render:
             groups["Three.js / WebGL"].append(w)
-        elif "Canvas" in render or "p5.js" in render:
-            groups["Canvas / p5.js"].append(w)
         else:
-            groups["CSS / GSAP / DOM"].append(w)
+            groups["Canvas / p5.js"].append(w)
 
     sections = []
-    emoji = {"Three.js / WebGL": "🌀", "Canvas / p5.js": "🎨", "CSS / GSAP / DOM": "💻"}
+    emoji = {"Three.js / WebGL": "🌀", "Canvas / p5.js": "🎨"}
     for group_name, group_works in groups.items():
         if not group_works:
             continue

@@ -521,7 +521,6 @@
     },
     {
       "slug": "windmill-valley",
-      "title": "Windmill Valley · 山谷里的风",
       "tagline": "风车在听，风铃在回答。一个你可以走进去的Frutiger Aero山谷",
       "tech": [
         "p5.js",
@@ -529,15 +528,16 @@
         "CSS Glassmorphism",
         "Web Audio API"
       ],
-      "render": "fullViewport",
+      "render": "Canvas2D (p5.js)",
       "audio": true,
       "touch": true,
       "healing_domain": "meditation",
-      "pushed": "2026-06-30"
+      "pushed": "2026-06-30",
+      "title_en": "Windmill Valley",
+      "title_zh": "山谷里的风"
     },
     {
       "slug": "dreamcore-summer-rain",
-      "title": "七里香 · Dreamcore夏夜",
       "tagline": "极致冷暖光碰撞 — 深黑蓝天 vs 售货机刺眼白光 vs 铁路脉冲红灯",
       "tech": [
         "p5.js",
@@ -546,7 +546,11 @@
       ],
       "has_audio": true,
       "has_touch": true,
-      "date": "2026-07-01"
+      "date": "2026-07-01",
+      "title_en": "Dreamcore Summer Night",
+      "title_zh": "七里香",
+      "render": "Canvas2D (p5.js)",
+      "healing_domain": "emotional_release"
     },
     {
       "slug": "drift-bottle",
