@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 23,
+  "total": 24,
   "updated": "2026-07-04",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -30,7 +30,8 @@
       "drift-bottle",
       "sunken-ipod",
       "crystal-turntable",
-      "sunken-treasure"
+      "sunken-treasure",
+      "rice-fragrance"
     ],
     "webgl_glsl": [
       "breath-mirror",
@@ -97,7 +98,8 @@
       "drift-bottle",
       "sunken-ipod",
       "crystal-turntable",
-      "sunken-treasure"
+      "sunken-treasure",
+      "rice-fragrance"
     ],
     "zero_dependency": [
       "silent-translator"
@@ -109,292 +111,271 @@
       "drift-bottle",
       "sunken-ipod",
       "crystal-turntable",
-      "sunken-treasure"
+      "sunken-treasure",
+      "rice-fragrance"
     ]
   },
   "works": [
     {
-      "slug": "sumi-e-taichi",
-      "title_en": "Sumi-e Taichi",
-      "title_zh": "水墨太极",
-      "tagline": "一滴墨落入宣纸——既是破坏，也是开始",
+      "slug": "crystal-turntable",
+      "title_en": "Crystal Turntable",
+      "title_zh": "雪夜晶莹唱片机",
+      "tagline": "屋外雪花纷飞，这里的旋律永远为你温暖。",
       "tech": [
-        "Three.js WebGL",
-        "particle physics",
-        "taichi gravity field",
-        "ink ripple simulation"
-      ],
-      "healing_domain": "meditation",
-      "render": "WebGL (Three.js)",
-      "has_audio": false,
-      "has_touch": false,
-      "dependencies": 1,
-      "particle_count": "1K+",
-      "files": [
-        "sumi-e-taichi.html",
-        "sumi-e-taichi.md",
-        "sumi-e-taichi.jpg"
-      ]
-    },
-    {
-      "slug": "inkmeditation",
-      "title_en": "Inkmeditation",
-      "title_zh": "墨池心境",
-      "tagline": "算法物理学 × 视觉设计 × 心理疗愈",
-      "tech": [
-        "Three.js WebGL",
-        "100K+ particles",
-        "real-time fluid dynamics",
-        "breath-cycle sync"
-      ],
-      "healing_domain": "meditation",
-      "render": "WebGL (Three.js)",
-      "has_audio": false,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "100K+",
-      "files": [
-        "inkmeditation.html",
-        "inkmeditation.md",
-        "inkmeditation.jpg"
-      ]
-    },
-    {
-      "slug": "cosmic-recollection",
-      "title_en": "Cosmic Recollection",
-      "title_zh": "宇宙回响 V78",
-      "tagline": "万物皆有裂痕——那是光照进来的地方",
-      "tech": [
-        "Three.js WebGL",
-        "Canvas 2D texture generation",
-        "CSS 3D transforms",
-        "GSAP animation",
-        "60K particle system"
-      ],
-      "healing_domain": "existential",
-      "render": "WebGL (Three.js) + Canvas 2D + CSS 3D",
-      "has_audio": false,
-      "has_touch": false,
-      "dependencies": 1,
-      "particle_count": "60K",
-      "files": [
-        "cosmic-recollection.html",
-        "cosmic-recollection.md",
-        "cosmic-recollection.jpg"
-      ]
-    },
-    {
-      "slug": "layered-mountains",
-      "title_en": "Layered Mountains",
-      "title_zh": "青绿·层峦",
-      "tagline": "触之即散，聚散随缘",
-      "tech": [
-        "Three.js WebGL",
-        "250K particles",
-        "layered landscape rendering",
-        "raycaster interaction"
-      ],
-      "healing_domain": "meditation",
-      "render": "WebGL (Three.js)",
-      "has_audio": false,
-      "has_touch": false,
-      "dependencies": 1,
-      "particle_count": "250K",
-      "files": [
-        "layered-mountains.html",
-        "layered-mountains.md",
-        "layered-mountains.jpg"
-      ]
-    },
-    {
-      "slug": "glass-rain",
-      "title_en": "Glass Rain",
-      "title_zh": "琉璃化雨",
-      "tagline": "眼泪落尽，便见晴空",
-      "tech": [
-        "Three.js WebGL",
-        "FBO fluid simulation",
-        "touch-drag physics",
-        "GLSL shader"
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API",
+        "Lo-fi Processing (LPF + Tape Wow + Reverb)",
+        "CSS3 Acrylic Glassmorphism",
+        "Frutiger Aero"
       ],
       "healing_domain": "emotional_release",
-      "render": "WebGL (Three.js)",
-      "has_audio": false,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A (GPU FBO)",
-      "files": [
-        "glass-rain.html",
-        "glass-rain.md",
-        "glass-rain_1.jpg",
-        "glass-rain_2.jpg"
-      ]
-    },
-    {
-      "slug": "silent-translator",
-      "title_en": "Silent Translator",
-      "title_zh": "无声的翻译官",
-      "tagline": "身体替你说了说不出的话",
-      "tech": [
-        "Canvas 2D",
-        "frame-by-frame sketch animation",
-        "Web Audio healing engine",
-        "CSS 3D transforms"
-      ],
-      "healing_domain": "somatic",
-      "render": "Canvas 2D + CSS 3D",
-      "has_audio": true,
-      "has_touch": false,
-      "dependencies": 0,
-      "particle_count": "N/A",
-      "files": [
-        "silent-translator.html",
-        "silent-translator.md",
-        "silent-translator_1.png"
-      ]
-    },
-    {
-      "slug": "breath-mirror",
-      "title_en": "Breath Mirror",
-      "title_zh": "息流 · 幻镜",
-      "tagline": "这里没有深渊，也没有波澜",
-      "tech": [
-        "Three.js WebGL",
-        "GLSL fragment shader",
-        "GPU fluid simulation",
-        "Web Audio API",
-        "Brown noise engine"
-      ],
-      "healing_domain": "meditation",
-      "render": "WebGL (Three.js)",
+      "render": "Canvas2D (p5.js)",
       "has_audio": true,
       "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A (GPU fluid)",
-      "files": [
-        "breath-mirror.html",
-        "breath-mirror.md",
-        "breath-mirror_1.png"
-      ]
-    },
-    {
-      "slug": "overthinking-engine",
-      "title_en": "Overthinking Engine",
-      "title_zh": "过载脑区",
-      "tagline": "过度清醒地审视自己，正在毁掉我们的生活",
-      "tech": [
-        "GSAP animation",
-        "CRT cyberpunk aesthetic",
-        "typewriter narrative",
-        "CSS animation"
-      ],
-      "healing_domain": "cognitive",
-      "render": "HTML/CSS (GSAP)",
-      "has_audio": false,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A",
-      "files": [
-        "overthinking-engine.html",
-        "overthinking-engine.md",
-        "overthinking-engine_1.jpg"
-      ]
-    },
-    {
-      "slug": "breathing-boundary",
-      "title_en": "Breathing Boundary",
-      "title_zh": "呼吸边界",
-      "tagline": "看似隔绝，实则翻译——这是一层活着的、会呼吸的边界",
-      "tech": [
-        "Three.js WebGL",
-        "Custom GLSL Shader (Simplex Noise/FBM)",
-        "Web Audio API",
-        "Canvas 2D",
-        "dual particle system"
-      ],
-      "healing_domain": "meditation",
-      "render": "WebGL (Three.js) + Canvas 2D",
-      "has_audio": true,
-      "has_touch": false,
-      "dependencies": 1,
-      "particle_count": "N/A (cold+warm dual system)",
-      "files": [
-        "breathing-boundary.html",
-        "breathing-boundary.md",
-        "breathing-boundary_1.png"
-      ]
-    },
-    {
-      "slug": "deep-blue-breath",
-      "title_en": "Deep Blue Breath",
-      "title_zh": "深蓝呼吸 V204",
-      "tagline": "深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升",
-      "tech": [
-        "Three.js WebGL",
-        "25K particle system",
-        "vortex-to-healing transition",
-        "Web Audio API (rain noise + Fmaj7 chords)"
-      ],
-      "healing_domain": "meditation",
-      "render": "WebGL (Three.js)",
-      "has_audio": true,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "25K",
-      "files": [
-        "deep-blue-breath.html",
-        "deep-blue-breath.md",
-        "deep-blue-breath_1.png"
-      ]
-    },
-    {
-      "slug": "grand-jiangshan",
-      "title_en": "Grand Jiangshan",
-      "title_zh": "万里江山图 - 宏大视界",
-      "tagline": "我见青山多妩媚，料青山见我应如是",
-      "tech": [
-        "Three.js WebGL",
-        "custom GLSL shader",
-        "4D Simplex noise terrain",
-        "470K particle system",
-        "OrbitControls"
-      ],
-      "healing_domain": "meditation",
-      "render": "WebGL (Three.js)",
-      "has_audio": false,
-      "has_touch": false,
       "dependencies": 2,
-      "particle_count": "470K (450K mountains + 20K snow)",
+      "particle_count": "120 (snow flakes x3 layers)",
       "files": [
-        "grand-jiangshan.html",
-        "grand-jiangshan.md",
-        "grand-jiangshan_1.png"
+        "crystal-turntable.html",
+        "crystal-turntable.md",
+        "crystal-turntable_1.gif"
+      ],
+      "date": "2026-07-04"
+    },
+    {
+      "slug": "sunken-treasure",
+      "title_en": "Sunken Treasure",
+      "title_zh": "Console Spawned Ecosystem",
+      "tagline": "像素鱼游进掌机传送门，逃逸到 3D 水晶水体中，蜕变为优雅的矢量鱼",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Frutiger Aero",
+        "Procedural Ecosystem",
+        "Pixel-to-Vector Metamorphosis",
+        "Mouse POV Parallax"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D (p5.js)",
+      "has_audio": false,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "140+ (bubbles + lightDust + fish + ripples)",
+      "files": [
+        "sunken-treasure.html",
+        "sunken-treasure.md",
+        "sunken-treasure_1.gif"
+      ],
+      "date": "2026-07-04"
+    },
+    {
+      "slug": "drift-bottle",
+      "title_en": "Drift Bottle",
+      "title_zh": "平行世界 · 漂流瓶生态系统",
+      "tagline": "轻触漂流瓶，唤醒瓶中平行世界",
+      "tech": [
+        "p5.js",
+        "Canvas 2D Wave Physics",
+        "Clip Pipeline",
+        "BlendMode Screen",
+        "Web Audio API",
+        "CSS Keyframes"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "20+ (plankton + ripples)",
+      "files": [
+        "drift-bottle.html",
+        "drift-bottle.md",
+        "drift-bottle_1.gif"
+      ],
+      "date": "2026-07-02"
+    },
+    {
+      "slug": "sunken-ipod",
+      "title_en": "Sunken iPod",
+      "title_zh": "沉水 MP3",
+      "tagline": "深海之底，一首七里香。触碰水面，音符如气泡升起。",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Frutiger Aero Glassmorphism",
+        "BlendMode Screen/Overlay",
+        "Web Audio API",
+        "Pentatonic Chime Synthesis"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "50+ (bubbles + ripples + bgParticles)",
+      "files": [
+        "sunken-ipod.html",
+        "sunken-ipod.md",
+        "sunken-ipod_1.gif"
+      ],
+      "date": "2026-07-02"
+    },
+    {
+      "slug": "dreamcore-summer-rain",
+      "tagline": "极致冷暖光碰撞 — 深黑蓝天 vs 售货机刺眼白光 vs 铁路脉冲红灯",
+      "tech": [
+        "p5.js",
+        "Canvas2D",
+        "Web Audio API"
+      ],
+      "has_audio": true,
+      "has_touch": true,
+      "date": "2026-07-01",
+      "title_en": "Dreamcore Summer Night",
+      "title_zh": "七里香",
+      "render": "Canvas2D (p5.js)",
+      "healing_domain": "emotional_release"
+    },
+    {
+      "slug": "windmill-valley",
+      "tagline": "风车在听，风铃在回答。一个你可以走进去的Frutiger Aero山谷",
+      "tech": [
+        "p5.js",
+        "Canvas2D",
+        "CSS Glassmorphism",
+        "Web Audio API"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "audio": true,
+      "touch": true,
+      "healing_domain": "meditation",
+      "pushed": "2026-06-30",
+      "title_en": "Windmill Valley",
+      "title_zh": "山谷里的风",
+      "date": "2026-06-30"
+    },
+    {
+      "slug": "rice-fragrance",
+      "title_en": "Rice Fragrance",
+      "title_zh": "稻香",
+      "tagline": "稻香里的童年记忆",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A",
+      "date": "2026-06-30",
+      "files": [
+        "rice-fragrance.html",
+        "rice-fragrance.md",
+        "rice-fragrance_1.gif"
       ]
     },
     {
-      "slug": "time-particle-clock",
-      "title_en": "Time Particle Clock",
-      "title_zh": "时间流转 - 粒子时钟",
-      "tagline": "时间是流动的粒子——拖拽加速，松开即止，每一秒都有声音",
+      "slug": "aero-slime",
+      "title_en": "Aero Slime",
+      "title_zh": "电子情绪宠物",
+      "tagline": "点击色块投喂情绪，双击玻璃释放惊吓——一只住在亚克力盒子里的电子史莱姆，用颜文字回应你的每一种心情",
+      "tech": [
+        "p5.js",
+        "Web Audio API",
+        "FSM Center-of-Mass Pathfinding",
+        "Line-Art Expressions",
+        "CSS Acrylic Glass"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D + DOM",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A (pixel sprites)",
+      "files": [
+        "aero-slime.html",
+        "aero-slime.md",
+        "aero-slime_1.gif"
+      ],
+      "date": "2026-06-29"
+    },
+    {
+      "slug": "falling-verse",
+      "title_en": "Falling Verse",
+      "title_zh": "宇宙时钟",
+      "tagline": "时间的字符拓扑。数字从行星环上剥落，金→珊瑚粉→星空蓝，沉入幽蓝水面。",
       "tech": [
         "Three.js WebGL",
-        "custom ShaderMaterial",
-        "200K particle system",
-        "analog clock algorithm",
-        "Web Audio tick synthesis",
-        "mouse-drag physics"
+        "Web Audio API",
+        "Planetary Orbital Mechanics",
+        "Particle Typography",
+        "Sacred Geometry"
       ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
       "has_audio": true,
-      "has_touch": false,
-      "dependencies": 1,
-      "particle_count": "200K",
+      "has_touch": true,
+      "dependencies": 2,
+      "particle_count": "N/A (orbital particle system)",
       "files": [
-        "time-particle-clock.html",
-        "time-particle-clock.md",
-        "time-particle-clock_1.png"
-      ]
+        "falling-verse.html",
+        "falling-verse.md",
+        "falling-verse_1.gif"
+      ],
+      "date": "2026-06-29"
+    },
+    {
+      "slug": "pixel-aquarium",
+      "title_en": "Pixel Aquarium",
+      "title_zh": "像素水族箱",
+      "tagline": "晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。",
+      "tech": [
+        "p5.js",
+        "CSS Glassmorphism",
+        "Procedural Pixel Flora",
+        "AI FSM"
+      ],
+      "healing_domain": "meditation",
+      "render": "Canvas2D + DOM",
+      "has_audio": false,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A (pixel sprites)",
+      "files": [
+        "pixel-aquarium.html",
+        "pixel-aquarium.md",
+        "pixel-aquarium_1.gif"
+      ],
+      "date": "2026-06-24"
+    },
+    {
+      "slug": "sky-through-glass",
+      "title_en": "Sky Through Glass",
+      "title_zh": "玻璃天空",
+      "tagline": "蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。",
+      "tech": [
+        "p5.js",
+        "FBO Masking",
+        "Web Audio API",
+        "Frutiger Aero",
+        "CRT/VHS CSS",
+        "Custom Cursor"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "Canvas2D + DOM",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A (FBO masking)",
+      "files": [
+        "sky-through-glass.html",
+        "sky-through-glass.md",
+        "sky-through-glass_1.gif"
+      ],
+      "date": "2026-06-23"
     },
     {
       "slug": "unbound-mind",
@@ -421,236 +402,303 @@
         "unbound-mind_1.png",
         "unbound-mind_2.png",
         "unbound-mind_3.png"
-      ]
-    },
-    {
-      "slug": "sky-through-glass",
-      "title_en": "Sky Through Glass",
-      "title_zh": "玻璃天空",
-      "tagline": "蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。",
-      "tech": [
-        "p5.js",
-        "FBO Masking",
-        "Web Audio API",
-        "Frutiger Aero",
-        "CRT/VHS CSS",
-        "Custom Cursor"
       ],
-      "healing_domain": "emotional_release",
-      "render": "Canvas2D + DOM",
-      "has_audio": true,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A (FBO masking)",
-      "files": [
-        "sky-through-glass.html",
-        "sky-through-glass.md",
-        "sky-through-glass_1.gif"
-      ]
+      "date": "2026-06-18"
     },
     {
-      "slug": "pixel-aquarium",
-      "title_en": "Pixel Aquarium",
-      "title_zh": "像素水族箱",
-      "tagline": "晶莹剔透的 Frutiger Aero 水族箱，像素小鱼在毛玻璃内游动。单击投食，双击敲玻璃。",
-      "tech": [
-        "p5.js",
-        "CSS Glassmorphism",
-        "Procedural Pixel Flora",
-        "AI FSM"
-      ],
-      "healing_domain": "meditation",
-      "render": "Canvas2D + DOM",
-      "has_audio": false,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A (pixel sprites)",
-      "files": [
-        "pixel-aquarium.html",
-        "pixel-aquarium.md",
-        "pixel-aquarium_1.gif"
-      ]
-    },
-    {
-      "slug": "aero-slime",
-      "title_en": "Aero Slime",
-      "title_zh": "电子情绪宠物",
-      "tagline": "点击色块投喂情绪，双击玻璃释放惊吓——一只住在亚克力盒子里的电子史莱姆，用颜文字回应你的每一种心情",
-      "tech": [
-        "p5.js",
-        "Web Audio API",
-        "FSM Center-of-Mass Pathfinding",
-        "Line-Art Expressions",
-        "CSS Acrylic Glass"
-      ],
-      "healing_domain": "emotional_release",
-      "render": "Canvas2D + DOM",
-      "has_audio": true,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A (pixel sprites)",
-      "files": [
-        "aero-slime.html",
-        "aero-slime.md",
-        "aero-slime_1.gif"
-      ]
-    },
-    {
-      "slug": "falling-verse",
-      "title_en": "Falling Verse",
-      "title_zh": "宇宙时钟",
-      "tagline": "时间的字符拓扑。数字从行星环上剥落，金→珊瑚粉→星空蓝，沉入幽蓝水面。",
+      "slug": "deep-blue-breath",
+      "title_en": "Deep Blue Breath",
+      "title_zh": "深蓝呼吸 V204",
+      "tagline": "深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升",
       "tech": [
         "Three.js WebGL",
-        "Web Audio API",
-        "Planetary Orbital Mechanics",
-        "Particle Typography",
-        "Sacred Geometry"
+        "25K particle system",
+        "vortex-to-healing transition",
+        "Web Audio API (rain noise + Fmaj7 chords)"
       ],
       "healing_domain": "meditation",
       "render": "WebGL (Three.js)",
       "has_audio": true,
       "has_touch": true,
-      "dependencies": 2,
-      "particle_count": "N/A (orbital particle system)",
+      "dependencies": 1,
+      "particle_count": "25K",
       "files": [
-        "falling-verse.html",
-        "falling-verse.md",
-        "falling-verse_1.gif"
-      ]
+        "deep-blue-breath.html",
+        "deep-blue-breath.md",
+        "deep-blue-breath_1.png"
+      ],
+      "date": "2026-06-17"
     },
     {
-      "slug": "windmill-valley",
-      "tagline": "风车在听，风铃在回答。一个你可以走进去的Frutiger Aero山谷",
+      "slug": "grand-jiangshan",
+      "title_en": "Grand Jiangshan",
+      "title_zh": "万里江山图 - 宏大视界",
+      "tagline": "我见青山多妩媚，料青山见我应如是",
       "tech": [
-        "p5.js",
-        "Canvas2D",
-        "CSS Glassmorphism",
-        "Web Audio API"
+        "Three.js WebGL",
+        "custom GLSL shader",
+        "4D Simplex noise terrain",
+        "470K particle system",
+        "OrbitControls"
       ],
-      "render": "Canvas2D (p5.js)",
-      "audio": true,
-      "touch": true,
       "healing_domain": "meditation",
-      "pushed": "2026-06-30",
-      "title_en": "Windmill Valley",
-      "title_zh": "山谷里的风"
-    },
-    {
-      "slug": "dreamcore-summer-rain",
-      "tagline": "极致冷暖光碰撞 — 深黑蓝天 vs 售货机刺眼白光 vs 铁路脉冲红灯",
-      "tech": [
-        "p5.js",
-        "Canvas2D",
-        "Web Audio API"
-      ],
-      "has_audio": true,
-      "has_touch": true,
-      "date": "2026-07-01",
-      "title_en": "Dreamcore Summer Night",
-      "title_zh": "七里香",
-      "render": "Canvas2D (p5.js)",
-      "healing_domain": "emotional_release"
-    },
-    {
-      "slug": "drift-bottle",
-      "title_en": "Drift Bottle",
-      "title_zh": "平行世界 · 漂流瓶生态系统",
-      "tagline": "轻触漂流瓶，唤醒瓶中平行世界",
-      "tech": [
-        "p5.js",
-        "Canvas 2D Wave Physics",
-        "Clip Pipeline",
-        "BlendMode Screen",
-        "Web Audio API",
-        "CSS Keyframes"
-      ],
-      "healing_domain": "emotional_release",
-      "render": "Canvas2D (p5.js)",
-      "has_audio": true,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "20+ (plankton + ripples)",
-      "files": [
-        "drift-bottle.html",
-        "drift-bottle.md",
-        "drift-bottle_1.gif"
-      ]
-    },
-    {
-      "slug": "sunken-ipod",
-      "title_en": "Sunken iPod",
-      "title_zh": "沉水 MP3",
-      "tagline": "深海之底，一首七里香。触碰水面，音符如气泡升起。",
-      "tech": [
-        "p5.js",
-        "Canvas 2D",
-        "Frutiger Aero Glassmorphism",
-        "BlendMode Screen/Overlay",
-        "Web Audio API",
-        "Pentatonic Chime Synthesis"
-      ],
-      "healing_domain": "emotional_release",
-      "render": "Canvas2D (p5.js)",
-      "has_audio": true,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "50+ (bubbles + ripples + bgParticles)",
-      "files": [
-        "sunken-ipod.html",
-        "sunken-ipod.md",
-        "sunken-ipod_1.gif"
-      ]
-    },
-    {
-      "slug": "crystal-turntable",
-      "title_en": "Crystal Turntable",
-      "title_zh": "雪夜晶莹唱片机",
-      "tagline": "屋外雪花纷飞，这里的旋律永远为你温暖。",
-      "tech": [
-        "p5.js",
-        "Canvas 2D",
-        "Web Audio API",
-        "Lo-fi Processing (LPF + Tape Wow + Reverb)",
-        "CSS3 Acrylic Glassmorphism",
-        "Frutiger Aero"
-      ],
-      "healing_domain": "emotional_release",
-      "render": "Canvas2D (p5.js)",
-      "has_audio": true,
-      "has_touch": true,
+      "render": "WebGL (Three.js)",
+      "has_audio": false,
+      "has_touch": false,
       "dependencies": 2,
-      "particle_count": "120 (snow flakes x3 layers)",
+      "particle_count": "470K (450K mountains + 20K snow)",
       "files": [
-        "crystal-turntable.html",
-        "crystal-turntable.md",
-        "crystal-turntable_1.gif"
-      ]
+        "grand-jiangshan.html",
+        "grand-jiangshan.md",
+        "grand-jiangshan_1.png"
+      ],
+      "date": "2026-06-17"
     },
     {
-      "slug": "sunken-treasure",
-      "title_en": "Sunken Treasure",
-      "title_zh": "Console Spawned Ecosystem",
-      "tagline": "像素鱼游进掌机传送门，逃逸到 3D 水晶水体中，蜕变为优雅的矢量鱼",
+      "slug": "time-particle-clock",
+      "title_en": "Time Particle Clock",
+      "title_zh": "时间流转 - 粒子时钟",
+      "tagline": "时间是流动的粒子——拖拽加速，松开即止，每一秒都有声音",
       "tech": [
-        "p5.js",
-        "Canvas 2D",
-        "Frutiger Aero",
-        "Procedural Ecosystem",
-        "Pixel-to-Vector Metamorphosis",
-        "Mouse POV Parallax"
+        "Three.js WebGL",
+        "custom ShaderMaterial",
+        "200K particle system",
+        "analog clock algorithm",
+        "Web Audio tick synthesis",
+        "mouse-drag physics"
       ],
-      "healing_domain": "emotional_release",
-      "render": "Canvas2D (p5.js)",
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js)",
+      "has_audio": true,
+      "has_touch": false,
+      "dependencies": 1,
+      "particle_count": "200K",
+      "files": [
+        "time-particle-clock.html",
+        "time-particle-clock.md",
+        "time-particle-clock_1.png"
+      ],
+      "date": "2026-06-17"
+    },
+    {
+      "slug": "overthinking-engine",
+      "title_en": "Overthinking Engine",
+      "title_zh": "过载脑区",
+      "tagline": "过度清醒地审视自己，正在毁掉我们的生活",
+      "tech": [
+        "GSAP animation",
+        "CRT cyberpunk aesthetic",
+        "typewriter narrative",
+        "CSS animation"
+      ],
+      "healing_domain": "cognitive",
+      "render": "HTML/CSS (GSAP)",
       "has_audio": false,
       "has_touch": true,
       "dependencies": 1,
-      "particle_count": "140+ (bubbles + lightDust + fish + ripples)",
+      "particle_count": "N/A",
       "files": [
-        "sunken-treasure.html",
-        "sunken-treasure.md",
-        "sunken-treasure_1.gif"
-      ]
+        "overthinking-engine.html",
+        "overthinking-engine.md",
+        "overthinking-engine_1.jpg"
+      ],
+      "date": "2026-06-16"
+    },
+    {
+      "slug": "breathing-boundary",
+      "title_en": "Breathing Boundary",
+      "title_zh": "呼吸边界",
+      "tagline": "看似隔绝，实则翻译——这是一层活着的、会呼吸的边界",
+      "tech": [
+        "Three.js WebGL",
+        "Custom GLSL Shader (Simplex Noise/FBM)",
+        "Web Audio API",
+        "Canvas 2D",
+        "dual particle system"
+      ],
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js) + Canvas 2D",
+      "has_audio": true,
+      "has_touch": false,
+      "dependencies": 1,
+      "particle_count": "N/A (cold+warm dual system)",
+      "files": [
+        "breathing-boundary.html",
+        "breathing-boundary.md",
+        "breathing-boundary_1.png"
+      ],
+      "date": "2026-06-16"
+    },
+    {
+      "slug": "silent-translator",
+      "title_en": "Silent Translator",
+      "title_zh": "无声的翻译官",
+      "tagline": "身体替你说了说不出的话",
+      "tech": [
+        "Canvas 2D",
+        "frame-by-frame sketch animation",
+        "Web Audio healing engine",
+        "CSS 3D transforms"
+      ],
+      "healing_domain": "somatic",
+      "render": "Canvas 2D + CSS 3D",
+      "has_audio": true,
+      "has_touch": false,
+      "dependencies": 0,
+      "particle_count": "N/A",
+      "files": [
+        "silent-translator.html",
+        "silent-translator.md",
+        "silent-translator_1.png"
+      ],
+      "date": "2026-06-15"
+    },
+    {
+      "slug": "breath-mirror",
+      "title_en": "Breath Mirror",
+      "title_zh": "息流 · 幻镜",
+      "tagline": "这里没有深渊，也没有波澜",
+      "tech": [
+        "Three.js WebGL",
+        "GLSL fragment shader",
+        "GPU fluid simulation",
+        "Web Audio API",
+        "Brown noise engine"
+      ],
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A (GPU fluid)",
+      "files": [
+        "breath-mirror.html",
+        "breath-mirror.md",
+        "breath-mirror_1.png"
+      ],
+      "date": "2026-06-15"
+    },
+    {
+      "slug": "glass-rain",
+      "title_en": "Glass Rain",
+      "title_zh": "琉璃化雨",
+      "tagline": "眼泪落尽，便见晴空",
+      "tech": [
+        "Three.js WebGL",
+        "FBO fluid simulation",
+        "touch-drag physics",
+        "GLSL shader"
+      ],
+      "healing_domain": "emotional_release",
+      "render": "WebGL (Three.js)",
+      "has_audio": false,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "N/A (GPU FBO)",
+      "files": [
+        "glass-rain.html",
+        "glass-rain.md",
+        "glass-rain_1.jpg",
+        "glass-rain_2.jpg"
+      ],
+      "date": "2026-06-12"
+    },
+    {
+      "slug": "sumi-e-taichi",
+      "title_en": "Sumi-e Taichi",
+      "title_zh": "水墨太极",
+      "tagline": "一滴墨落入宣纸——既是破坏，也是开始",
+      "tech": [
+        "Three.js WebGL",
+        "particle physics",
+        "taichi gravity field",
+        "ink ripple simulation"
+      ],
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js)",
+      "has_audio": false,
+      "has_touch": false,
+      "dependencies": 1,
+      "particle_count": "1K+",
+      "files": [
+        "sumi-e-taichi.html",
+        "sumi-e-taichi.md",
+        "sumi-e-taichi.jpg"
+      ],
+      "date": "2026-06-11"
+    },
+    {
+      "slug": "inkmeditation",
+      "title_en": "Inkmeditation",
+      "title_zh": "墨池心境",
+      "tagline": "算法物理学 × 视觉设计 × 心理疗愈",
+      "tech": [
+        "Three.js WebGL",
+        "100K+ particles",
+        "real-time fluid dynamics",
+        "breath-cycle sync"
+      ],
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js)",
+      "has_audio": false,
+      "has_touch": true,
+      "dependencies": 1,
+      "particle_count": "100K+",
+      "files": [
+        "inkmeditation.html",
+        "inkmeditation.md",
+        "inkmeditation.jpg"
+      ],
+      "date": "2026-06-11"
+    },
+    {
+      "slug": "cosmic-recollection",
+      "title_en": "Cosmic Recollection",
+      "title_zh": "宇宙回响 V78",
+      "tagline": "万物皆有裂痕——那是光照进来的地方",
+      "tech": [
+        "Three.js WebGL",
+        "Canvas 2D texture generation",
+        "CSS 3D transforms",
+        "GSAP animation",
+        "60K particle system"
+      ],
+      "healing_domain": "existential",
+      "render": "WebGL (Three.js) + Canvas 2D + CSS 3D",
+      "has_audio": false,
+      "has_touch": false,
+      "dependencies": 1,
+      "particle_count": "60K",
+      "files": [
+        "cosmic-recollection.html",
+        "cosmic-recollection.md",
+        "cosmic-recollection.jpg"
+      ],
+      "date": "2026-06-11"
+    },
+    {
+      "slug": "layered-mountains",
+      "title_en": "Layered Mountains",
+      "title_zh": "青绿·层峦",
+      "tagline": "触之即散，聚散随缘",
+      "tech": [
+        "Three.js WebGL",
+        "250K particles",
+        "layered landscape rendering",
+        "raycaster interaction"
+      ],
+      "healing_domain": "meditation",
+      "render": "WebGL (Three.js)",
+      "has_audio": false,
+      "has_touch": false,
+      "dependencies": 1,
+      "particle_count": "250K",
+      "files": [
+        "layered-mountains.html",
+        "layered-mountains.md",
+        "layered-mountains.jpg"
+      ],
+      "date": "2026-06-11"
     }
   ]
 }
