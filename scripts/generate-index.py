@@ -19,40 +19,24 @@ def update_readme(data):
     today = date.today().isoformat()
     pages_base = data.get("pages", "https://shasha1108.github.io/healing-visual-lab/")
 
-    # Group works by render type — only two categories
-    groups = {
-        "Three.js / WebGL": [],
-        "Canvas / p5.js": [],
-    }
-    for w in works:
+    # Flat list, reverse chronological (works already sorted in works.json)
+    items = []
+    for i, w in enumerate(works, 1):
+        slug = w["slug"]
+        title = f"{w.get('title_zh','')} / {w.get('title_en','')}"
+        tagline = (w.get('tagline','') or "")[:60]
+        url = f"{pages_base}{slug}/{slug}.html"
         render = w.get("render", "")
-        if "Three.js" in render or "WebGL" in render:
-            groups["Three.js / WebGL"].append(w)
-        else:
-            groups["Canvas / p5.js"].append(w)
+        e = "🌀" if ("Three.js" in render or "WebGL" in render) else "🎨"
+        items.append(f"{i:02d}. {e} [{title}]({url}) — {tagline}")
 
-    sections = []
-    emoji = {"Three.js / WebGL": "🌀", "Canvas / p5.js": "🎨"}
-    for group_name, group_works in groups.items():
-        if not group_works:
-            continue
-        items = []
-        for w in group_works:
-            slug = w["slug"]
-            title = f"{w.get('title_zh','')} / {w.get('title_en','')}"
-            tagline = (w.get('tagline','') or "")[:60]
-            url = f"{pages_base}{slug}/{slug}.html"
-            items.append(f"- [{title}]({url}) — {tagline}")
-        items_str = "\n".join(items)
-        e = emoji.get(group_name, "")
-        sections.append(
-            f"<details open>\n"
-            f"<summary><b>{e} {group_name}</b> &ensp;<sub>{len(group_works)} works</sub></summary>\n\n"
-            f"{items_str}\n\n"
-            f"</details>"
-        )
-
-    table = "\n\n".join(sections)
+    items_str = "\n".join(items)
+    table = (
+        f"<details open>\n"
+        f"<summary><b>📦 All Works</b> &ensp;<sub>{len(works)} works · newest first</sub></summary>\n\n"
+        f"{items_str}\n\n"
+        f"</details>"
+    )
 
     readme_path = ROOT / "README.md"
     with open(readme_path) as f:
@@ -77,7 +61,7 @@ def update_readme(data):
 
     with open(readme_path, 'w') as f:
         f.write(readme)
-    print(f"README.md: {len(works)} works in {len(sections)} groups")
+    print(f"README.md: {len(works)} works (flat, reverse chronological)")
 
 def update_index(data):
     works = data["works"]
