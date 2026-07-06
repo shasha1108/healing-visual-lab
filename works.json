@@ -2,19 +2,17 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 24,
+  "total": 20,
   "updated": "2026-07-06",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
       "falling-verse",
       "unbound-mind",
-      "deep-blue-breath",
       "grand-jiangshan",
       "time-particle-clock",
       "breathing-boundary",
       "breath-mirror",
-      "glass-rain",
       "sumi-e-taichi",
       "inkmeditation",
       "cosmic-recollection",
@@ -30,7 +28,6 @@
       "rice-fragrance",
       "aero-slime",
       "pixel-aquarium",
-      "sky-through-glass",
       "breathing-boundary",
       "silent-translator",
       "cosmic-recollection"
@@ -38,12 +35,10 @@
     "webgl_glsl": [
       "falling-verse",
       "unbound-mind",
-      "deep-blue-breath",
       "grand-jiangshan",
       "time-particle-clock",
       "breathing-boundary",
       "breath-mirror",
-      "glass-rain",
       "sumi-e-taichi",
       "inkmeditation",
       "cosmic-recollection",
@@ -57,16 +52,13 @@
       "rice-fragrance",
       "aero-slime",
       "falling-verse",
-      "sky-through-glass",
       "unbound-mind",
-      "deep-blue-breath",
       "time-particle-clock",
       "breathing-boundary",
       "silent-translator",
       "breath-mirror"
     ],
     "css_3d_gsap": [
-      "overthinking-engine",
       "silent-translator",
       "cosmic-recollection"
     ],
@@ -78,23 +70,18 @@
       "aero-slime",
       "falling-verse",
       "pixel-aquarium",
-      "sky-through-glass",
       "unbound-mind",
-      "deep-blue-breath",
       "grand-jiangshan",
       "time-particle-clock",
       "breathing-boundary",
       "breath-mirror",
-      "glass-rain",
       "sumi-e-taichi",
       "inkmeditation",
       "cosmic-recollection",
       "layered-mountains"
     ],
     "fluid_simulation": [
-      "sky-through-glass",
       "breath-mirror",
-      "glass-rain",
       "inkmeditation"
     ],
     "touch_interaction": [
@@ -107,12 +94,8 @@
       "aero-slime",
       "falling-verse",
       "pixel-aquarium",
-      "sky-through-glass",
       "unbound-mind",
-      "deep-blue-breath",
-      "overthinking-engine",
       "breath-mirror",
-      "glass-rain",
       "inkmeditation"
     ],
     "zero_dependency": [
@@ -127,8 +110,7 @@
       "windmill-valley",
       "rice-fragrance",
       "aero-slime",
-      "pixel-aquarium",
-      "sky-through-glass"
+      "pixel-aquarium"
     ]
   },
   "works": [
@@ -368,32 +350,6 @@
       "date": "2026-06-24"
     },
     {
-      "slug": "sky-through-glass",
-      "title_en": "Sky Through Glass",
-      "title_zh": "玻璃天空",
-      "tagline": "蒙尘的玻璃下，是小时候的温柔天空。指腹划过，VHS噪点被轻轻擦开。",
-      "tech": [
-        "p5.js",
-        "FBO Masking",
-        "Web Audio API",
-        "Frutiger Aero",
-        "CRT/VHS CSS",
-        "Custom Cursor"
-      ],
-      "healing_domain": "emotional_release",
-      "render": "Canvas2D + DOM",
-      "has_audio": true,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A (FBO masking)",
-      "files": [
-        "sky-through-glass.html",
-        "sky-through-glass.md",
-        "sky-through-glass_1.gif"
-      ],
-      "date": "2026-06-23"
-    },
-    {
       "slug": "unbound-mind",
       "title_en": "Unbound Mind",
       "title_zh": "释·茧",
@@ -420,30 +376,6 @@
         "unbound-mind_3.png"
       ],
       "date": "2026-06-18"
-    },
-    {
-      "slug": "deep-blue-breath",
-      "title_en": "Deep Blue Breath",
-      "title_zh": "深蓝呼吸 V204",
-      "tagline": "深蓝之中，漩涡慢转——长按屏幕，让金色疗愈粒子缓缓上升",
-      "tech": [
-        "Three.js WebGL",
-        "25K particle system",
-        "vortex-to-healing transition",
-        "Web Audio API (rain noise + Fmaj7 chords)"
-      ],
-      "healing_domain": "meditation",
-      "render": "WebGL (Three.js)",
-      "has_audio": true,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "25K",
-      "files": [
-        "deep-blue-breath.html",
-        "deep-blue-breath.md",
-        "deep-blue-breath_1.png"
-      ],
-      "date": "2026-06-17"
     },
     {
       "slug": "grand-jiangshan",
@@ -495,30 +427,6 @@
         "time-particle-clock_1.png"
       ],
       "date": "2026-06-17"
-    },
-    {
-      "slug": "overthinking-engine",
-      "title_en": "Overthinking Engine",
-      "title_zh": "过载脑区",
-      "tagline": "过度清醒地审视自己，正在毁掉我们的生活",
-      "tech": [
-        "GSAP animation",
-        "CRT cyberpunk aesthetic",
-        "typewriter narrative",
-        "CSS animation"
-      ],
-      "healing_domain": "cognitive",
-      "render": "HTML/CSS (GSAP)",
-      "has_audio": false,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A",
-      "files": [
-        "overthinking-engine.html",
-        "overthinking-engine.md",
-        "overthinking-engine_1.jpg"
-      ],
-      "date": "2026-06-16"
     },
     {
       "slug": "breathing-boundary",
@@ -593,31 +501,6 @@
         "breath-mirror_1.png"
       ],
       "date": "2026-06-15"
-    },
-    {
-      "slug": "glass-rain",
-      "title_en": "Glass Rain",
-      "title_zh": "琉璃化雨",
-      "tagline": "眼泪落尽，便见晴空",
-      "tech": [
-        "Three.js WebGL",
-        "FBO fluid simulation",
-        "touch-drag physics",
-        "GLSL shader"
-      ],
-      "healing_domain": "emotional_release",
-      "render": "WebGL (Three.js)",
-      "has_audio": false,
-      "has_touch": true,
-      "dependencies": 1,
-      "particle_count": "N/A (GPU FBO)",
-      "files": [
-        "glass-rain.html",
-        "glass-rain.md",
-        "glass-rain_1.jpg",
-        "glass-rain_2.jpg"
-      ],
-      "date": "2026-06-12"
     },
     {
       "slug": "sumi-e-taichi",

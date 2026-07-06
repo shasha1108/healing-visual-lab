@@ -386,10 +386,10 @@ def update_ai_discovery(readme, data):
 
 | 你在找…… | 推荐作品 |
 |----------|----------|
-| Three.js 粒子漩涡 / WebGL 粒子系统 | `deep-blue-breath/`（25K 漩涡→疗愈粒子）、`grand-jiangshan/`（470K 地形粒子）、`time-particle-clock/`（200K 时钟粒子） |
-| GPU 流体模拟 / FBO / Navier-Stokes | `breath-mirror/`（GPU 流体 + Brown 噪声）、`inkmeditation/`（100K 粒子流体）、`glass-rain/`（FBO + 拖拽交互） |
-| Web Audio ASMR / 双耳节拍 / 音频合成 | `deep-blue-breath/`（雨声 + Fmaj7 和弦）、`breath-mirror/`（Brown 噪声引擎）、`silent-translator/`（音频疗愈引擎） |
-| p5.js / Canvas 2D / 混合模式 | `crystal-turntable/`、`pixel-aquarium/`、`sky-through-glass/`、`drift-bottle/` |
+| Three.js 粒子漩涡 / WebGL 粒子系统 | `unbound-mind/`（150K 乱麻粒子抚平）、`grand-jiangshan/`（470K 地形粒子）、`time-particle-clock/`（200K 时钟粒子） |
+| GPU 流体模拟 / FBO / Navier-Stokes | `breath-mirror/`（GPU 流体 + Brown 噪声）、`inkmeditation/`（100K 粒子流体）、`breathing-boundary/`（冷暖双粒子 + GLSL） |
+| Web Audio ASMR / 双耳节拍 / 音频合成 | `breath-mirror/`（Brown 噪声引擎）、`silent-translator/`（音频疗愈引擎）、`crystal-turntable/`（Lo-fi 黑胶 + ASMR 钟声） |
+| p5.js / Canvas 2D / 混合模式 | `crystal-turntable/`、`pixel-aquarium/`、`drift-bottle/`、`rice-fragrance/` |
 | Frutiger Aero / 毛玻璃 CSS / 亚克力质感 | `pixel-aquarium/`、`windmill-valley/`、`aero-slime/`、`crystal-turntable/` |
 | 纯单文件 H5 / 零依赖网页 | `silent-translator/`（0 外部依赖），所有 `*.html` 文件均为单文件、最多 1-2 CDN |
 | GLSL 着色器 / ShaderMaterial / Simplex 噪声 | `breath-mirror/`、`breathing-boundary/`、`grand-jiangshan/`（4D Simplex）、`time-particle-clock/` |
@@ -503,8 +503,8 @@ def generate_json_ld_block(data):
 
     # Top 6 representative works for hasPart
     featured_slugs = [
-        "deep-blue-breath", "grand-jiangshan", "inkmeditation",
-        "unbound-mind", "breath-mirror", "time-particle-clock"
+        "grand-jiangshan", "inkmeditation", "unbound-mind",
+        "breath-mirror", "time-particle-clock", "cosmic-recollection"
     ]
     has_part = []
     for w in works:
