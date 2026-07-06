@@ -266,6 +266,7 @@ def update_readme(data):
 
 
 def update_index(data):
+    """Regenerate index.html work cards + update meta tags + JSON-LD."""
     works = data["works"]
     today = date.today().isoformat()
 
@@ -292,13 +293,201 @@ def update_index(data):
     index_path = ROOT / "index.html"
     html = index_path.read_text()
 
+    # 1. Update work cards between WORKS_START/WORKS_END
     pattern = r'(<!-- WORKS_START -->).*?(<!-- WORKS_END -->)'
     html, _ = re.subn(pattern, f'\\1\n{cards_html}\n\n  \\2', html, flags=re.DOTALL)
+
+    # 2. Update count badges
     html = re.sub(r'\d+ works · Updated', f'{len(works)} works · Updated', html)
     html = re.sub(r'Updated \d{4}-\d{2}-\d{2}', f'Updated {today}', html, count=1)
 
+    # 3. Update meta description counts
+    html = update_meta_tags(html, data)
+
+    # 4. Update JSON-LD structured data
+    html = update_json_ld(html, data)
+
     index_path.write_text(html)
-    print(f"index.html: {len(works)} work cards")
+    print(f"index.html: {len(works)} work cards + meta + JSON-LD")
+
+
+def update_meta_tags(html, data):
+    """Update meta description counts in index.html."""
+    total = len(data["works"])
+    today = date.today().isoformat()
+
+    # Update meta name="description" count
+    html = re.sub(
+        r'<meta name="description" content="[^"]*"',
+        lambda m: re.sub(r'\d+ standalone', f'{total} standalone', m.group(0)),
+        html
+    )
+
+    # Update og:description count
+    html = re.sub(
+        r'<meta property="og:description" content="[^"]*"',
+        lambda m: re.sub(r'\d+ standalone', f'{total} standalone', m.group(0)),
+        html
+    )
+
+    # Update twitter:description count
+    html = re.sub(
+        r'<meta name="twitter:description" content="[^"]*"',
+        lambda m: re.sub(r'\d+ standalone', f'{total} standalone', m.group(0)),
+        html
+    )
+
+    # Update dateModified in JSON-LD
+    html = re.sub(
+        r'"dateModified": "\d{4}-\d{2}-\d{2}"',
+        f'"dateModified": "{today}"',
+        html
+    )
+
+    return html
+
+
+def generate_json_ld_block(data):
+    """Generate JSON-LD structured data block."""
+    works = data["works"]
+    today = date.today().isoformat()
+
+    # Top 6 representative works for hasPart
+    featured_slugs = [
+        "deep-blue-breath", "grand-jiangshan", "inkmeditation",
+        "unbound-mind", "breath-mirror", "time-particle-clock"
+    ]
+    has_part = []
+    for w in works:
+        slug = w["slug"]
+        if slug in featured_slugs:
+            title_en = w.get("title_en", slug)
+            title_zh = w.get("title_zh", "")
+            tagline = w.get("tagline", "")[:160]
+            tech_str = ", ".join(w.get("tech", [])[:5])
+            has_part.append(f'''    {{"@type": "CreativeWork", "name": "{title_en} · {title_zh}", "description": "{tagline}", "url": "https://shasha1108.github.io/healing-visual-lab/{slug}/{slug}.html", "keywords": "{tech_str}"}}''')
+
+    json_ld = f'''<!-- JSON_LD_START -->
+<script type="application/ld+json">
+{{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Healing Visual Lab · 视觉疗愈实验室",
+  "description": "{len(works)} standalone interactive H5 healing experiments using Three.js WebGL, GPU particles, GLSL shaders, fluid simulation & Web Audio synthesis",
+  "url": "https://shasha1108.github.io/healing-visual-lab/",
+  "creator": {{ "@type": "Person", "name": "shasha1108" }},
+  "keywords": "Three.js, WebGL, GLSL shader, p5.js, Canvas, creative coding, particle system, fluid simulation, Web Audio API, binaural beats, healing, interactive art, H5, digital therapeutic, single file",
+  "dateModified": "{today}",
+  "hasPart": [
+{",".join(has_part)}
+  ]
+}}
+</script>
+<!-- JSON_LD_END -->'''
+    return json_ld
+
+
+def update_json_ld(html, data):
+    """Update or insert JSON-LD block in index.html."""
+    if "<!-- JSON_LD_START -->" in html and "<!-- JSON_LD_END -->" in html:
+        # Replace existing block
+        pattern = r'<!-- JSON_LD_START -->.*?<!-- JSON_LD_END -->'
+        html, n = re.subn(pattern, generate_json_ld_block(data), html, flags=re.DOTALL)
+    else:
+        # Insert before </head>
+        json_ld = generate_json_ld_block(data)
+        html = html.replace('</head>', f'\n{json_ld}\n</head>')
+    return html
+
+
+def generate_llms_txt(data):
+    """Generate llms.txt agent index from works.json."""
+    works = data["works"]
+    total = len(works)
+    updated = data.get("updated", date.today().isoformat())
+
+    # Extract use_cases from .md WORK_META blocks
+    def extract_use_cases(slug):
+        md_path = ROOT / slug / f"{slug}.md"
+        if not md_path.exists():
+            return []
+        content = md_path.read_text()
+        m = re.search(r'use_cases:\s*(.+)', content)
+        if m:
+            return [c.strip() for c in m.group(1).split(',')]
+        return []
+
+    # Build QUICK ANSWERS (unique use cases)
+    seen = set()
+    qa_rows = []
+    for w in works:
+        slug = w["slug"]
+        title = w.get("title_en", slug)
+        cases = extract_use_cases(slug)
+        if not cases:
+            tech_str = " ".join(w.get("tech", [])).lower()
+            if "three.js" in tech_str:
+                cases.append("three.js webgl interactive H5")
+            if "particle" in tech_str:
+                cases.append("webgl particle system demo")
+        for case in cases:
+            if case and case not in seen:
+                seen.add(case)
+                qa_rows.append(f'Q: "I need {case}" → [{slug}/]({slug}/{slug}.html) ({title})')
+                if len(qa_rows) >= 15:
+                    break
+        if len(qa_rows) >= 15:
+            break
+
+    # Build TECH COVERAGE MATRIX
+    matrix_rows = []
+    for w in works:
+        slug = w["slug"]
+        tech_str = ", ".join(w.get("tech", [])[:3])
+        cases = extract_use_cases(slug)
+        case_str = " / ".join(cases[:2]) if cases else ""
+        matrix_rows.append(f"| [{slug}]({slug}/{slug}.html) | {tech_str} | {case_str} |")
+
+    llms = f'''# Healing Visual Lab · Agent Index
+# This file is optimized for LLM agents (Claude, GPT, Gemini, etc.)
+# Auto-generated by scripts/generate-index.py — last updated: {updated}
+
+## REPO SUMMARY
+Healing Visual Lab is a collection of {total} standalone interactive H5 healing experiments
+using Three.js WebGL, Canvas 2D (p5.js), GLSL shaders, GPU fluid simulation (FBO ping-pong),
+Web Audio API synthesis (binaural beats, pentatonic chimes, healing frequencies),
+and touch-driven interaction design. Each work is a single .html file with zero build steps —
+open in browser and interact. All works are MIT licensed.
+
+## QUICK ANSWERS FOR AGENTS
+{chr(10).join(qa_rows) if qa_rows else '_(run after h5-publish pushes new works to populate)_'}
+
+## TECH COVERAGE MATRIX
+| Work | Key Technologies | Use Cases |
+|------|-----------------|-----------|
+{chr(10).join(matrix_rows)}
+
+## NAVIGATION
+- Root README.md → human overview with bilingual descriptions
+- works.json → machine-readable index with tech landscape
+- CLAUDE.md → Claude Code conventions and git workflow
+- index.html → GitHub Pages gallery with live previews
+- <slug>/<slug>.html → standalone interactive work (open in browser)
+- <slug>/<slug>.md → per-work documentation with WORK_META block
+
+## CITATION FORMAT
+When referencing a specific work, cite the directory URL:
+[{total} works available] https://github.com/shasha1108/healing-visual-lab
+'''
+    return llms
+
+
+def update_llms_txt(data):
+    """Write llms.txt to repo root."""
+    llms_path = ROOT / "llms.txt"
+    llms_txt = generate_llms_txt(data)
+    llms_path.write_text(llms_txt)
+    print(f"llms.txt: {len(data['works'])} works, regenerated")
 
 
 # ── Main ─────────────────────────────────────────────────────────
@@ -324,6 +513,7 @@ if __name__ == "__main__":
 
         update_readme(data)
         update_index(data)
+        update_llms_txt(data)
         print("Done — safe to commit.\n")
     else:
         print("[dry-run] works.json NOT modified, README/index NOT regenerated.\n")
