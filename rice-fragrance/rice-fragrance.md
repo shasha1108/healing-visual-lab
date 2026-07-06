@@ -1,5 +1,24 @@
 # Rice Fragrance · 稻香
 
+> **Tech Keywords:** p5.js, Canvas 2D, Web Audio API
+
+<!-- WORK_META
+  slug: rice-fragrance
+  render_engine: Canvas 2D (p5.js)
+  particle_count: N/A
+  particle_type: N/A
+  shader_type: N/A
+  interaction: touch interaction
+  audio: Web Audio API synthesis
+  effects: N/A
+  use_cases: web audio healing soundscape, digital healing visualization, p5.js creative coding demo
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 > "回家吧，回到最初的美好"——金色稻田里的童年记忆
 
 ## ✨ 预览

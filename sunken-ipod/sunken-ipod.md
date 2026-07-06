@@ -2,6 +2,23 @@
 
 > **Tech Keywords:** p5.js, Canvas 2D, Frutiger Aero, Web Audio API, Aquatic UI, Emotional Release
 
+<!-- WORK_META
+  slug: sunken-ipod
+  render_engine: Canvas 2D (p5.js)
+  particle_count: 50+ (bubbles + ripples + bgParticles)
+  particle_type: BufferGeometry point sprites
+  shader_type: N/A
+  interaction: touch interaction
+  audio: pentatonic chime synthesis
+  effects: blend-mode compositing
+  use_cases: web audio healing soundscape, digital healing visualization, p5.js creative coding demo, frutiger aero aesthetic H5
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 ![沉水 iPod 预览 - Frutiger Aero underwater crystal iPod with click wheel and bubbles](sunken-ipod_1.gif)
 
 > 深海之底，一首七里香。触碰水面，音符如气泡升起。

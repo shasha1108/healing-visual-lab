@@ -1,5 +1,24 @@
 # Sky Through Glass · 玻璃天空
 
+> **Tech Keywords:** p5.js, FBO Masking, Web Audio API, Frutiger Aero, CRT/VHS CSS, Custom Cursor
+
+<!-- WORK_META
+  slug: sky-through-glass
+  render_engine: Canvas 2D (p5.js)
+  particle_count: N/A (FBO masking)
+  particle_type: GPU shader particles (FBO)
+  shader_type: FBO ping-pong GPU computation
+  interaction: touch interaction
+  audio: Web Audio API synthesis
+  effects: CRT scanlines, FBO ping-pong render targets
+  use_cases: web audio healing soundscape, digital healing visualization, p5.js creative coding demo, frutiger aero aesthetic H5
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 ![Sky Through Glass - Frutiger Aero glass-wipe interaction with VHS noise and blue sky](sky-through-glass_1.gif)
 

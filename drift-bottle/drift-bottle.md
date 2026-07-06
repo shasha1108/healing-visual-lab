@@ -2,6 +2,23 @@
 
 > **Tech Keywords:** p5.js, Canvas 2D Wave Physics, Clip Pipeline, BlendMode Screen, Web Audio API, Frutiger Aero
 
+<!-- WORK_META
+  slug: drift-bottle
+  render_engine: Canvas 2D (p5.js)
+  particle_count: 20+ (plankton + ripples)
+  particle_type: BufferGeometry point sprites
+  shader_type: N/A
+  interaction: touch interaction
+  audio: Web Audio API synthesis
+  effects: blend-mode compositing
+  use_cases: web audio healing soundscape, digital healing visualization, p5.js creative coding demo
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 ![预览](drift-bottle_1.gif)
 
 > 轻触漂流瓶，唤醒瓶中平行世界——帆船、发光鲨鱼、微型海鸥在同一片玻璃海域中共生。

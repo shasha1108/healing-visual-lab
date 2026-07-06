@@ -1,5 +1,24 @@
 # Inkmeditation · 墨池心境
 
+> **Tech Keywords:** Three.js WebGL, 100K+ particles, real-time fluid dynamics, breath-cycle sync
+
+<!-- WORK_META
+  slug: inkmeditation
+  render_engine: Three.js WebGL r128
+  particle_count: 100K+
+  particle_type: BufferGeometry point sprites
+  shader_type: N/A
+  interaction: touch interaction
+  audio: N/A
+  effects: N/A
+  use_cases: three.js webgl interactive H5, webgl particle system demo, webgl fluid simulation, digital healing visualization, breath-sync meditation tool
+  standalone: yes
+  dependencies: 1 CDN (Three.js r128 CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 > **一句话定义:** 这是一个基于 Three.js WebGL 构建的 100K+ 粒子水墨流体模拟，专门解决了高密度粒子系统在浏览器中的实时流体力学渲染问题。
 > **What it does:** A 100K+ particle ink-wash fluid simulation built with Three.js WebGL that solves real-time fluid dynamics rendering for high-density particle systems in the browser.

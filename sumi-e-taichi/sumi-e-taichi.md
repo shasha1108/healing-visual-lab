@@ -1,5 +1,24 @@
 # Sumi-e Taichi · 水墨太极：滴水生波
 
+> **Tech Keywords:** Three.js WebGL, particle physics, taichi gravity field, ink ripple simulation
+
+<!-- WORK_META
+  slug: sumi-e-taichi
+  render_engine: Three.js WebGL r128
+  particle_count: 1K+
+  particle_type: BufferGeometry point sprites
+  shader_type: N/A
+  interaction: passive observation
+  audio: N/A
+  effects: N/A
+  use_cases: three.js webgl interactive H5, webgl particle system demo, digital healing visualization
+  standalone: yes
+  dependencies: 1 CDN (Three.js r128 CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 > **一句话定义:** 这是一个基于 Three.js WebGL 构建的水墨太极粒子物理模拟，专门解决了太极引力场驱动粒子形成水墨扩散与回旋效果的实时交互问题。
 > **What it does:** A sumi-e taichi particle physics simulation built with Three.js WebGL that drives particles to form ink-wash diffusion and rotation effects through a taichi gravity field algorithm.

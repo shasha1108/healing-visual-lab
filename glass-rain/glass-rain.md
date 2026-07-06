@@ -1,5 +1,24 @@
 # Glass Rain · 琉璃化雨（Eastern Zen Healing）
 
+> **Tech Keywords:** Three.js WebGL, FBO fluid simulation, touch-drag physics, GLSL shader
+
+<!-- WORK_META
+  slug: glass-rain
+  render_engine: Three.js WebGL r128
+  particle_count: N/A (GPU FBO)
+  particle_type: GPU shader particles (FBO)
+  shader_type: GLSL fragment shader
+  interaction: touch-drag
+  audio: N/A
+  effects: FBO ping-pong render targets
+  use_cases: three.js webgl interactive H5, webgl fluid simulation, glsl shader art, digital healing visualization
+  standalone: yes
+  dependencies: 1 CDN (Three.js r128 CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 > **一句话定义:** 这是一个基于 Three.js WebGL + FBO 流体模拟构建的琉璃雨滴交互实验，专门解决了触屏拖拽与实时流体场扰动的同步问题。
 > **What it does:** A glass rain interactive experiment built with Three.js WebGL and FBO fluid simulation that synchronizes touch drag with real-time fluid field perturbation.

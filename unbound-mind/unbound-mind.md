@@ -1,5 +1,24 @@
 # Unbound Mind · 释·茧
 
+> **Tech Keywords:** Three.js WebGL, Custom GLSL Shaders, 150K particle system, Web Audio API, spring-damper physics, 4-7-8 breathing rhythm
+
+<!-- WORK_META
+  slug: unbound-mind
+  render_engine: Three.js WebGL r128
+  particle_count: 150K
+  particle_type: BufferGeometry point sprites + custom ShaderMaterial
+  shader_type: GLSL fragment shader
+  interaction: press-and-hold
+  audio: Web Audio API synthesis
+  effects: spring-damper physics
+  use_cases: three.js webgl interactive H5, webgl particle system demo, glsl shader art, web audio healing soundscape, digital healing visualization, breath-sync meditation tool
+  standalone: yes
+  dependencies: 1 CDN (Three.js r128 CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 > **一句话定义:** 这是一个基于 Three.js + WebGL 构建的粒子疗愈交互作品，专门解决了用户通过触觉拖拽将内心焦虑视觉化为星系平静、配合 4-7-8 呼吸节奏实现情绪调节的问题。
 > **What it does:** A WebGL particle healing experience built with Three.js that transforms anxious thought patterns into calm galaxy formations through touch-based interaction and 4-7-8 breathing rhythm.

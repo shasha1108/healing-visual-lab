@@ -2,6 +2,23 @@
 
 > **Tech Keywords:** p5.js, Web Audio API, FSM Center-of-Mass Pathfinding, Line-Art Expressions, CSS Acrylic Glass
 
+<!-- WORK_META
+  slug: aero-slime
+  render_engine: Canvas 2D (p5.js)
+  particle_count: N/A (pixel sprites)
+  particle_type: N/A
+  shader_type: N/A
+  interaction: click
+  audio: Web Audio API synthesis
+  effects: N/A
+  use_cases: web audio healing soundscape, digital healing visualization, p5.js creative coding demo
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 ![预览](aero-slime_1.gif)
 
 > 点击色块投喂情绪，双击玻璃释放惊吓——一只住在亚克力盒子里的电子史莱姆，用颜文字回应你的每一种心情。

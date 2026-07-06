@@ -1,5 +1,24 @@
 # Breath Mirror · 息流 · 幻镜 | 东方数字疗愈
 
+> **Tech Keywords:** Three.js WebGL, GLSL fragment shader, GPU fluid simulation, Web Audio API, Brown noise engine
+
+<!-- WORK_META
+  slug: breath-mirror
+  render_engine: Three.js WebGL r128
+  particle_count: N/A (GPU fluid)
+  particle_type: BufferGeometry point sprites + custom ShaderMaterial
+  shader_type: GLSL fragment shader
+  interaction: touch interaction
+  audio: Brown noise engine
+  effects: N/A
+  use_cases: three.js webgl interactive H5, webgl fluid simulation, glsl shader art, web audio healing soundscape, digital healing visualization, breath-sync meditation tool
+  standalone: yes
+  dependencies: 1 CDN (Three.js r128 CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 > **一句话定义:** 这是一个基于 Three.js WebGL + GLSL 片段着色器构建的 GPU 流体模拟实验，专门解决了呼吸节奏与视觉反馈实时同步的问题。
 > **What it does:** A GPU fluid simulation built with Three.js WebGL and GLSL fragment shaders that synchronizes breath rhythm with real-time visual feedback.

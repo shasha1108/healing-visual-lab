@@ -2,6 +2,23 @@
 
 > **Tech Keywords:** p5.js, Canvas 2D, Frutiger Aero, Procedural Ecosystem, Pixel-to-Vector Metamorphosis, Mouse POV Parallax
 
+<!-- WORK_META
+  slug: sunken-treasure
+  render_engine: Canvas 2D (p5.js)
+  particle_count: 140+ (bubbles + lightDust + fish + ripples)
+  particle_type: BufferGeometry point sprites
+  shader_type: N/A
+  interaction: touch interaction
+  audio: N/A
+  effects: N/A
+  use_cases: digital healing visualization, p5.js creative coding demo, frutiger aero aesthetic H5
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 ![Crystal aqua world with 3D game console spawning vector fish](sunken-treasure_1.gif)
 
 > 像素鱼游进掌机传送门，逃逸到 3D 水晶水体中，蜕变为优雅的矢量鱼——鱼群随时间越来越多。

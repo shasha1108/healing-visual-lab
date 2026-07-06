@@ -1,5 +1,24 @@
 # Pixel Aquarium · 像素水族箱
 
+> **Tech Keywords:** p5.js, CSS Glassmorphism, Procedural Pixel Flora, AI FSM
+
+<!-- WORK_META
+  slug: pixel-aquarium
+  render_engine: Canvas 2D (p5.js)
+  particle_count: N/A (pixel sprites)
+  particle_type: N/A
+  shader_type: N/A
+  interaction: click
+  audio: N/A
+  effects: N/A
+  use_cases: digital healing visualization, p5.js creative coding demo
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 ![Pixel Aquarium — 像素小鱼在 Frutiger Aero 毛玻璃水族箱中游动，点击投食，双击敲玻璃](pixel-aquarium_1.gif)
 

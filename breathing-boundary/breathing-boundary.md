@@ -1,5 +1,24 @@
 # Breathing Boundary · 呼吸边界｜The Breathing Boundary
 
+> **Tech Keywords:** Three.js WebGL, Custom GLSL Shader (Simplex Noise/FBM), Web Audio API, Canvas 2D, dual particle system
+
+<!-- WORK_META
+  slug: breathing-boundary
+  render_engine: Three.js WebGL r128
+  particle_count: N/A (cold+warm dual system)
+  particle_type: BufferGeometry point sprites + custom ShaderMaterial
+  shader_type: GLSL fragment shader (Simplex Noise + FBM)
+  interaction: passive observation
+  audio: Web Audio API synthesis
+  effects: N/A
+  use_cases: three.js webgl interactive H5, webgl particle system demo, glsl shader art, web audio healing soundscape, digital healing visualization, p5.js creative coding demo
+  standalone: yes
+  dependencies: 1 CDN (Three.js r128 CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 > **一句话定义:** 这是一个基于 Three.js WebGL + 自定义 GLSL 着色器构建的有机膜粒子系统，专门解决了呼吸节律与半透膜视觉边界动态映射的问题。
 > **What it does:** An organic membrane particle system built with Three.js WebGL and custom GLSL shaders that dynamically maps breathing rhythm to a semi-permeable visual boundary.

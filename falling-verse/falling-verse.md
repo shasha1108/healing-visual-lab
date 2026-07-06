@@ -2,6 +2,23 @@
 
 > **Tech Keywords:** Three.js WebGL, Web Audio API, Planetary Orbital Mechanics, Particle Typography, Sacred Geometry
 
+<!-- WORK_META
+  slug: falling-verse
+  render_engine: Three.js WebGL r128
+  particle_count: N/A (orbital particle system)
+  particle_type: BufferGeometry point sprites
+  shader_type: N/A
+  interaction: touch interaction
+  audio: Web Audio API synthesis
+  effects: N/A
+  use_cases: three.js webgl interactive H5, web audio healing soundscape, digital healing visualization
+  standalone: yes
+  dependencies: 1 CDN (Three.js r128 CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 ![预览](falling-verse_1.gif)
 
 > 时间的字符拓扑——数字从行星环上剥落，化作金粉与星辰，沉入幽蓝水面。

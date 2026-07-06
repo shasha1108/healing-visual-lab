@@ -2,6 +2,23 @@
 
 > **Tech Keywords:** p5.js, Canvas 2D, Web Audio API, Lo-fi Jazz, Frutiger Aero, CSS3 Glassmorphism
 
+<!-- WORK_META
+  slug: crystal-turntable
+  render_engine: Canvas 2D (p5.js)
+  particle_count: 120 (snow flakes x3 layers)
+  particle_type: BufferGeometry point sprites
+  shader_type: N/A
+  interaction: touch interaction
+  audio: BiquadFilterNode LPF sweep, ConvolverNode reverb
+  effects: N/A
+  use_cases: web audio healing soundscape, digital healing visualization, p5.js creative coding demo, frutiger aero aesthetic H5
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 ![Snowy night vinyl turntable with crystal glow and falling snow](crystal-turntable_1.gif)
 
 > 屋外雪花纷飞，这里的旋律永远为你温暖。

@@ -1,5 +1,24 @@
 # Windmill Valley · 山谷里的风
 
+> **Tech Keywords:** p5.js, Canvas2D, CSS Glassmorphism, Web Audio API
+
+<!-- WORK_META
+  slug: windmill-valley
+  render_engine: Canvas 2D (p5.js)
+  particle_count: N/A
+  particle_type: N/A
+  shader_type: N/A
+  interaction: passive observation
+  audio: N/A
+  effects: N/A
+  use_cases: digital healing visualization, p5.js creative coding demo
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 > 风车在听，风铃在回答。一个你可以走进去的 Frutiger Aero 山谷，风永远在温柔地吹。
 
 ## ✨ 预览

@@ -1,5 +1,24 @@
 # dreamcore-summer-rain · 七里香 Dreamcore夏夜
 
+> **Tech Keywords:** p5.js, Canvas2D, Web Audio API
+
+<!-- WORK_META
+  slug: dreamcore-summer-rain
+  render_engine: Canvas 2D (p5.js)
+  particle_count: N/A
+  particle_type: N/A
+  shader_type: N/A
+  interaction: touch interaction
+  audio: Web Audio API synthesis
+  effects: N/A
+  use_cases: web audio healing soundscape, digital healing visualization, p5.js creative coding demo
+  standalone: yes
+  dependencies: 1 CDN (p5.js CDN)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 > 极致冷暖光碰撞 — 深黑蓝天 vs 售货机刺眼白光 vs 铁路脉冲红灯，日本动漫夏夜最经典的情感锚点。
 
 ## ✨ 预览

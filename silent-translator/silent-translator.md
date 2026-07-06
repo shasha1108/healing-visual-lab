@@ -1,5 +1,24 @@
 # Silent Translator · 无声的翻译官 | 躯体化便签
 
+> **Tech Keywords:** Canvas 2D, frame-by-frame sketch animation, Web Audio healing engine, CSS 3D transforms
+
+<!-- WORK_META
+  slug: silent-translator
+  render_engine: Canvas 2D (p5.js)
+  particle_count: N/A
+  particle_type: N/A
+  shader_type: N/A
+  interaction: passive observation
+  audio: Web Audio API synthesis
+  effects: N/A
+  use_cases: web audio healing soundscape, digital healing visualization, p5.js creative coding demo
+  standalone: yes
+  dependencies: 0 (zero dependencies)
+  file_size: N/A
+  compatibility: Chrome/Edge/Firefox, Safari iOS 15+
+  WORK_META_END
+-->
+
 
 > **一句话定义:** 这是一个基于原生 Canvas 2D + Web Audio 构建的躯体化症状医学插图 H5，专门解决了情绪与身体症状之间关联的可视化科普问题。
 > **What it does:** A somatic symptom medical illustration H5 built with vanilla Canvas 2D and Web Audio that visualizes the connection between emotions and physical symptoms.
