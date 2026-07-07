@@ -244,12 +244,7 @@ open inkmeditation/inkmeditation.html
 
 ## 🔗 相关项目
 
-| 仓库 | 做什么 |
-|------|--------|
-| [**healing-space**](https://github.com/shasha1108/healing-space) | 触觉驱动的交互式疗愈 H5 生成器——GPU 流体、WebGL 着色器 |
-| [**pixel-bloom**](https://github.com/shasha1108/pixel-bloom) | 像素艺术 × 毛玻璃美学——赛博养宠、电子水族箱、像素盆栽 |
-| [**inner-voice**](https://github.com/shasha1108/inner-voice) | 小红书情绪内容创作——隐喻挖掘、场景写作、视觉叙事 |
-| [**h5-publish-skill**](https://github.com/shasha1108/h5-publish-skill) | 一键发布 H5 到 GitHub Pages——拖入文件夹即上线 |
+> 相关工具仓库已转为私有开发。
 
 <p align="right"><sub><a href="#top">↑ 回到顶部</a></sub></p>
 
