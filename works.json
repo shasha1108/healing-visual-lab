@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 21,
+  "total": 22,
   "updated": "2026-07-08",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -20,6 +20,7 @@
     ],
     "canvas_2d": [
       "oxygen-chamber",
+      "luminous-sea-bottle",
       "crystal-turntable",
       "sunken-treasure",
       "drift-bottle",
@@ -66,6 +67,7 @@
     ],
     "particle_system": [
       "oxygen-chamber",
+      "luminous-sea-bottle",
       "crystal-turntable",
       "sunken-treasure",
       "drift-bottle",
@@ -89,6 +91,7 @@
     ],
     "touch_interaction": [
       "oxygen-chamber",
+      "luminous-sea-bottle",
       "crystal-turntable",
       "sunken-treasure",
       "drift-bottle",
@@ -107,6 +110,7 @@
     ],
     "p5js": [
       "oxygen-chamber",
+      "luminous-sea-bottle",
       "crystal-turntable",
       "sunken-treasure",
       "drift-bottle",
@@ -150,6 +154,42 @@
         "frutiger aero glass container",
         "emotional breathing H5",
         "mood-based interactive art"
+      ],
+      "date": "2026-07-08"
+    },
+    {
+      "slug": "luminous-sea-bottle",
+      "title_en": "Luminous Sea Bottle",
+      "title_zh": "玻璃瓶里的夜光海",
+      "tagline": "一个封存在像素玻璃瓶里的发光海洋——触碰唤醒生物荧光，然后慢慢暗回宁静",
+      "tech": [
+        "p5.js Canvas 2D",
+        "Bayer ordered dithering",
+        "canvas glass container pipeline",
+        "touch-to-glow bioluminescence",
+        "Perlin noise algae drift",
+        "Frutiger Aero glassmorphism"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": false,
+      "has_touch": true,
+      "particle_count": "yes",
+      "dependencies": 1,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "pixel terrarium",
+        "frutiger aero glass",
+        "luminous sea",
+        "touch bioluminescence",
+        "desktop companion",
+        "quiet digital object",
+        "bayer dithering"
+      ],
+      "use_cases": [
+        "pixel terrarium digital object",
+        "frutiger aero interactive art",
+        "touch bioluminescence H5",
+        "quiet desktop companion"
       ],
       "date": "2026-07-08"
     },
