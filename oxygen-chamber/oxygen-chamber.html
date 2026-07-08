@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<!--
+  Title: oxygen-chamber · 内心气象日记 · 60s 氧气舱
+  Tech: p5.js Canvas 2D pixel rendering, Web Audio API OscillatorNode + BiquadFilterNode, CSS Frutiger Aero glassmorphism, Bayer ordered dithering
+  Keywords: pixel art, frutiger aero, emotional breathing, 60s timer, oxygen chamber, web audio synthesis, interactive diary, mood visualization
+  Features: 60-second emotional oxygen chamber with mood-switching UI — pixel weather system rendered inside a Frutiger Aero glass container with Web Audio ambient synthesis
+  Render: Canvas 2D (p5.js)
+  Audio: yes
+  Touch: yes
+  Particles: yes
+  Standalone: yes, single HTML file, 2 CDN dependencies
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>内心气象日记 · 60s 氧气舱</title>
+<!-- p5.js: cdnjs first, bootcdn fallback -->
+<link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+<link rel="dns-prefetch" href="//cdn.bootcdn.net">
+<link rel="preconnect" href="//cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="//cdn.bootcdn.net" crossorigin>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>')</script>
+
+<style>
+  :root {
+    --bg: #0a0d18;
+    --glass-bg: rgba(18, 24, 38, 0.45);
+    --glass-border: rgba(255, 255, 255, 0.22);
+    --text: #dcdde1;
+    --muted: #8395a7;
+    --accent: #f1c40f;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100dvh; font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+    overflow: hidden; user-select: none; -webkit-user-select: none;
+    touch-action: none; cursor: default;
+  }
+
+  #env-glow {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 600px; height: 500px; border-radius: 50%;
+    filter: blur(80px); opacity: 0.35; pointer-events: none; z-index: 0;
+    transition: all 1.2s ease;
+  }
+
+  /* 顶部情绪切换 */
+  #mood-bar {
+    position: relative; z-index: 10;
+    display: flex; gap: 8px; margin-bottom: 14px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .mood-btn {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14);
+    color: var(--muted); padding: 7px 14px; border-radius: 20px;
+    font-size: 12px; letter-spacing: 1px; cursor: pointer;
+    transition: all 0.3s ease; backdrop-filter: blur(10px);
+    display: flex; align-items: center; gap: 4px; font-weight: 600;
+  }
+  .mood-btn:hover { border-color: rgba(255,255,255,0.35); color: var(--text); transform: translateY(-1px); }
+  .mood-btn.active { background: rgba(255,255,255,0.2); border-color: var(--accent); color: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+
+  /* 核心舞台：Aero 晶莹玻璃小屋 */
+  #pixel-stage {
+    position: relative; z-index: 5;
+    width: 640px; height: 440px; max-width: 92vw; max-height: 52vh;
+    border-radius: 24px; overflow: hidden;
+    box-shadow:
+      0 25px 60px rgba(0,0,0,0.65),
+      0 0 0 1px var(--glass-border),
+      inset 0 1px 2px rgba(255,255,255,0.4);
+  }
+
+  #glass-base {
+    position: absolute; inset: 0; z-index: 2;
+    backdrop-filter: blur(8px) saturate(1.2);
+    background: var(--glass-bg); pointer-events: none;
+  }
+  #pixel-stage canvas {
+    position: absolute !important; inset: 0; z-index: 3;
+    display: block; width: 100% !important; height: 100% !important;
+    image-rendering: pixelated;
+  }
+
+  /* 拟物高光罩 */
+  #glass-shell {
+    position: absolute; inset: 0; z-index: 4; border-radius: 24px; pointer-events: none;
+    border: 1.5px solid rgba(255,255,255,0.38);
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.6), inset 0 -10px 20px rgba(0,0,0,0.4);
+  }
+  #glass-shell::before {
+    content: ''; position: absolute; top: 10px; left: 10%; width: 80%; height: 60px;
+    border-radius: 50%; background: linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 100%);
+  }
+
+  #interact-layer { position: absolute; inset: 0; z-index: 5; cursor: pointer; }
+
+  /* 💥 爆款升级：情绪氧气舱与日记控制台 */
+  .companion-bar {
+    position: relative; z-index: 10; margin-top: 14px;
+    display: flex; gap: 16px; align-items: center;
+    background: rgba(20, 24, 40, 0.88);
+    padding: 8px 20px; border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+
+  .mood-display {
+    font-family: -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px; font-weight: bold; color: #fff;
+    letter-spacing: 1px; text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    min-width: 140px; text-align: center;
+  }
+
+  .action-btn {
+    background: rgba(255, 255, 255, 0.2); border: none;
+    color: #fff; padding: 6px 14px; border-radius: 14px;
+    font-size: 12px; cursor: pointer; font-weight: bold;
+    transition: all 0.2s ease; display: flex; align-items: center; gap: 4px;
+  }
+  .action-btn:hover { background: rgba(255, 255, 255, 0.4); transform: translateY(-1px); }
+
+  /* 气象日记卡片弹窗 */
+  #card-modal {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(6, 10, 20, 0.9);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+    padding: 24px; text-align: center; color: #fff;
+  }
+  #card-modal.active { opacity: 1; pointer-events: auto; }
+
+  /* 拍立得美学卡片 */
+  .polaroid-card {
+    background: #f8f9fa; color: #2c3e50;
+    border-radius: 16px; padding: 20px 20px 28px 20px;
+    max-width: 300px; width: 100%; box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+    position: relative; text-align: left; transform: rotate(-1.5deg);
+  }
+  .polaroid-photo {
+    width: 100%; height: 180px; background: #1a2436; border-radius: 8px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    color: #fff; margin-bottom: 16px; position: relative; overflow: hidden;
+  }
+  .polaroid-photo .photo-icon { font-size: 48px; margin-bottom: 8px; }
+  .polaroid-photo .photo-status { font-size: 15px; font-weight: bold; color: #00f2fe; }
+  .polaroid-date { font-size: 11px; color: #95a5a6; font-family: monospace; }
+  .polaroid-quote { font-size: 15px; font-weight: 600; line-height: 1.5; color: #2c3e50; margin-top: 8px; }
+  .polaroid-footer { margin-top: 14px; font-size: 11px; color: #7f8c8d; text-align: right; }
+
+  .close-card-btn {
+    margin-top: 22px; background: #f1c40f; color: #000; border: none;
+    padding: 10px 32px; border-radius: 20px; font-weight: bold; cursor: pointer;
+    box-shadow: 0 4px 15px rgba(241, 196, 15, 0.4);
+  }
+</style>
+</head>
+<body>
+
+<div id="env-glow"></div>
+
+<!-- 顶部情绪切换 -->
+<div id="mood-bar">
+  <button class="mood-btn active" data-weather="snow">❄️ 低落</button>
+  <button class="mood-btn" data-weather="storm">⚡ 焦躁</button>
+  <button class="mood-btn" data-weather="fog">🌫️ 迷茫</button>
+  <button class="mood-btn" data-weather="calm">☀️ 平静</button>
+  <button class="mood-btn" data-weather="sun">🌟 充盈</button>
+</div>
+
+<!-- 主舞台 -->
+<div id="pixel-stage">
+  <div id="glass-base"></div>
+  <div id="glass-shell"></div>
+  <div id="interact-layer"></div>
+</div>
+
+<!-- 💥 重构的 60秒情绪氧气舱与日记控制台 -->
+<div class="companion-bar">
+  <div class="mood-display" id="mood-txt">心境：雪夜避风港</div>
+  <button class="action-btn" id="breathe-btn" onclick="toggleBreathe()">🌬️ 逃离 60 秒</button>
+  <button class="action-btn" onclick="showDiaryCard(false)">📸 气象日记</button>
+  <button class="action-btn" id="audio-btn" onclick="toggleAudio()">🔇 开启音轨</button>
+</div>
+
+<!-- 气象日记拍立得卡片 Modal -->
+<div id="card-modal">
+  <div class="polaroid-card">
+    <div class="polaroid-photo" id="photo-bg">
+      <div class="photo-icon" id="card-icon">❄️</div>
+      <div class="photo-status" id="card-status">心境：雪夜避风港</div>
+    </div>
+    <div class="polaroid-date" id="card-date">2026.07.07 10:29 · 内心气象记录</div>
+    <div class="polaroid-quote" id="card-quote">“雪落无声——世界安静下来的时候，你也该对自己温柔一点。”</div>
+    <div class="polaroid-footer">—— 无声的情绪记录仪 🐾</div>
+  </div>
+  <button class="close-card-btn" onclick="downloadAndCloseCard()">收下这页日记 📸</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// 1. 全局配置与状态
+// ═══════════════════════════════════════════════════════════════
+const CW = 320, CH = 220; 
+
+const WEATHERS = {
+  snow: { name: '❄️ 雪夜避风港', glow: 'rgba(180,200,230,0.35)', quote: '雪落无声——世界安静下来的时候，你也该对自己温柔一点。' },
+  storm: { name: '⚡ 暴雨宣泄', glow: 'rgba(120,50,160,0.4)', quote: '暴风雨会过去。在它过去之前，允许自己先不平静。' },
+  fog:   { name: '🌫️ 迷雾星辰', glow: 'rgba(130,150,180,0.3)', quote: '看不清的时候，就停下来。雾散之后，星会为你指路。' },
+  calm:  { name: '☀️ 晴天泡泡', glow: 'rgba(80,200,160,0.35)', quote: '什么也不做，阳光和泡泡替你做完所有的事。' },
+  sun:   { name: '🌟 晨光充能', glow: 'rgba(241,196,15,0.4)', quote: '光从东方来，落在心上——此刻的充盈，值得被记住。' }
+};
+
+let currentWeather = 'snow';
+
+// 💥 情绪氧气舱状态
+let breatheSeconds = 60;
+let isBreathing = false;
+let breatheTimerId = null;
+
+// 音频系统
+let audioCtx = null, masterGain = null;
+let audioStarted = false;
+let activeAudio = { sources: [], timers: [] };
+
+// 像素动画状态
+let bearState = { x: 160, y: 155, animT: 0, petGlow: 0, bounceY: 0, fsm: 'idle', fsmTimer: 0, idleCycle: 0, nextAction: 30, waveH: 0 };
+let raindrops = [], sunDust = [], heartParticles = [], breathRipples = [];
+const BAYER4 = [[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]];
+
+// ═══════════════════════════════════════════════════════════════
+// 2. 音频引擎 (安全 Ramp 函数，防 DOMException 崩死)
+// ═══════════════════════════════════════════════════════════════
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain(); masterGain.gain.value = 0;
+    masterGain.connect(audioCtx.destination);
+  } catch (e) {
+    console.warn("Audio init deferred:", e);
+  }
+}
+
+function safeRamp(param, targetVal, time) {
+  if (!audioCtx) return;
+  const safeTarget = Math.max(0.0001, targetVal); 
+  try {
+    param.cancelScheduledValues(audioCtx.currentTime);
+    param.setValueAtTime(Math.max(0.0001, param.value), audioCtx.currentTime);
+    param.exponentialRampToValueAtTime(safeTarget, time);
+  } catch (e) { param.value = safeTarget; }
+}
+
+function stopAllAudio() {
+  activeAudio.timers.forEach(id => { clearTimeout(id); clearInterval(id); });
+  activeAudio.timers = [];
+  if (audioCtx) {
+    activeAudio.sources.forEach(item => {
+      try {
+        if (item.gain) safeRamp(item.gain.gain, 0.0001, audioCtx.currentTime + 0.05);
+        if (item.node && item.node.stop) item.node.stop(audioCtx.currentTime + 0.06);
+      } catch(e) {}
+    });
+  }
+  activeAudio.sources = [];
+}
+
+function startWeatherAudio(wId) {
+  if (!audioCtx || !audioStarted) return;
+  stopAllAudio();
+  const now = audioCtx.currentTime;
+
+  if (wId === 'snow') {
+    // ❄️ 雪夜风声: 白噪低频 + LFO 呼吸感 + 偶发风铃
+    const bufSize = audioCtx.sampleRate * 3, buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) d[i] = (Math.random() * 2 - 1) * 0.03;
+    const src = audioCtx.createBufferSource(); src.buffer = buf; src.loop = true;
+    const lp = audioCtx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 220;
+    const g = audioCtx.createGain(); g.gain.value = 0.08;
+    // LFO 呼吸感: 增益以 4 秒周期在 0.05~0.15 之间摆动
+    const lfo = audioCtx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.25; // 4秒周期
+    const lfoG = audioCtx.createGain(); lfoG.gain.value = 0.05;
+    const lfoAdd = audioCtx.createGain(); lfoAdd.gain.value = 0.1;
+    lfo.connect(lfoG); lfoG.connect(g.gain);
+    lfo.start(now);
+    src.connect(lp); lp.connect(g); g.connect(masterGain); src.start(now);
+    activeAudio.sources.push({ node: src, gain: g }, { node: lfo, gain: lfoG });
+    // 偶发风铃 (更轻柔)
+    (function windBell(){
+      if(currentWeather!=='snow'||!audioStarted)return;
+      const cn=audioCtx.currentTime;
+      const co=audioCtx.createOscillator(); co.type='sine';
+      co.frequency.value=[587.33, 783.99, 1046.5, 1318.5][Math.floor(Math.random()*4)];
+      const cg=audioCtx.createGain(); cg.gain.setValueAtTime(0,cn);
+      cg.gain.linearRampToValueAtTime(.018, cn+.04); safeRamp(cg.gain, 0.0001, cn+3);
+      co.connect(cg); cg.connect(masterGain); co.start(cn); co.stop(cn+3);
+      activeAudio.timers.push(setTimeout(windBell, 5000+Math.random()*7000));
+    })();
+  } else if (wId === 'storm') {
+    // ⚡ 暴雨: 两层雨声 (近+远) + 低频 + 雷鸣
+    // 远层: 轻柔高频雨
+    const bufFar = audioCtx.createBuffer(1, audioCtx.sampleRate*2, audioCtx.sampleRate), df = bufFar.getChannelData(0);
+    for (let i=0; i<df.length; i++) df[i] = (Math.random()*2-1)*0.03;
+    const srcFar = audioCtx.createBufferSource(); srcFar.buffer = bufFar; srcFar.loop = true;
+    const bpFar = audioCtx.createBiquadFilter(); bpFar.type = 'bandpass'; bpFar.frequency.value = 1200; bpFar.Q.value = 0.4;
+    const gFar = audioCtx.createGain(); gFar.gain.value = 0.06;
+    srcFar.connect(bpFar); bpFar.connect(gFar); gFar.connect(masterGain); srcFar.start(now);
+    activeAudio.sources.push({ node: srcFar, gain: gFar });
+    // 近层: 厚重低频雨
+    const bufNear = audioCtx.createBuffer(1, audioCtx.sampleRate*2, audioCtx.sampleRate), dn = bufNear.getChannelData(0);
+    for (let i=0; i<dn.length; i++) dn[i] = (Math.random()*2-1)*0.06;
+    const srcNear = audioCtx.createBufferSource(); srcNear.buffer = bufNear; srcNear.loop = true;
+    const lpNear = audioCtx.createBiquadFilter(); lpNear.type = 'lowpass'; lpNear.frequency.value = 350;
+    const gNear = audioCtx.createGain(); gNear.gain.value = 0.12;
+    srcNear.connect(lpNear); lpNear.connect(gNear); gNear.connect(masterGain); srcNear.start(now);
+    activeAudio.sources.push({ node: srcNear, gain: gNear });
+    // 远方低频雷
+    const drone = audioCtx.createOscillator(); drone.type = 'triangle'; drone.frequency.value = 55;
+    const lp2 = audioCtx.createBiquadFilter(); lp2.type = 'lowpass'; lp2.frequency.value = 100;
+    const dg = audioCtx.createGain(); dg.gain.value = 0.018;
+    drone.connect(lp2); lp2.connect(dg); dg.connect(masterGain); drone.start(now);
+    activeAudio.sources.push({ node: drone, gain: dg });
+    // 雷鸣
+    (function thunder(){if(currentWeather!=='storm'||!audioStarted)return;const tn=audioCtx.currentTime;const to=audioCtx.createOscillator();to.type='sine';to.frequency.setValueAtTime(80,tn);safeRamp(to.frequency, 25, tn+.6);const tg=audioCtx.createGain();tg.gain.setValueAtTime(.12,tn);safeRamp(tg.gain, 0.0001, tn+.6);to.connect(tg);tg.connect(masterGain);to.start(tn);to.stop(tn+.6);activeAudio.timers.push(setTimeout(thunder,3000+Math.random()*6000))})();
+  } else if (wId === 'fog') {
+    const bowl = audioCtx.createOscillator(); bowl.type = 'sine'; bowl.frequency.value = 432;
+    const bg = audioCtx.createGain(); bg.gain.value = 0.04;
+    bowl.connect(bg); bg.connect(masterGain); bowl.start(now);
+    activeAudio.sources.push({ node: bowl, gain: bg });
+    (function chime(){if(currentWeather!=='fog'||!audioStarted)return;const cn=audioCtx.currentTime;const co=audioCtx.createOscillator();co.type='sine';co.frequency.value=528*(Math.random()>.5?1:1.5);const cg=audioCtx.createGain();cg.gain.setValueAtTime(0,cn);cg.gain.linearRampToValueAtTime(.03,cn+.05);safeRamp(cg.gain, 0.0001, cn+2.8);co.connect(cg);cg.connect(masterGain);co.start(cn);co.stop(cn+2.8);activeAudio.timers.push(setTimeout(chime,4000+Math.random()*3500))})();
+  } else if (wId === 'calm') {
+    // ☀️ 风铃: 轻柔三角波 + 随机间隔 + 温暖 ambient 基底
+    const pad = audioCtx.createOscillator(); pad.type = 'sine'; pad.frequency.value = 261.63;
+    const pg = audioCtx.createGain(); pg.gain.value = 0.015;
+    pad.connect(pg); pg.connect(masterGain); pad.start(now);
+    activeAudio.sources.push({ node: pad, gain: pg });
+    // 风铃: 高音三角波, 不规则间隔, 每次频率微调
+    const chimes = [1046.5, 1174.7, 1318.5, 1568.0, 1760.0, 2093.0];
+    (function windChime(){
+      if(currentWeather!=='calm'||!audioStarted)return;
+      const cn = audioCtx.currentTime;
+      const co = audioCtx.createOscillator(); co.type = 'triangle';
+      co.frequency.value = chimes[Math.floor(Math.random()*chimes.length)];
+      const cg = audioCtx.createGain();
+      cg.gain.setValueAtTime(0, cn);
+      cg.gain.linearRampToValueAtTime(.02, cn + .02);
+      safeRamp(cg.gain, 0.0001, cn + 2.5);
+      co.connect(cg); cg.connect(masterGain);
+      co.start(cn); co.stop(cn + 2.5);
+      // 随机间隔 2~6 秒
+      activeAudio.timers.push(setTimeout(windChime, 2000 + Math.random() * 4000));
+    })();
+  } else if (wId === 'sun') {
+    // 174Hz 修复基音
+    const base = audioCtx.createOscillator(); base.type = 'sine'; base.frequency.value = 174;
+    const bg = audioCtx.createGain(); bg.gain.value = 0.035;
+    base.connect(bg); bg.connect(masterGain); base.start(now);
+    activeAudio.sources.push({ node: base, gain: bg });
+    // 温暖五声琶音 (金色光斑感)
+    const arpNotes = [261.63, 329.63, 392.00, 523.25, 659.25];
+    activeAudio.timers.push(setInterval(() => {
+      if (currentWeather !== 'sun' || !audioStarted) return;
+      const cn = audioCtx.currentTime;
+      const co = audioCtx.createOscillator(); co.type = 'triangle';
+      co.frequency.value = arpNotes[Math.floor(Math.random() * arpNotes.length)];
+      const cg = audioCtx.createGain();
+      cg.gain.setValueAtTime(0, cn);
+      cg.gain.linearRampToValueAtTime(0.02, cn + 0.04);
+      safeRamp(cg.gain, 0.0001, cn + 2.0);
+      co.connect(cg); cg.connect(masterGain);
+      co.start(cn); co.stop(cn + 2.0);
+    }, 2400));
+  }
+}
+
+function playPetSound() {
+  if (!audioCtx || !audioStarted) return;
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+  osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, now);
+  safeRamp(osc.frequency, 783.99, now + 0.15);
+  g.gain.setValueAtTime(0.12, now); safeRamp(g.gain, 0.0001, now + 0.15);
+  osc.connect(g); g.connect(audioCtx.destination);
+  osc.start(now); osc.stop(now + 0.15);
+}
+
+function toggleAudio() {
+  initAudio();
+  const btn = document.getElementById('audio-btn');
+  if (!audioStarted) {
+    audioCtx.resume(); audioStarted = true;
+    masterGain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.5);
+    startWeatherAudio(currentWeather);
+    btn.textContent = '🔊 音轨: 开';
+  } else {
+    audioStarted = false;
+    masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+    stopAllAudio();
+    btn.textContent = '🔇 音轨: 关';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 3. P5.JS 渲染引擎 (底层保留完美像素渲染)
+// ═══════════════════════════════════════════════════════════════
+function sizeStage() {
+  const stage = document.getElementById('pixel-stage');
+  if (!stage) return;
+  const maxW = Math.min(window.innerWidth * 0.92, 640);
+  const maxH = Math.min(window.innerHeight * 0.52, 440);
+  const s = Math.min(maxW / 640, maxH / 440);
+  stage.style.width = `${Math.floor(640 * s)}px`;
+  stage.style.height = `${Math.floor(440 * s)}px`;
+}
+
+function setup() {
+  sizeStage();
+  const c = createCanvas(CW, CH);
+  c.parent('pixel-stage');
+  noSmooth(); pixelDensity(1);
+  drawingContext.imageSmoothingEnabled = false;
+
+  initSnow(); initRain(); initBubbles(); initSunDust();
+}
+
+function draw() {
+  try {
+    const ctx = drawingContext;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, CW, CH);
+    ctx.clip();
+    drawingContext.imageSmoothingEnabled = false;
+    const t = millis() * 0.001;
+
+    drawCozyRoomBackground(t);
+
+    if (currentWeather === 'snow') drawSnowParticles(t);
+    else if (currentWeather === 'storm') drawRainParticles();
+    else if (currentWeather === 'calm') drawBubbles(t);
+    else if (currentWeather === 'sun') drawSunParticles(t);
+
+    drawPixelBearCharacter(t);
+    drawRoomFurniture(t);
+    drawPottedPlant(t);
+    drawingContext.globalCompositeOperation = 'screen';
+    updateDrawBreathRipples(t);
+    drawingContext.globalCompositeOperation = 'source-over';
+    updateDrawHeartParticles();
+    ctx.restore();
+  } catch (e) {
+    try { drawingContext.restore(); } catch (_) {}
+    console.error("Render loop error:", e);
+  }
+}
+
+function drawCozyRoomBackground(t) {
+  push(); noStroke();
+  fill(30, 24, 38); rect(0, 0, CW, CH);
+
+  const winX = 40, winY = 20, winW = 240, winH = 130;
+  
+  if (currentWeather === 'snow') fill(22, 28, 42);
+  else if (currentWeather === 'storm') fill(22, 12, 35);
+  else if (currentWeather === 'fog') fill(40, 48, 55);
+  else if (currentWeather === 'calm') fill(100, 160, 210);
+  else fill(245, 180, 90); 
+  rect(winX, winY, winW, winH);
+
+  fill(18, 14, 10);
+  rect(winX - 4, winY - 4, winW + 8, 4);
+  rect(winX - 4, winY + winH, winW + 8, 6);
+  rect(winX - 4, winY - 4, 4, winH + 8);
+  rect(winX + winW, winY - 4, 4, winH + 8);
+  rect(winX + winW/2 - 2, winY, 4, winH);
+
+  if (currentWeather === 'snow') {
+    // ❄️ 雪夜窗外: 深蓝天穹 + 远山 + 小镇灯火 + 慢速云层 + 飘雪
+    // 天穹 (从深蓝到地平线淡紫)
+    for (let y=winY; y<winY+winH; y+=2) {
+      const ty = (y-winY)/winH;
+      fill(18+ty*8, 24+ty*10, 38+ty*12); rect(winX, y, winW, 2);
+    }
+    // 远山 (3层视差)
+    fill(28,34,48); rect(winX, winY+75, winW, 55);
+    fill(32,38,50); rect(winX, winY+85, winW, 45);
+    // 雪地
+    fill(38,44,56); rect(winX, winY+100, winW, 30);
+    fill(45,50,60); rect(winX, winY+115, winW, 15);
+    // 像素小镇 (远处建筑群，带灯光窗户)
+    const blds = [[winX+20,winY+60,14,4],[winX+50,winY+50,18,5],[winX+80,winY+62,12,3],
+                  [winX+110,winY+48,22,6],[winX+145,winY+55,16,5],[winX+175,winY+58,14,4],[winX+205,winY+52,18,5]];
+    blds.forEach(([bx,by2,bw,floors]) => {
+      fill(24,28,38); rect(bx, by2, bw, winH-(by2-winY));
+      fill(28,32,42); rect(bx, by2, bw, 2); // 屋顶积雪
+      // 暖色窗户 (位置决定亮灭，不闪烁)
+      for (let fy=0; fy<floors; fy++) {
+        for (let fx=0; fx<Math.floor(bw/6); fx++) {
+          const h = (bx*31+fy*17+fx*53) % 100;
+          if (h > 30) {
+            const wx2 = bx+4+fx*6, wy2 = by2+6+fy*10;
+            const wa = 120 + (h%40);
+            fill(255,210,140, wa); rect(wx2, wy2, 3, 4);
+          }
+        }
+      }
+    });
+    // 街灯 (Bayer 抖动暖光)
+    for (let li=0; li<3; li++) {
+      const lx2 = winX+60+li*65, ly2 = winY+65;
+      for (let dx=-8; dx<=8; dx+=2) for (let dy=-8; dy<=8; dy+=2) {
+        const d = Math.sqrt(dx*dx+dy*dy);
+        if (d<7) { const b=(1-d/7)*.35, bx=Math.floor(Math.abs(lx2+dx)/2)%4, by=Math.floor(Math.abs(ly2+dy)/2)%4;
+          if (b>BAYER4[by][bx]/16) { fill(255,215,145, b*255); rect(lx2+dx, ly2+dy, 2, 2); }
+        }
+      }
+    }
+    // 慢速云层 (3朵，漂移)
+    for (let ci=0; ci<3; ci++) {
+      const cx = winX+30 + ((t*8 + ci*80) % (winW+50)) - 25;
+      const cy = winY+15 + ci*12;
+      fill(35,40,55, 80); rect(cx, cy, 40+ci*10, 8);
+      fill(40,45,58, 60); rect(cx+5, cy-3, 30+ci*8, 6);
+    }
+  } else if (currentWeather === 'storm') {
+    if (random()<0.015) { fill(255,255,240,150); rect(winX,winY,winW,winH); }
+  } else if (currentWeather === 'fog') {
+    fill(28,32,38); rect(winX+55,winY+35,4,winH-35); 
+    for(let l=0;l<3;l++){const bw=10-l*3,b2=winY+35-l*10;rect(winX+57-bw,b2,bw*2,4)}
+    rect(winX+175,winY+45,3,winH-45); 
+    for(let l=0;l<3;l++){const bw=8-l*3,b2=winY+45-l*9;rect(winX+176-bw,b2,bw*2,4)}
+    for(let i=0;i<18;i++){
+      const sx=winX+10+(i*31+77)%(winW-20), sy=winY+8+(i*19+53)%(winH-20);
+      const tw=sin(t*3+i*1.7)*.5+.5;
+      fill(255,255,220,tw*180); rect(sx,sy,1.5,1.5);
+      if(tw>.7){fill(255,255,240,tw*100); rect(sx-1,sy-1,3,3)}
+    }
+  } else if (currentWeather === 'calm') {
+    fill(240,245,255,170); rect(winX+30,winY+30,50,10); rect(winX+38,winY+24,35,8);
+  } else if (currentWeather === 'sun') {
+    const sx=winX+50,sy2=winY+35;
+    for(let dx=-22;dx<=22;dx+=3) {
+      for(let dy=-22;dy<=22;dy+=3) {
+        const d=sqrt(dx*dx+dy*dy);
+        if(d<20){
+          const b=(1-d/20)*0.5;
+          // ⚠️ BUG FIX: Use Math.floor!
+          const bx = Math.floor(Math.abs(sx+dx)/3) % 4;
+          const by = Math.floor(Math.abs(sy2+dy)/3) % 4;
+          if(b > BAYER4[by][bx]/16){fill(255,230,160,b*255);rect(sx+dx,sy2+dy,3,3)}
+        }
+      }
+    }
+  }
+
+  if (currentWeather === 'snow') {
+    for(let i=0;i<8;i++){const fx=winX+4+(i*32+Math.floor(t*5))%(winW-14);noStroke();fill(200,215,235,25+random(15));rect(fx,winY+2,6,3)}
+    for(let i=0;i<6;i++){const fy=winY+4+(i*24)%(winH-14);noStroke();fill(200,215,235,25+random(15));rect(winX+2,fy,3,5)}
+  } else if (currentWeather === 'storm') {
+    stroke('rgba(180,190,220,0.35)'); strokeWeight(1);
+    for(let i=0;i<10;i++){const sx=winX+6+(i*25+Math.floor(t*18+i*7))%(winW-12);line(sx,winY+4,sx-1,winY+4+random(8,22))}
+    noStroke();
+  }
+
+  fill(45, 32, 22); rect(0, CH - 45, CW, 45);
+  fill(55, 40, 28); rect(0, CH - 45, CW, 3); 
+  pop();
+}
+
+function drawPixelBearCharacter(t) {
+  push(); noStroke();
+  
+  bearState.fsmTimer += deltaTime * 0.001;
+  // ═══ 30s 自发行为循环: idle中计时，触发随机小动作 ═══
+  if (bearState.fsm === 'idle') {
+    bearState.idleCycle += deltaTime * 0.001;
+    if (bearState.idleCycle > bearState.nextAction) {
+      const acts = ['yawning','rubbingEyes','waving','looking','breathing'];
+      bearState.fsm = acts[Math.floor(Math.random() * acts.length)];
+      bearState.fsmTimer = 0; bearState.idleCycle = 0; bearState.nextAction = 25 + Math.random() * 20;
+      if (bearState.fsm === 'waving') bearState.waveH = 0;
+    }
+  }
+  // 短暂行为 → 自动回到 idle
+  if (bearState.fsm === 'yawning' || bearState.fsm === 'rubbingEyes' || bearState.fsm === 'looking') {
+    if (bearState.fsmTimer > 3.0) { bearState.fsm = 'idle'; bearState.fsmTimer = 0; }
+  } else if (bearState.fsm === 'waving') {
+    bearState.waveH = Math.sin(bearState.fsmTimer * 5) * 0.5 + 0.5;
+    if (bearState.fsmTimer > 2.5) { bearState.fsm = 'idle'; bearState.fsmTimer = 0; bearState.waveH = 0; }
+  } else if (bearState.fsm === 'petted') {
+    if (bearState.fsmTimer > 2.0) { bearState.fsm = 'idle'; bearState.fsmTimer = 0; }
+  } else if (bearState.fsm === 'breathing') {
+    if (bearState.fsmTimer > 4) {
+      if (typeof isBreathing !== 'undefined' && isBreathing) { bearState.fsmTimer = 0; }
+      else { bearState.fsm = 'idle'; bearState.fsmTimer = 0; bearState.idleCycle = 0; bearState.nextAction = 25 + Math.random() * 20; }
+    }
+  }
+
+  bearState.bounceY += (0 - bearState.bounceY) * 0.1;
+  let bx = bearState.x, by = bearState.y + Math.sin(t * 2) * 1.5 - bearState.bounceY;
+
+  // FSM 姿势变化
+  if (bearState.fsm === 'breathing') {
+    by += Math.sin(bearState.fsmTimer * 3) * 2;
+  } else if (bearState.fsm === 'yawning') {
+    if (bearState.fsmTimer > 1.5) by += Math.sin((bearState.fsmTimer - 1.5) * Math.PI) * 4;
+  } else if (bearState.fsm === 'rubbingEyes') {
+    by += 1;
+  } else if (bearState.fsm === 'looking') {
+    bx += Math.sin(bearState.fsmTimer * 1.5) * 3;
+  }
+
+  if (bearState.petGlow > 0) {
+    fill(`rgba(241, 196, 15, ${bearState.petGlow * 0.4})`);
+    circle(bx, by - 10, 70);
+    bearState.petGlow -= 0.02;
+  }
+
+  fill('#5c3618'); rect(bx-12,by-4,12,18); rect(bx-14,by-10,2,14);
+  fill('#7f4f24'); rect(bx-14,by-12,28,6); rect(bx-2,by-6,10,14); rect(bx-14,by-8,16,4);
+  fill('#a0683a'); rect(bx-10,by-10,8,14);
+  fill('#c89460'); rect(bx-8,by-2,14,10);
+
+  fill('#5c3618'); rect(bx-14,by-28,4,16); rect(bx-16,by-32,2,10);
+  fill('#7f4f24'); rect(bx-16,by-32,32,6); rect(bx-10,by-26,26,12); rect(bx+10,by-30,6,4);
+  fill('#a0683a'); rect(bx-12,by-32,10,12);
+
+  [bx-16,bx+8].forEach(ex => {
+    fill('#5c3618'); rect(ex,by-38,8,2);
+    fill('#7f4f24'); rect(ex,by-38,7,6);
+    fill('#a0683a'); rect(ex+1,by-37,4,4);
+    fill('#e0a96d'); rect(ex+2,by-36,3,3);
+  });
+
+  fill('#d4956b'); rect(bx-9,by-24,18,11);
+  fill('#e0a96d'); rect(bx-8,by-23,16,9);
+  fill('#ecc89b'); rect(bx-6,by-22,12,6);
+  fill('#1a0f05'); rect(bx-3,by-22,6,4);
+  fill('#2b1d0c'); rect(bx-2,by-22,4,3);
+  fill('#fff'); rect(bx-1,by-21,1.5,1.5);
+
+  // 眼睛 (天气/FSM驱动)
+  if (currentWeather === 'storm') {
+    stroke('#2b1d0c'); strokeWeight(2);
+    line(bx-10,by-26,bx-6,by-23); line(bx+6,by-26,bx+10,by-23); noStroke();
+  } else if (bearState.fsm === 'yawning' || bearState.fsm === 'rubbingEyes') {
+    stroke('#2b1d0c'); strokeWeight(2); // 闭眼 =_=
+    line(bx-10,by-26,bx-6,by-26); line(bx+6,by-26,bx+10,by-26); noStroke();
+  } else {
+    fill('#1a0f05'); rect(bx-10,by-26,5,6); rect(bx+5,by-26,5,6);
+    fill('#2b1d0c'); rect(bx-9,by-26,4,5); rect(bx+6,by-26,4,5);
+    fill('#fff'); rect(bx-9,by-26,2,2); rect(bx+7,by-26,2,2);
+  }
+  // 挥手 — 右爪抬起摇摆
+  if (bearState.fsm === 'waving') {
+    const wx = bx + 14, wy = by - 14 - bearState.waveH * 12;
+    fill('#5c3618'); rect(wx-3,wy,7,10);
+    fill('#7f4f24'); rect(wx-2,wy+1,5,8);
+    fill('#e0a96d'); rect(wx-1,wy+9,3,2);
+  }
+  // 揉眼睛 — 左爪抬到眼角
+  if (bearState.fsm === 'rubbingEyes') {
+    fill('#7f4f24'); rect(bx-9,by-26,4,5);
+    fill('#e0a96d'); rect(bx-8,by-25,3,3);
+  }
+
+  if (currentWeather === 'snow') {
+    fill('#8B4513'); rect(bx-10,by-10,20,7); fill('#D2691E'); rect(bx-10,by-12,20,4); rect(bx+8,by-12,3,12);
+    fill('#A0522D'); rect(bx-18,by-36,36,4);
+  } else if (currentWeather === 'storm') {
+    fill('#8b0000'); rect(bx-10,by-10,20,6);
+    fill('#c0392b'); rect(bx-10,by-12,20,4); rect(bx+8,by-12,2,10);
+  } else if (currentWeather === 'fog') {
+    fill('#1a5276'); rect(bx-10,by-12,20,8);
+    fill('#2980b9'); rect(bx-10,by-14,20,4); rect(bx-18,by-36,36,4);
+  } else if (currentWeather === 'calm') {
+    fill('#1a252f'); rect(bx-17,by-26,5,13); rect(bx+12,by-26,5,13);
+    fill('#2c3e50'); rect(bx-16,by-25,4,11); rect(bx+13,by-25,4,11);
+    fill('#34495e'); rect(bx-17,by-29,24,3);
+  } else if (currentWeather === 'sun') {
+    fill('#111'); rect(bx-12,by-28,10,6); rect(bx+2,by-28,10,6);
+    rect(bx-14,by-27,28,2);
+    const sipPhase = sin(t * 1.2) * 0.5 + 0.5;
+    const canX = bx + 10, canY = by - 6 + (sipPhase > 0.6 ? -3 : 0);
+    fill('#c0392b'); rect(canX, canY, 6, 10);
+    fill('#e74c3c'); rect(canX+1, canY, 3, 8);
+    fill('#7f8c8d'); rect(canX, canY, 6, 2); rect(canX, canY+8, 6, 2);
+    stroke('#fff'); strokeWeight(1); line(canX+3, canY, canX+3, canY-4); noStroke();
+  }
+
+  // 腿 (从身体下方伸出，站立姿态)
+  [[bx-14,by+12],[bx+6,by+12]].forEach(([px,py]) => {
+    fill('#5c3618'); rect(px,py,8,10);      // 腿暗面
+    fill('#7f4f24'); rect(px+1,py,6,8);      // 腿主色
+    fill('#a0683a'); rect(px+2,py,3,6);      // 腿高光
+    // 脚掌
+    fill('#5c3618'); rect(px-1,py+9,10,4);
+    fill('#7f4f24'); rect(px,py+9,8,3);
+  });
+
+  pop();
+}
+
+function drawRoomFurniture(t) {
+  push(); noStroke();
+  const tx = 200, ty = CH - 40;
+  fill(55,38,26); rect(tx-70,ty,140,16);
+  fill(65,45,30); rect(tx-68,ty,136,3);
+  fill(40,28,18); rect(tx-65,ty+16,8,26); rect(tx+55,ty+16,8,26);
+
+  // 📚 三本叠放的书
+  const bx2=tx-35,by2=ty-3;
+  fill('#1a3a5c'); rect(bx2-12,by2-4,24,6); fill('#2471a3'); rect(bx2-12,by2-4,24,2); fill('#1a5276'); rect(bx2-10,by2-3,5,1);
+  fill('#7b241c'); rect(bx2-10,by2-10,20,7); fill('#a93226'); rect(bx2-10,by2-10,20,2); fill('#922b21'); rect(bx2-8,by2-9,5,1);
+  fill('#1e5c3a'); rect(bx2-7,by2-16,15,7); fill('#27ae60'); rect(bx2-7,by2-16,15,2); fill('#186a3b'); rect(bx2-5,by2-15,4,1);
+  fill(255,255,255,25); rect(bx2+10,by2-16,1,22);
+
+  fill(215,210,200); rect(tx+30,ty-12,12,12);
+  fill(180,175,165); rect(tx+32,ty-11,4,10);
+  fill(110,70,38); rect(tx+31,ty-11,10,3);
+  // 自然蒸汽 (3缕上升白雾)
+  for (let s=0; s<3; s++) {
+    const sx = tx+35 + s*3, sy = ty-16 - ((t*5 + s*2.2) % 8);
+    const sa = 100 + sin(t*3 + s) * 50;
+    fill(255, 250, 245, sa); rect(sx-1, sy-2, 3, 4);
+    fill(255, 255, 250, sa*0.5); rect(sx, sy-4, 2, 3);
+  }
+
+  fill(240,235,225); rect(tx+5,ty-5,14,8);
+  fill(200,195,185); rect(tx+6,ty-5,12,1);
+
+  pop();
+}
+
+function drawPottedPlant(t) {
+  push(); noStroke();
+  const px=280,py=CH-43;
+  let w=0; if(currentWeather==='storm')w=sin(t*8)*3;else if(currentWeather==='snow')w=sin(t*3)*1.5;else w=sin(t*2)*.8;
+  // 花盆
+  fill('#7B4B2A'); rect(px-10,py,20,13); fill('#A0623C'); rect(px-9,py,18,11); fill('#C08050'); rect(px-7,py,7,9);
+  fill('#5C3318'); rect(px-11,py-1,22,3); fill('#8B5E3C'); rect(px-10,py-2,20,2);
+  fill('#3D2010'); rect(px-7,py+2,14,3);
+  // 粗茎
+  stroke('#5D8A3C'); strokeWeight(3); line(px,py,px+w*.3,py-20);
+  stroke('#4A7030'); strokeWeight(2); line(px,py,px+w*.3,py-20); noStroke();
+  // 7片大叶
+  for(let i=0;i<7;i++){const a=i*.9+.2,lx=px+cos(a+w*.04)*(6+i*.8),ly=py-6-i*2.5+sin(w*.08+i)*1.5;
+    fill('#2D5A1E'); rect(lx-6+w*.3*(i*.3),ly-3,12,7); fill('#3D7A28'); rect(lx-5+w*.3*(i*.3),ly-3,10,6); fill('#4D942E'); rect(lx-4+w*.3*(i*.3),ly-2,8,4);
+    stroke('#2D5A1E'); strokeWeight(1); line(lx-3+w*.3*(i*.3),ly,lx+3+w*.3*(i*.3),ly); noStroke()}
+  // 新芽
+  fill('#6AB840'); rect(px-3+w*.35,py-23,5,5); fill('#7BC85C'); rect(px-2+w*.35,py-24,3,3);
+  pop();
+}
+
+// 粒子系统
+function initRain() {
+  raindrops = [];
+  for (let i = 0; i < 50; i++) raindrops.push({ x: random(40, 280), y: random(20, 150), speed: random(4, 7) });
+}
+function drawRainParticles() {
+  stroke('rgba(160, 220, 255, 0.6)'); strokeWeight(1);
+  raindrops.forEach(d => {
+    d.y += d.speed; if (d.y > 150) { d.y = 20; d.x = random(40, 280); }
+    line(d.x, d.y, d.x - 1, d.y + 8);
+  });
+}
+
+let snowflakes = [];
+function initSnow() { snowflakes = []; for (let i=0;i<40;i++) snowflakes.push({x:random(40,280),y:random(-20,150),spd:random(.3,.9),sz:random(1.5,3),sway:random(TWO_PI)}); }
+function drawSnowParticles(t) {
+  noStroke();
+  snowflakes.forEach(f=>{
+    f.y+=f.spd;f.x+=sin(t*2+f.sway)*.3;if(f.y>150){f.y=random(-20,-5);f.x=random(40,280)}
+    fill(240,245,255,160+sin(t*3+f.sway)*40);rect(f.x,f.y,f.sz,f.sz);
+  });
+}
+
+let bubbles = [];
+function initBubbles(){bubbles=[];for(let i=0;i<10;i++)bubbles.push({x:random(50,270),y:random(30,CH-30),r:random(3,7),spd:random(.2,.5),sway:random(TWO_PI),a:random(.3,.7)})}
+function drawBubbles(t){
+  bubbles.forEach(b=>{
+    b.y-=b.spd;b.x+=sin(t*1.5+b.sway)*.4;if(b.y<-10){b.y=CH-10;b.x=random(50,270);b.r=random(3,7)}
+    noFill();stroke(180,220,255,b.a*150);strokeWeight(1);circle(b.x,b.y,b.r*2);
+    fill(255,255,255,b.a*200);noStroke();rect(b.x-b.r*.3,b.y-b.r*.5,2,2);
+  });
+}
+
+function initSunDust() {
+  sunDust = [];
+  for (let i = 0; i < 25; i++) sunDust.push({ x: random(40, 280), y: random(20, 150), phase: random(TWO_PI) });
+}
+function drawSunParticles(t) {
+  noStroke();
+  sunDust.forEach(d => {
+    fill(255, 235, 150, 120 + sin(t * 2 + d.phase) * 80);
+    rect(d.x, d.y + sin(t + d.phase) * 2, 2, 2);
+  });
+}
+
+function triggerHeartParticles(x, y) {
+  for (let i = 0; i < 6; i++) {
+    heartParticles.push({
+      x: x, y: y,
+      vx: (Math.random() - 0.5) * 3, vy: -1.5 - Math.random() * 2,
+      alpha: 1.0
+    });
+  }
+}
+
+function updateDrawHeartParticles() {
+  for (let i = heartParticles.length - 1; i >= 0; i--) {
+    let p = heartParticles[i]; p.x += p.vx; p.y += p.vy; p.alpha -= 0.03;
+    if (p.alpha <= 0) { heartParticles.splice(i, 1); continue; }
+    noStroke(); fill(`rgba(255, 118, 117, ${p.alpha})`);
+    rect(p.x, p.y, 4, 4);
+  }
+}
+
+function triggerBreathRipple(x, y, strength = 1) {
+  breathRipples.push({ x, y, r: 4, alpha: 0.72 * strength, drift: -0.12 - Math.random() * 0.08 });
+  if (breathRipples.length > 18) breathRipples.shift();
+}
+
+function updateDrawBreathRipples(t) {
+  for (let i = breathRipples.length - 1; i >= 0; i--) {
+    const p = breathRipples[i];
+    p.r += isBreathing ? 0.92 : 0.58;
+    p.y += p.drift;
+    p.alpha -= isBreathing ? 0.008 : 0.014;
+    if (p.alpha <= 0 || p.r > 92) { breathRipples.splice(i, 1); continue; }
+    const pulse = 0.75 + Math.sin(t * 3 + i) * 0.25;
+    noFill();
+    stroke(160, 235, 255, p.alpha * 120 * pulse);
+    strokeWeight(2);
+    circle(p.x, p.y, p.r * 2);
+    stroke(255, 255, 230, p.alpha * 70);
+    strokeWeight(1);
+    circle(p.x, p.y, p.r * 1.42);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 4. 💥 氧气舱与拍立得逻辑
+// ═══════════════════════════════════════════════════════════════
+const interactEl = document.getElementById('interact-layer');
+
+interactEl.addEventListener('pointerdown', function(e) {
+  const r = interactEl.getBoundingClientRect();
+  const px = (e.clientX - r.left) * (CW / r.width);
+  const py = (e.clientY - r.top) * (CH / r.height);
+  triggerBreathRipple(px, py, isBreathing ? 1.15 : 0.75);
+
+  if (Math.hypot(px - bearState.x, py - bearState.y) < 40) {
+    bearState.bounceY = 8;
+    bearState.petGlow = 1.0;
+    bearState.fsm = 'petted'; bearState.fsmTimer = 0;
+    triggerHeartParticles(px, py);
+    playPetSound();
+  }
+});
+
+function switchWeather(wId) {
+  currentWeather = wId;
+  const cfg = WEATHERS[wId];
+
+  const envGlow = document.getElementById('env-glow');
+  if (envGlow) envGlow.style.background = cfg.glow;
+
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.weather === wId);
+  });
+
+  if (!isBreathing) {
+    document.getElementById('mood-txt').textContent = `心境：${cfg.name.split(' ')[1]}`;
+  }
+
+  if (wId === 'snow') initSnow();
+  if (wId === 'storm') initRain();
+  if (wId === 'calm') initBubbles();
+  if (wId === 'sun') initSunDust();
+  if (audioStarted) startWeatherAudio(wId);
+}
+
+document.querySelectorAll('.mood-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchWeather(btn.dataset.weather));
+});
+
+// 💥 60秒情绪氧气舱逻辑
+function toggleBreathe() {
+  const btn = document.getElementById('breathe-btn');
+  const moodTxt = document.getElementById('mood-txt');
+  
+  if (!isBreathing) {
+    isBreathing = true;
+    breatheSeconds = 60;
+    btn.textContent = '⏸ 提前结束';
+    
+    // 强制小熊进入呼吸状态陪你
+    bearState.fsm = 'breathing';
+    bearState.fsmTimer = 0;
+    triggerBreathRipple(160, 118, 1.2);
+
+    breatheTimerId = setInterval(() => {
+      if (breatheSeconds > 0) {
+        breatheSeconds--;
+        if (breatheSeconds % 4 === 0) triggerBreathRipple(160, 118, 1.05);
+        moodTxt.textContent = `深呼吸... ${String(breatheSeconds).padStart(2, '0')}s`;
+      } else {
+        clearInterval(breatheTimerId);
+        isBreathing = false;
+        btn.textContent = '🌬️ 逃离 60 秒';
+        moodTxt.textContent = `心境：${WEATHERS[currentWeather].name.split(' ')[1]}`;
+        showDiaryCard(true); // 自动弹出情绪处方卡
+      }
+    }, 1000);
+  } else {
+    isBreathing = false;
+    clearInterval(breatheTimerId);
+    btn.textContent = '🌬️ 逃离 60 秒';
+    moodTxt.textContent = `心境：${WEATHERS[currentWeather].name.split(' ')[1]}`;
+    bearState.fsm = 'idle'; // 恢复状态
+  }
+}
+
+function windowResized() {
+  sizeStage();
+}
+
+// 💥 无字天气日记卡片
+function showDiaryCard(isPrescription = false) {
+  const cfg = WEATHERS[currentWeather];
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}.${(now.getMonth()+1).toString().padStart(2,'0')}.${now.getDate().toString().padStart(2,'0')}`;
+  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  
+  const icon = cfg.name.split(' ')[0];
+  const moodName = cfg.name.split(' ')[1];
+
+  document.getElementById('card-icon').textContent = icon;
+  document.getElementById('card-status').textContent = `心境：${moodName}`;
+  document.getElementById('card-date').textContent = `${dateStr} ${timeStr} · 内心气象记录`;
+  
+  if (isPrescription === true) {
+    document.getElementById('card-quote').textContent = `[ 处方 ] 已进行 60 秒深呼吸，请允许一切发生。`;
+  } else {
+    document.getElementById('card-quote').textContent = `“${cfg.quote}”`;
+  }
+  
+  document.getElementById('card-modal').classList.add('active');
+}
+
+function closeCard() {
+  document.getElementById('card-modal').classList.remove('active');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 新增：原生 Canvas 3:4 海报生成与下载引擎
+// ═══════════════════════════════════════════════════════════════
+
+// 辅助函数：兼容旧版浏览器的圆角矩形绘制
+function drawRoundRectFallback(ctx, x, y, w, h, r) {
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function downloadAndCloseCard() {
+  // 1. 创建后台 3:4 高清画布 (1200x1600)
+  const cvs = document.createElement('canvas');
+  cvs.width = 1200;
+  cvs.height = 1600;
+  const ctx = cvs.getContext('2d');
+
+  // 绘制深色底垫
+  ctx.fillStyle = '#0a0d18';
+  ctx.fillRect(0, 0, 1200, 1600);
+
+  // 2. 截取 p5.js 当前画面，放大并添加高斯模糊作为海报背景
+  const p5Canvas = document.querySelector('#pixel-stage canvas');
+  if (p5Canvas) {
+    ctx.save();
+    ctx.filter = 'blur(25px) brightness(0.7)';
+    const scale = Math.max(1200 / p5Canvas.width, 1600 / p5Canvas.height);
+    const w = p5Canvas.width * scale;
+    const h = p5Canvas.height * scale;
+    // 居中覆盖绘制背景
+    ctx.drawImage(p5Canvas, (1200 - w) / 2, (1600 - h) / 2, w, h);
+    ctx.restore();
+  }
+
+  // 3. 计算并在海报中央绘制拍立得卡片
+  const cardW = 900;
+  const cardH = 1100;
+  const cx = (1200 - cardW) / 2;
+  const cy = (1600 - cardH) / 2;
+
+  ctx.save();
+  // 倾斜卡片 -1.5 度，复刻你在 DOM 里的视觉效果
+  ctx.translate(1200 / 2, 1600 / 2);
+  ctx.rotate(-1.5 * Math.PI / 180);
+  ctx.translate(-1200 / 2, -1600 / 2);
+
+  // 绘制阴影
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+  ctx.shadowBlur = 50;
+  ctx.shadowOffsetY = 20;
+
+  // 绘制卡片主体 (白纸)
+  ctx.fillStyle = '#f8f9fa';
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(cx, cy, cardW, cardH, 24);
+  else drawRoundRectFallback(ctx, cx, cy, cardW, cardH, 24);
+  ctx.fill();
+  
+  ctx.shadowColor = 'transparent'; // 关掉阴影继续画内部
+
+  // 绘制照片黑框区域
+  const photoX = cx + 50;
+  const photoY = cy + 50;
+  const photoW = cardW - 100;
+  const photoH = 650;
+  ctx.fillStyle = '#1a2436';
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(photoX, photoY, photoW, photoH, 16);
+  else drawRoundRectFallback(ctx, photoX, photoY, photoW, photoH, 16);
+  ctx.fill();
+
+  // 4. 提取当前 DOM 的文本数据
+  const icon = document.getElementById('card-icon').textContent || '';
+  const status = document.getElementById('card-status').textContent || '';
+  const dateStr = document.getElementById('card-date').textContent || '';
+  const quoteStr = document.getElementById('card-quote').textContent || '';
+  const footerEl = document.querySelector('.polaroid-footer');
+  const footerStr = footerEl ? footerEl.textContent : '';
+
+  // 绘制大图标 (emoji)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '160px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  ctx.fillText(icon, cx + cardW/2, photoY + 280);
+
+  // 绘制状态标题
+  ctx.fillStyle = '#00f2fe';
+  ctx.font = 'bold 46px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.fillText(status, cx + cardW/2, photoY + 480);
+
+  // 绘制日期
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#95a5a6';
+  ctx.font = '28px monospace';
+  ctx.fillText(dateStr, cx + 50, photoY + photoH + 60);
+
+  // 绘制名言金句 (自动换行算法)
+  ctx.fillStyle = '#2c3e50';
+  ctx.font = 'bold 42px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  
+  let wrapY = photoY + photoH + 130;
+  let line = '';
+  for (let i = 0; i < quoteStr.length; i++) {
+    let testLine = line + quoteStr[i];
+    if (ctx.measureText(testLine).width > cardW - 100 && i > 0) {
+      ctx.fillText(line, cx + 50, wrapY);
+      line = quoteStr[i];
+      wrapY += 60; // 行高
+    } else {
+      line = testLine;
+    }
+  }
+  ctx.fillText(line, cx + 50, wrapY);
+
+  // 绘制底部落款
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#7f8c8d';
+  ctx.font = '28px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  ctx.fillText(footerStr, cx + cardW - 50, cy + cardH - 60);
+
+  ctx.restore();
+
+  // 5. 触发系统下载
+  const link = document.createElement('a');
+  link.download = `内心气象日记_${new Date().getTime()}.png`;
+  link.href = cvs.toDataURL('image/png');
+  link.click();
+
+  // 6. 调用你原有的关闭卡片函数
+  if (typeof closeCard === 'function') {
+    closeCard();
+  }
+}
+// 初始化
+switchWeather('snow');
+</script>
+</body>
+</html>

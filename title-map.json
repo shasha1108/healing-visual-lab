@@ -5,5 +5,11 @@
   "沉水 MP3 · Sunken iPod": "sunken-ipod",
   "雪夜晶莹唱片机 — Frutiger Aero Vector Edition": "crystal-turntable",
   "Sunken Treasure — Console Spawned Ecosystem": "sunken-treasure",
-  "mappings": []
+  "mappings": [
+    {
+      "title": "内心气象日记 · 60s 氧气舱",
+      "slug": "oxygen-chamber",
+      "first_pushed": "2026-07-08"
+    }
+  ]
 }
