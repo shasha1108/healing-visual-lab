@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 20,
+  "total": 21,
   "updated": "2026-07-08",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -19,6 +19,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "oxygen-chamber",
       "crystal-turntable",
       "sunken-treasure",
       "drift-bottle",
@@ -45,6 +46,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "oxygen-chamber",
       "crystal-turntable",
       "drift-bottle",
       "sunken-ipod",
@@ -63,6 +65,7 @@
       "cosmic-recollection"
     ],
     "particle_system": [
+      "oxygen-chamber",
       "crystal-turntable",
       "sunken-treasure",
       "drift-bottle",
@@ -85,6 +88,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "oxygen-chamber",
       "crystal-turntable",
       "sunken-treasure",
       "drift-bottle",
@@ -102,6 +106,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "oxygen-chamber",
       "crystal-turntable",
       "sunken-treasure",
       "drift-bottle",
@@ -114,6 +119,40 @@
     ]
   },
   "works": [
+    {
+      "slug": "oxygen-chamber",
+      "title_en": "Inner Weather Diary · 60s Oxygen Chamber",
+      "title_zh": "内心气象日记 · 60s 氧气舱",
+      "tagline": "60秒情绪氧气舱——选一种天气，让内心在玻璃小屋里安静呼吸",
+      "tech": [
+        "p5.js Canvas 2D",
+        "Web Audio API OscillatorNode",
+        "BiquadFilterNode ambient synthesis",
+        "Bayer ordered dithering",
+        "Frutiger Aero glassmorphism",
+        "mood-based particle system"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "yes",
+      "dependencies": 2,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "pixel weather diary",
+        "emotional breathing tool",
+        "frutiger aero interactive",
+        "60s meditation H5",
+        "mood visualization"
+      ],
+      "use_cases": [
+        "pixel art weather system",
+        "frutiger aero glass container",
+        "emotional breathing H5",
+        "mood-based interactive art"
+      ],
+      "date": "2026-07-08"
+    },
     {
       "slug": "crystal-turntable",
       "title_en": "Crystal Turntable",
