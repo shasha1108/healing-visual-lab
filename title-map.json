@@ -1,20 +1,5 @@
 {
-  "稻香 · Rice Fragrance": "rice-fragrance",
-  "七里香 · Dreamcore夏夜": "dreamcore-summer-rain",
-  "平行世界 · 漂流瓶生态系统": "drift-bottle",
-  "沉水 MP3 · Sunken iPod": "sunken-ipod",
-  "雪夜晶莹唱片机 — Frutiger Aero Vector Edition": "crystal-turntable",
-  "Sunken Treasure — Console Spawned Ecosystem": "sunken-treasure",
-  "mappings": [
-    {
-      "title": "内心气象日记 · 60s 氧气舱",
-      "slug": "oxygen-chamber",
-      "first_pushed": "2026-07-08"
-    },
-    {
-      "title": "玻璃瓶里的夜光海",
-      "slug": "luminous-sea-bottle",
-      "first_pushed": "2026-07-08"
-    }
-  ]
+  "title": "玻璃钟罩里的潮汐月苔",
+  "slug": "tidal-moon-moss",
+  "first_pushed": "2026-07-09"
 }
