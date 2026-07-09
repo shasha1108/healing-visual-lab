@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<!--
+  Title: Pocket Forest Radio · 露光口袋森林电台
+  Tech: p5.js 1.9.0 Canvas 2D, Web Audio API oscillator synthesis, AnalyserNode FFT 256-bin audio reactive, Bayer 4x4 ordered dithering, Canvas 2D screen composite mode, spring physics tuning ring, getUserMedia microphone input, Audio file drag-drop decoding
+  Keywords: p5.js, canvas 2d, web audio oscillator, fft audio reactive, bayer dithering, pixel forest, frutiger aero glass, tuning ring, spring physics, mic reactive
+  Features: Pixel forest radio device with Frutiger Aero glass shell — spring-physics tuning ring drives 34 pixel trees and 22 fireflies, all reacting to live microphone FFT analysis and touch. Web Audio oscillator synthesis with 86Hz sine drone, noise buffer, and triangle-wave glass ping on interaction.
+  Render: Canvas 2D (p5.js) — mixed smooth Frutiger Aero glass shell + 180×126 pixel sub-canvas upscaled to 360×252
+  Audio: yes — Web Audio oscillator drone + noise buffer + glass ping, mic reactive + file drop
+  Touch: yes — pointerdown/move/up on tuning ring and screen
+  Particles: 34 pixel trees + 22 fireflies (56 animated sprites)
+  Standalone: yes, single HTML file, 1 CDN dependency (p5.js 1.9.0)
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>露光口袋森林电台</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#061826;font-family:"Segoe UI","Frutiger","PingFang SC",sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+#canvas-container{position:absolute;inset:0;overflow:hidden}
+canvas{display:block;position:absolute;inset:0;z-index:1;image-rendering:auto}
+.pixel-reference{image-rendering:pixelated}
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+<script>
+const BASE_W=720;
+const BASE_H=960;
+const PALETTE={
+  name:'Cyber Mint + Aero Aqua 16',
+  role:'smooth Frutiger Aero device shell + crisp pixel forest screen',
+  colors:['#40e0a0','#80f0c0','#b0f8d8','#e0fcf0','#a0f0ff','#1098c0','#083040']
+};
+const PX=2;
+const BAYER_4X4=[
+  [0,8,2,10],
+  [12,4,14,6],
+  [3,11,1,9],
+  [15,7,13,5]
+];
+
+let simTime=0;
+let stage={scale:1,ox:0,oy:0};
+let pixelCanvas,pctx;
+let trees=[];
+let fireflies=[];
+let pulses=[];
+let pointerDown=false;
+let tuneIndex=0;
+let targetTune=0;
+let tuneAngle=0;
+let tuneVelocity=0;
+let tuneMemory=0;
+let ringEnergy=0;
+let screenWake=0;
+let shellGlow=0;
+let audioCtx=null;
+let masterGain=null;
+let droneOsc=null;
+let droneGain=null;
+let noiseNode=null;
+let bird={visible:false,timer:20+Math.random()*30,x:0,y:0,vx:0,flapPhase:0};
+
+const AudioReactive={
+  stream:null,source:null,analyser:null,active:false,
+  bass:0,mid:0,high:0,rms:0,beat:false,musicDetected:false,
+  sBass:0,sMid:0,sHigh:0,sRMS:0,
+  _freq:null,_time:null,_beatCd:0,
+
+  async start(){
+    if(this.active)return;
+    try{
+      this.stream=await navigator.mediaDevices.getUserMedia({
+        audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}
+      });
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!audioCtx){audioCtx=new AC();masterGain=audioCtx.createGain();}
+      if(audioCtx.state==='suspended')await audioCtx.resume();
+      this.source=audioCtx.createMediaStreamSource(this.stream);
+      this.analyser=audioCtx.createAnalyser();
+      this.analyser.fftSize=256;
+      this.analyser.smoothingTimeConstant=0.75;
+      this.analyser.minDecibels=-70;
+      this.analyser.maxDecibels=-10;
+      this.source.connect(this.analyser);
+      this._freq=new Uint8Array(128);
+      this._time=new Uint8Array(256);
+      this.active=true;
+    }catch(e){console.warn('Mic denied, drag audio file instead:',e.message);}
+  },
+
+  update(dt){
+    if(!this.active||!this.analyser)return;
+    this.analyser.getByteFrequencyData(this._freq);
+    this.analyser.getByteTimeDomainData(this._time);
+    let bs=0,ms=0,hs=0;
+    for(let i=0;i<10;i++)bs+=this._freq[i];
+    for(let i=11;i<=50;i++)ms+=this._freq[i];
+    for(let i=51;i<128;i++)hs+=this._freq[i];
+    this.bass=bs/2550;this.mid=ms/10200;this.high=hs/19890;
+    let ss=0;
+    for(let i=0;i<256;i++){const v=(this._time[i]-128)/128;ss+=v*v;}
+    this.rms=Math.sqrt(ss/256);
+    const L=0.08;
+    this.sBass+=(this.bass-this.sBass)*L;
+    this.sMid+=(this.mid-this.sMid)*L;
+    this.sHigh+=(this.high-this.sHigh)*L;
+    this.sRMS+=(this.rms-this.sRMS)*L;
+    this.musicDetected=this.sRMS>0.004;
+    this._beatCd=Math.max(0,this._beatCd-dt*1000);
+    if(this.bass>0.035&&this._beatCd<=0){this.beat=true;this._beatCd=160;}
+    else this.beat=false;
+  },
+
+  stop(){
+    if(this.stream){this.stream.getTracks().forEach(t=>t.stop());this.stream=null;}
+    if(this.source){this.source.disconnect();this.source=null;}
+    this.analyser=null;this.active=false;
+  }
+};
+
+function setup(){
+  const cvs=createCanvas(windowWidth,windowHeight);
+  cvs.parent('canvas-container');
+  pixelDensity(1);
+  noSmooth();
+  drawingContext.imageSmoothingEnabled=false;
+  pixelCanvas=document.createElement('canvas');
+  pixelCanvas.width=180;
+  pixelCanvas.height=126;
+  pctx=pixelCanvas.getContext('2d');
+  pctx.imageSmoothingEnabled=false;
+  initWorld();
+  updateStage();
+  const layer=document.getElementById('canvas-container');
+  layer.addEventListener('pointerdown',onPointerDown,{passive:false});
+  layer.addEventListener('pointermove',onPointerMove,{passive:false});
+  window.addEventListener('pointerup',onPointerUp);
+  window.addEventListener('pointercancel',onPointerUp);
+  layer.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();});
+  layer.addEventListener('drop',onFileDrop);
+}
+
+function windowResized(){
+  resizeCanvas(windowWidth,windowHeight);
+  pixelDensity(1);
+  updateStage();
+}
+
+function draw(){
+  const dt=Math.min(0.05,(deltaTime||16.67)*0.001);
+  simTime+=dt;
+  updateState(dt);
+  clear();
+  const ctx=drawingContext;
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.imageSmoothingEnabled=true;
+  drawAmbient(ctx);
+  ctx.save();
+  ctx.translate(stage.ox,stage.oy);
+  ctx.scale(stage.scale,stage.scale);
+  drawDeviceShadow(ctx);
+  drawDeviceBack(ctx);
+  drawScreenWorld(ctx);
+  drawDeviceFront(ctx);
+  drawTuningRing(ctx);
+  ctx.restore();
+  drawAudioIndicator(ctx);
+  updateAudio();
+}
+
+function updateStage(){
+  stage.scale=Math.min(windowWidth/BASE_W,windowHeight/BASE_H);
+  stage.ox=(windowWidth-BASE_W*stage.scale)*0.5;
+  stage.oy=(windowHeight-BASE_H*stage.scale)*0.5;
+}
+
+function initWorld(){
+  trees=[];
+  for(let i=0;i<34;i++){
+    const k=i*17+3;
+    trees.push({
+      x:10+hf(k)*160,
+      y:86+hf(k+1)*24,
+      h:18+hf(k+2)*44,
+      w:5+hf(k+3)*8,
+      phase:hf(k+4)*6.283,
+      tier:Math.floor(hf(k+5)*3),
+      energy:0,
+      bend:0
+    });
+  }
+  fireflies=[];
+  for(let i=0;i<22;i++){
+    const k=i*29+9;
+    fireflies.push({
+      x:18+hf(k)*146,
+      y:30+hf(k+1)*70,
+      phase:hf(k+2)*6.283,
+      energy:hf(k+3)*0.4
+    });
+  }
+}
+
+function hf(n){
+  return (Math.sin(n*127.1+311.7)*43758.5453123)%1+(((Math.sin(n*127.1+311.7)*43758.5453123)%1)<0?1:0);
+}
+
+function onPointerDown(evt){
+  evt.preventDefault();
+  pointerDown=true;
+  const p=toBasePoint(evt);
+  wakeRadio(p.x,p.y,true);
+}
+
+function onPointerMove(evt){
+  if(!pointerDown)return;
+  evt.preventDefault();
+  const p=toBasePoint(evt);
+  wakeRadio(p.x,p.y,false);
+}
+
+function onPointerUp(){
+  pointerDown=false;
+}
+
+function toBasePoint(evt){
+  const r=document.getElementById('canvas-container').getBoundingClientRect();
+  const sx=(evt.clientX-r.left)*(width/r.width);
+  const sy=(evt.clientY-r.top)*(height/r.height);
+  return {
+    x:(sx-stage.ox)/stage.scale,
+    y:(sy-stage.oy)/stage.scale
+  };
+}
+
+async function onFileDrop(e){
+  e.preventDefault();e.stopPropagation();
+  const files=e.dataTransfer.files;
+  if(!files.length)return;
+  const file=files[0];
+  if(!file.type.startsWith('audio/'))return;
+  AudioReactive.stop();
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!audioCtx){audioCtx=new AC();masterGain=audioCtx.createGain();masterGain.gain.value=0.3;masterGain.connect(audioCtx.destination);}
+  if(audioCtx.state==='suspended')await audioCtx.resume();
+  const audio=new Audio();
+  audio.src=URL.createObjectURL(file);
+  audio.loop=true;
+  const fileSource=audioCtx.createMediaElementSource(audio);
+  AudioReactive.analyser=audioCtx.createAnalyser();
+  AudioReactive.analyser.fftSize=256;
+  AudioReactive.analyser.smoothingTimeConstant=0.75;
+  AudioReactive.analyser.minDecibels=-70;
+  AudioReactive.analyser.maxDecibels=-10;
+  fileSource.connect(AudioReactive.analyser);
+  fileSource.connect(audioCtx.destination);
+  AudioReactive._freq=new Uint8Array(128);
+  AudioReactive._time=new Uint8Array(256);
+  AudioReactive.active=true;
+  await audio.play();
+}
+
+function wakeRadio(x,y,isTap){
+  startAudio();
+  AudioReactive.start();
+  const knob={x:486,y:654};
+  const dx=x-knob.x;
+  const dy=y-knob.y;
+  const d=Math.sqrt(dx*dx+dy*dy);
+  const onRing=d>42&&d<116&&y>540&&y<752;
+  const onScreen=x>190&&x<530&&y>252&&y<466;
+  if(onRing||onScreen||isTap){
+    const force=onRing?1:0.72;
+    targetTune+=onRing?0.34:0.18;
+    tuneMemory=Math.min(1,tuneMemory+0.2*force);
+    ringEnergy=Math.max(ringEnergy,1);
+    screenWake=Math.max(screenWake,1);
+    shellGlow=Math.max(shellGlow,0.8);
+    pulses.push({x:constrain((x-180)/2,0,176),life:1,phase:tuneIndex});
+    tuneIndex=(tuneIndex+1)%8;
+    pingGlass(force);
+  }
+}
+
+function updateState(dt){
+  AudioReactive.update(dt);
+  const spring=(targetTune-tuneAngle)*18;
+  tuneVelocity+=(spring-tuneVelocity*8)*dt;
+  tuneAngle+=tuneVelocity*dt;
+  tuneMemory*=Math.pow(0.985,dt*60);
+  ringEnergy*=Math.pow(0.94,dt*60);
+  screenWake*=Math.pow(0.965,dt*60);
+  shellGlow*=Math.pow(0.97,dt*60);
+
+  if(AudioReactive.active&&AudioReactive.musicDetected){
+    const ab=AudioReactive.sBass;
+    const am=AudioReactive.sMid;
+    ringEnergy=Math.max(ringEnergy,ab*2.5);
+    screenWake=Math.max(screenWake,am*2.0);
+    shellGlow=Math.max(shellGlow,AudioReactive.sRMS*1.8);
+    targetTune+=ab*0.18*dt*60;
+    if(AudioReactive.beat){
+      tuneIndex=(tuneIndex+1)%8;
+      ringEnergy=Math.max(ringEnergy,0.9);
+      screenWake=Math.max(screenWake,0.7);
+      pulses.push({x:constrain(90+Math.sin(tuneAngle*2.4)*54,0,176),life:1,phase:tuneIndex});
+    }
+  }
+
+  for(const tree of trees){
+    const wave=Math.sin(simTime*1.2+tree.phase+tuneAngle*1.7);
+    let audioBend=0;
+    if(AudioReactive.active&&AudioReactive.musicDetected){
+      audioBend=AudioReactive.sBass*6.5*Math.sin(tree.phase+simTime*2.0);
+    }
+    tree.bend=wave*(0.45+tree.tier*0.18)+screenWake*1.8*Math.sin(tree.x*0.09+tuneAngle*4)+audioBend;
+    tree.energy+=(screenWake*(0.25+tree.tier*0.18)-tree.energy)*0.05;
+  }
+  for(const f of fireflies){
+    const pulse=0.25+0.75*Math.max(0,Math.sin(simTime*1.7+f.phase+tuneAngle));
+    let audioSparkle=0;
+    if(AudioReactive.active&&AudioReactive.musicDetected){
+      audioSparkle=AudioReactive.sHigh*1.2;
+    }
+    f.energy+=(screenWake*pulse+0.18-tuneMemory*0.05-f.energy+audioSparkle)*0.035;
+  }
+  for(let i=pulses.length-1;i>=0;i--){
+    pulses[i].life*=Math.pow(0.92,dt*60);
+    if(pulses[i].life<0.04)pulses.splice(i,1);
+  }
+
+  bird.timer-=dt;
+  if(bird.visible){
+    bird.x+=bird.vx*dt*60;
+    bird.y+=Math.sin(simTime*3.5+bird.flapPhase)*0.25;
+    bird.flapPhase+=dt*10;
+    if(bird.x<-8||bird.x>188){bird.visible=false;bird.timer=18+Math.random()*28;}
+  }else if(bird.timer<=0){
+    const fromLeft=Math.random()>0.5;
+    bird.x=fromLeft?-6:186;
+    bird.y=30+Math.random()*56;
+    bird.vx=fromLeft?1.6+Math.random()*1.2:-(1.6+Math.random()*1.2);
+    bird.flapPhase=Math.random()*6.28;
+    bird.visible=true;
+    bird.timer=22+Math.random()*26;
+    if(screenWake>0.3)bird.timer*=0.45;
+  }
+}
+
+function drawAudioIndicator(ctx){
+  const ix=width-48,iy=36,r=10;
+  ctx.save();
+  if(AudioReactive.active&&AudioReactive.musicDetected){
+    const pulse=0.6+0.4*Math.sin(simTime*8);
+    const glow=ctx.createRadialGradient(ix,iy,r*0.3,ix,iy,r*1.8);
+    glow.addColorStop(0,`rgba(160,255,140,${0.7+AudioReactive.sRMS*8})`);
+    glow.addColorStop(0.5,`rgba(100,240,160,${0.3*pulse})`);
+    glow.addColorStop(1,'rgba(100,240,160,0)');
+    ctx.fillStyle=glow;
+    ctx.beginPath();ctx.arc(ix,iy,r*2.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(180,255,160,${0.7+AudioReactive.sBass*3})`;
+    ctx.beginPath();ctx.arc(ix,iy,r*AudioReactive.sRMS*12,0,Math.PI*2);ctx.fill();
+    if(AudioReactive.beat){
+      ctx.strokeStyle='rgba(255,255,200,0.9)';
+      ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(ix,iy,r*2.2,0,Math.PI*2);ctx.stroke();
+    }
+  }else if(AudioReactive.active){
+    ctx.fillStyle='rgba(120,120,120,0.5)';
+    ctx.beginPath();ctx.arc(ix,iy,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(180,180,180,0.3)';
+    ctx.beginPath();ctx.arc(ix,iy,8,0,Math.PI*2);ctx.fill();
+  }else{
+    ctx.fillStyle='rgba(60,60,60,0.35)';
+    ctx.beginPath();ctx.arc(ix,iy,4,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawAmbient(ctx){
+  const g=ctx.createRadialGradient(width*0.52,height*0.42,20,width*0.52,height*0.5,Math.max(width,height)*0.75);
+  g.addColorStop(0,'rgba(126,240,220,0.34)');
+  g.addColorStop(0.28,'rgba(23,120,150,0.26)');
+  g.addColorStop(0.72,'rgba(5,27,48,0.92)');
+  g.addColorStop(1,'rgba(2,10,20,1)');
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,width,height);
+  ctx.save();
+  ctx.globalCompositeOperation='screen';
+  for(let i=0;i<14;i++){
+    const x=(width*(0.12+0.76*hf(i+50))+Math.sin(simTime*0.14+i)*18);
+    const y=height*(0.14+0.72*hf(i+70));
+    const r=20+hf(i+90)*70;
+    const alpha=0.035+hf(i+4)*0.045;
+    const bg=ctx.createRadialGradient(x,y,0,x,y,r);
+    bg.addColorStop(0,`rgba(180,255,235,${alpha})`);
+    bg.addColorStop(1,'rgba(180,255,235,0)');
+    ctx.fillStyle=bg;
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawDeviceShadow(ctx){
+  ctx.save();
+  ctx.fillStyle='rgba(0,12,18,0.34)';
+  ctx.beginPath();
+  ctx.ellipse(360,760,190,38,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='rgba(70,220,210,0.08)';
+  ctx.beginPath();
+  ctx.ellipse(360,733,160,24,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function roundedRectPath(ctx,x,y,w,h,r){
+  const rr=Math.min(r,w*0.5,h*0.5);
+  ctx.beginPath();
+  ctx.moveTo(x+rr,y);
+  ctx.lineTo(x+w-rr,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+rr);
+  ctx.lineTo(x+w,y+h-rr);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-rr,y+h);
+  ctx.lineTo(x+rr,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-rr);
+  ctx.lineTo(x,y+rr);
+  ctx.quadraticCurveTo(x,y,x+rr,y);
+  ctx.closePath();
+}
+
+function drawDeviceBack(ctx){
+  ctx.save();
+  roundedRectPath(ctx,142,122,436,620,88);
+  const body=ctx.createLinearGradient(150,120,570,735);
+  body.addColorStop(0,'rgba(240,255,255,0.62)');
+  body.addColorStop(0.18,'rgba(155,245,232,0.34)');
+  body.addColorStop(0.55,'rgba(35,165,178,0.26)');
+  body.addColorStop(1,'rgba(8,54,78,0.72)');
+  ctx.fillStyle=body;
+  ctx.fill();
+  ctx.lineWidth=8;
+  ctx.strokeStyle='rgba(212,255,255,0.74)';
+  ctx.stroke();
+  ctx.lineWidth=2;
+  ctx.strokeStyle='rgba(255,255,255,0.92)';
+  ctx.stroke();
+  ctx.globalCompositeOperation='screen';
+  const side=ctx.createLinearGradient(170,140,510,706);
+  side.addColorStop(0,'rgba(255,255,255,0.72)');
+  side.addColorStop(0.18,'rgba(255,255,255,0.18)');
+  side.addColorStop(0.62,'rgba(150,255,238,0.08)');
+  side.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=side;
+  roundedRectPath(ctx,174,148,106,552,56);
+  ctx.fill();
+  const sheen=ctx.createLinearGradient(524,168,458,700);
+  sheen.addColorStop(0,'rgba(255,255,255,0.58)');
+  sheen.addColorStop(0.35,'rgba(180,245,255,0.12)');
+  sheen.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.strokeStyle=sheen;
+  ctx.lineWidth=16;
+  ctx.beginPath();
+  ctx.moveTo(512,174);
+  ctx.bezierCurveTo(558,310,546,588,494,704);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function screenRect(ctx){
+  roundedRectPath(ctx,176,232,368,256,38);
+}
+
+function drawScreenWorld(ctx){
+  drawPixelScreen();
+  ctx.save();
+  screenRect(ctx);
+  ctx.clip();
+  ctx.fillStyle='rgba(5,26,36,0.82)';
+  ctx.fill();
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(pixelCanvas,180,240,360,252);
+  ctx.imageSmoothingEnabled=true;
+  ctx.globalCompositeOperation='screen';
+  const wake=screenWake+0.25*tuneMemory;
+  const g=ctx.createRadialGradient(360,356,14,360,356,210);
+  g.addColorStop(0,`rgba(170,255,225,${0.18+0.25*wake})`);
+  g.addColorStop(0.48,`rgba(80,230,210,${0.08+0.15*wake})`);
+  g.addColorStop(1,'rgba(80,230,210,0)');
+  ctx.fillStyle=g;
+  ctx.fillRect(176,232,368,256);
+  ctx.restore();
+
+  ctx.save();
+  screenRect(ctx);
+  ctx.lineWidth=10;
+  ctx.strokeStyle='rgba(3,24,38,0.62)';
+  ctx.stroke();
+  ctx.lineWidth=4;
+  ctx.strokeStyle='rgba(210,255,250,0.82)';
+  ctx.stroke();
+  ctx.globalCompositeOperation='screen';
+  ctx.strokeStyle='rgba(255,255,255,0.62)';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(210,250);
+  ctx.bezierCurveTo(290,226,410,228,510,260);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPixelScreen(){
+  const w=pixelCanvas.width;
+  const h=pixelCanvas.height;
+  pctx.clearRect(0,0,w,h);
+  pctx.fillStyle='#083040';
+  pctx.fillRect(0,0,w,h);
+  for(let y=0;y<h;y+=2){
+    const t=y/h;
+    pctx.fillStyle=orderedDither(y,Math.floor(t*16),t,'#105060','#1098c0');
+    pctx.fillRect(0,y,w,2);
+  }
+  for(let i=0;i<6;i++){
+    const y=22+i*12+Math.sin(simTime*0.3+i)*1.5;
+    pctx.fillStyle=i%2?'rgba(112,216,240,0.18)':'rgba(160,240,255,0.12)';
+    pctx.fillRect(6,y,168,1);
+  }
+  for(const pulse of pulses){
+    const radius=(1-pulse.life)*80;
+    const alpha=pulse.life*0.85;
+    pctx.strokeStyle=`rgba(160,255,238,${alpha})`;
+    pctx.lineWidth=2;
+    pctx.beginPath();
+    pctx.ellipse(pulse.x,84,radius,Math.max(8,radius*0.18),0,0,Math.PI*2);
+    pctx.stroke();
+  }
+  trees.sort((a,b)=>a.y-b.y);
+  for(const tree of trees)drawPixelTree(tree);
+  for(const f of fireflies)drawPixelFirefly(f);
+  drawPixelBird();
+  const cursorX=90+Math.sin(tuneAngle*2.4)*54;
+  pctx.fillStyle='rgba(255,255,255,0.9)';
+  pctx.fillRect(Math.round(cursorX),8,2,8);
+  pctx.fillStyle='rgba(128,240,192,0.8)';
+  for(let i=0;i<8;i++){
+    const on=i<=tuneIndex;
+    pctx.fillStyle=on?'#ccffa3':'rgba(112,216,240,0.3)';
+    pctx.fillRect(54+i*9,114,5,3);
+  }
+}
+
+function orderedDither(x,y,t,a,b){
+  const v=BAYER_4X4[Math.abs(y)%4][Math.abs(x)%4]/16;
+  return v<t?b:a;
+}
+
+function drawPixelTree(tree){
+  const baseX=Math.round(tree.x+tree.bend);
+  const baseY=Math.round(tree.y);
+  const h=Math.round(tree.h);
+  const glow=tree.energy;
+  pctx.fillStyle=glow>0.55?'#ccffa3':glow>0.25?'#98ea96':'#32c982';
+  pctx.fillRect(baseX,baseY-h,2,Math.max(6,h));
+  pctx.fillStyle=glow>0.35?'#a0f0ff':'#70d8f0';
+  for(let j=0;j<5;j++){
+    const yy=baseY-h+8+j*7;
+    const spread=Math.max(5,tree.w+j*2);
+    const sway=Math.round(Math.sin(simTime*1.1+tree.phase+j)*2+tree.bend*0.5);
+    pctx.fillRect(baseX-spread+sway,yy,spread*2,2);
+    if(j%2===0)pctx.fillRect(baseX-spread+2+sway,yy-3,2,2);
+    if(j%2===1)pctx.fillRect(baseX+spread-3+sway,yy-3,2,2);
+  }
+  if(glow>0.2){
+    pctx.fillStyle=glow>0.55?'#ffffff':'#b0f8d8';
+    pctx.fillRect(baseX-1,baseY-h-3,4,2);
+  }
+}
+
+function drawPixelFirefly(f){
+  const x=Math.round(f.x+Math.sin(simTime*0.8+f.phase+tuneAngle)*7);
+  const y=Math.round(f.y+Math.cos(simTime*0.7+f.phase)*4);
+  const e=Math.max(0.15,Math.min(1,f.energy));
+  pctx.fillStyle=e>0.7?'#ffffff':e>0.4?'#ccffa3':'#70d8f0';
+  pctx.fillRect(x,y,2,2);
+  if(e>0.45){
+    pctx.fillStyle='rgba(160,240,255,0.5)';
+    pctx.fillRect(x-2,y,2,2);
+    pctx.fillRect(x+2,y,2,2);
+    pctx.fillRect(x,y-2,2,2);
+  }
+}
+
+function drawPixelBird(){
+  if(!bird.visible)return;
+  const bx=Math.round(bird.x),by=Math.round(bird.y);
+  const flap=Math.sin(bird.flapPhase)>0;
+  const dir=bird.vx>0?1:-1;
+  pctx.fillStyle='#3a2a1a';
+  pctx.fillRect(bx,by,3,2);
+  pctx.fillRect(bx+3,by+1,2,1);
+  if(flap){
+    pctx.fillStyle='#5a4a3a';
+    pctx.fillRect(bx-1,by-2,5,2);
+  }else{
+    pctx.fillStyle='#5a4a3a';
+    pctx.fillRect(bx,by-1,3,1);
+  }
+  pctx.fillStyle='#c04030';
+  pctx.fillRect(bx+1,by-3,1,1);
+}
+
+function getEQHeights(){
+  if(!AudioReactive.active||!AudioReactive._freq)return null;
+  const f=AudioReactive._freq;
+  const bands=[[0,3],[4,7],[8,11],[12,16],[17,22],[23,29],[30,37],[38,46],[47,56],[57,67],[68,79],[80,92],[93,106],[107,120],[121,127]];
+  return bands.map(([lo,hi])=>{
+    let sum=0;
+    for(let i=lo;i<=hi;i++)sum+=f[i];
+    return sum/(hi-lo+1)/255;
+  });
+}
+
+function drawDeviceFront(ctx){
+  ctx.save();
+  ctx.globalCompositeOperation='screen';
+  const glow=ctx.createRadialGradient(360,410,40,360,410,280);
+  glow.addColorStop(0,`rgba(128,255,220,${0.04+shellGlow*0.18})`);
+  glow.addColorStop(1,'rgba(128,255,220,0)');
+  ctx.fillStyle=glow;
+  ctx.fillRect(120,120,480,640);
+  ctx.restore();
+
+  ctx.save();
+  const eq=AudioReactive.active&&AudioReactive.musicDetected?getEQHeights():null;
+  for(let i=0;i<15;i++){
+    const x=224+i*18;
+    const idleH=Math.sin(simTime*0.9+i+tuneAngle)*4;
+    const eqH=eq?eq[i]*40:0;
+    const boost=eq?eq[i]*3:0;
+    const h=12+idleH+eqH+screenWake*8*(i%3===tuneIndex%3?1+boost:0);
+    const bright=eq?eq[i]:0.5;
+    ctx.fillStyle=i%2
+      ?`rgba(190,255,248,${0.32+bright*0.45})`
+      :`rgba(255,255,255,${0.46+bright*0.35})`;
+    roundedRectPath(ctx,x,562-h,8,h,4);
+    ctx.fill();
+  }
+  ctx.globalCompositeOperation='screen';
+  ctx.strokeStyle='rgba(255,255,255,0.36)';
+  ctx.lineWidth=2;
+  for(let i=0;i<3;i++){
+    ctx.beginPath();
+    ctx.ellipse(360,614+i*22,138-i*24,16,0,0,Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawTuningRing(ctx){
+  const cx=486,cy=654;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(tuneAngle);
+  const pulse=ringEnergy;
+  const outer=70+10*pulse;
+  const inner=40;
+  const g=ctx.createRadialGradient(0,0,inner,0,0,outer);
+  g.addColorStop(0,'rgba(10,52,76,0.76)');
+  g.addColorStop(0.62,'rgba(46,190,190,0.38)');
+  g.addColorStop(1,'rgba(230,255,255,0.66)');
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.arc(0,0,outer,0,Math.PI*2);
+  ctx.arc(0,0,inner,0,Math.PI*2,true);
+  ctx.fill();
+  ctx.lineWidth=3;
+  ctx.strokeStyle='rgba(255,255,255,0.82)';
+  ctx.stroke();
+  for(let i=0;i<16;i++){
+    const a=i*Math.PI*2/16;
+    const lit=i%8===tuneIndex;
+    ctx.strokeStyle=lit?'rgba(255,255,255,0.96)':'rgba(190,255,245,0.34)';
+    ctx.lineWidth=lit?4:2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*52,Math.sin(a)*52);
+    ctx.lineTo(Math.cos(a)*62,Math.sin(a)*62);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation='screen';
+  ctx.fillStyle='rgba(255,255,255,0.72)';
+  ctx.beginPath();
+  ctx.arc(Math.cos(-0.8)*50,Math.sin(-0.8)*50,7,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function startAudio(){
+  if(audioCtx)return;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return;
+  audioCtx=new AC();
+  masterGain=audioCtx.createGain();
+  masterGain.gain.value=0.0001;
+  masterGain.connect(audioCtx.destination);
+  droneOsc=audioCtx.createOscillator();
+  droneOsc.type='sine';
+  droneOsc.frequency.value=86;
+  droneGain=audioCtx.createGain();
+  droneGain.gain.value=0.0001;
+  droneOsc.connect(droneGain);
+  droneGain.connect(masterGain);
+  droneOsc.start();
+  const size=audioCtx.sampleRate*1.2;
+  const buffer=audioCtx.createBuffer(1,size,audioCtx.sampleRate);
+  const data=buffer.getChannelData(0);
+  for(let i=0;i<size;i++){
+    data[i]=(hf(i+1000)-0.5)*Math.pow(1-i/size,2)*0.18;
+  }
+  noiseNode=audioCtx.createBufferSource();
+  noiseNode.buffer=buffer;
+  noiseNode.loop=true;
+  const noiseGain=audioCtx.createGain();
+  noiseGain.gain.value=0.006;
+  noiseNode.connect(noiseGain);
+  noiseGain.connect(masterGain);
+  noiseNode.start();
+}
+
+function pingGlass(force){
+  if(!audioCtx)return;
+  if(audioCtx.state==='suspended')audioCtx.resume();
+  const now=audioCtx.currentTime;
+  masterGain.gain.cancelScheduledValues(now);
+  masterGain.gain.setTargetAtTime(0.22,now,0.08);
+  const osc=audioCtx.createOscillator();
+  const gain=audioCtx.createGain();
+  osc.type='triangle';
+  osc.frequency.setValueAtTime(820+force*120+40*(tuneIndex%4),now);
+  osc.frequency.exponentialRampToValueAtTime(420+force*80,now+0.42);
+  gain.gain.setValueAtTime(0.0001,now);
+  gain.gain.exponentialRampToValueAtTime(0.06*force,now+0.018);
+  gain.gain.exponentialRampToValueAtTime(0.0001,now+0.58);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(now);
+  osc.stop(now+0.62);
+}
+
+function updateAudio(){
+  if(!audioCtx||!masterGain)return;
+  const now=audioCtx.currentTime;
+  const level=0.045+0.12*(screenWake+tuneMemory);
+  masterGain.gain.setTargetAtTime(level,now,0.2);
+  if(droneOsc)droneOsc.frequency.setTargetAtTime(82+18*tuneMemory+4*Math.sin(tuneAngle),now,0.18);
+  if(droneGain)droneGain.gain.setTargetAtTime(0.018+0.035*screenWake,now,0.25);
+}
+</script>
+</body>
+</html>
