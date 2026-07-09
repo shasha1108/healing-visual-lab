@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 22,
-  "updated": "2026-07-08",
+  "total": 23,
+  "updated": "2026-07-09",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -19,6 +19,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "tidal-moon-moss",
       "oxygen-chamber",
       "luminous-sea-bottle",
       "crystal-turntable",
@@ -47,6 +48,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "tidal-moon-moss",
       "oxygen-chamber",
       "crystal-turntable",
       "drift-bottle",
@@ -66,6 +68,7 @@
       "cosmic-recollection"
     ],
     "particle_system": [
+      "tidal-moon-moss",
       "oxygen-chamber",
       "luminous-sea-bottle",
       "crystal-turntable",
@@ -90,6 +93,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "tidal-moon-moss",
       "oxygen-chamber",
       "luminous-sea-bottle",
       "crystal-turntable",
@@ -109,6 +113,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "tidal-moon-moss",
       "oxygen-chamber",
       "luminous-sea-bottle",
       "crystal-turntable",
@@ -123,6 +128,46 @@
     ]
   },
   "works": [
+    {
+      "slug": "tidal-moon-moss",
+      "title_en": "Tidal Moon Moss",
+      "title_zh": "玻璃钟罩里的潮汐月苔",
+      "tagline": "你碰了一下玻璃，罩里的月苔轻轻醒来，像一小片夜晚被照料。",
+      "tech": [
+        "p5.js 1.9.0 Canvas 2D noSmooth pixel rendering",
+        "Canvas bezierCurveTo clip glass pipeline",
+        "Web Audio OscillatorNode pentatonic synthesis (432Hz root)",
+        "BiquadFilterNode lowpass drone with LFO modulation",
+        "touch wave-propagation wake field",
+        "screen/lighter blend mode Frutiger Aero glassmorphism",
+        "spore particle moon-gravity system"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "variable (~60 spores + wakeWaves + ripples concurrently active)",
+      "dependencies": 1,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "pixel terrarium",
+        "bell jar terrarium",
+        "canvas glass container",
+        "touch wave-propagation",
+        "web audio pentatonic synthesis",
+        "frutiger aero glassmorphism",
+        "moon moss bioluminescence",
+        "bayer ordered dithering"
+      ],
+      "use_cases": [
+        "pixel terrarium digital object",
+        "canvas glass container rendering",
+        "touch bioluminescence H5",
+        "web audio oscillator synthesis interactive",
+        "frutiger aero healing visualization",
+        "bell jar terrarium companion"
+      ],
+      "date": "2026-07-09"
+    },
     {
       "slug": "oxygen-chamber",
       "title_en": "Inner Weather Diary · 60s Oxygen Chamber",
