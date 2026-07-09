@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 23,
+  "total": 24,
   "updated": "2026-07-09",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -20,6 +20,7 @@
     ],
     "canvas_2d": [
       "tidal-moon-moss",
+      "pocket-forest-radio",
       "oxygen-chamber",
       "luminous-sea-bottle",
       "crystal-turntable",
@@ -49,6 +50,7 @@
     ],
     "web_audio": [
       "tidal-moon-moss",
+      "pocket-forest-radio",
       "oxygen-chamber",
       "crystal-turntable",
       "drift-bottle",
@@ -69,6 +71,7 @@
     ],
     "particle_system": [
       "tidal-moon-moss",
+      "pocket-forest-radio",
       "oxygen-chamber",
       "luminous-sea-bottle",
       "crystal-turntable",
@@ -94,6 +97,7 @@
     ],
     "touch_interaction": [
       "tidal-moon-moss",
+      "pocket-forest-radio",
       "oxygen-chamber",
       "luminous-sea-bottle",
       "crystal-turntable",
@@ -114,6 +118,7 @@
     ],
     "p5js": [
       "tidal-moon-moss",
+      "pocket-forest-radio",
       "oxygen-chamber",
       "luminous-sea-bottle",
       "crystal-turntable",
@@ -165,6 +170,47 @@
         "web audio oscillator synthesis interactive",
         "frutiger aero healing visualization",
         "bell jar terrarium companion"
+      ],
+      "date": "2026-07-09"
+    },
+    {
+      "slug": "pocket-forest-radio",
+      "title_en": "Pocket Forest Radio",
+      "title_zh": "露光口袋森林电台",
+      "tagline": "轻拨调谐环，把一片像素森林调到你的频率上。",
+      "tech": [
+        "p5.js 1.9.0 Canvas 2D dual-canvas (180×126 pixel sub-canvas + smooth main canvas)",
+        "Web Audio oscillator synthesis (86Hz sine drone + noise buffer + triangle-wave glass ping)",
+        "AnalyserNode FFT 256-bin audio reactive (bass/mid/high band splitting, beat detection)",
+        "Bayer 4x4 ordered dithering on sky gradient",
+        "Canvas 2D screen composite blend mode (ambient glow, device sheen, tuning ring halo)",
+        "spring physics tuning ring (tuneAngle → targetTune spring-damper model)",
+        "getUserMedia microphone input + audio file drag-drop decoding"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "56 animated sprites (34 pixel trees + 22 fireflies)",
+      "dependencies": 1,
+      "healing_domain": "meditation",
+      "keywords": [
+        "p5.js canvas 2d",
+        "web audio oscillator",
+        "fft audio reactive",
+        "bayer dithering",
+        "pixel forest",
+        "frutiger aero glass",
+        "tuning ring",
+        "spring physics",
+        "mic reactive"
+      ],
+      "use_cases": [
+        "p5.js interactive radio device",
+        "canvas 2d pixel forest",
+        "web audio oscillator healing",
+        "frutiger aero glass ui",
+        "microphone reactive visualization",
+        "audio file drag-drop H5"
       ],
       "date": "2026-07-09"
     },
