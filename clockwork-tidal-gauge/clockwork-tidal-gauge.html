@@ -1,0 +1,515 @@
+<!doctype html>
+<!--
+  Title: Clockwork Tidal Gauge · 发条潮汐仪
+  Tech: p5.js 1.9.4 Canvas 2D, Web Audio API (OscillatorNode glass knock chime 1850/2600/3150Hz + triangle thud 250→50Hz sweep + DelayNode echo + BiquadFilter low-pass ocean noise + BufferSource noise generator), Bayer 4x4 ordered dithering, spring-damper gear physics, sinusoidal tide simulation (12s period)
+  Keywords: p5.js canvas, web audio synthesis, bayer dithering, tide simulation, moon phase gear, frutiger aero glass capsule, spring physics, clockwork instrument
+  Features: Clockwork tide gauge in a Frutiger Aero glass capsule — touch triggers spring-driven moon gear rotation with 8-frame pixel moon phase animation, sinusoidal tide rise/fall with Bayer-dithered water pixels, and glass knock chimes via Web Audio oscillator synthesis. 4 floating buoys, 22 bubbles, and a real-time tide history recording chart.
+  Render: Canvas 2D (p5.js 1.9.4)
+  Audio: yes
+  Touch: yes
+  Particles: N/A
+  Standalone: yes, single HTML file, 1 CDN dependency
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>发条潮汐仪</title>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(81, 184, 207, 0.28), transparent 37%),
+        radial-gradient(circle at 50% 72%, rgba(114, 235, 255, 0.12), transparent 31%),
+        linear-gradient(180deg, #072232 0%, #071923 54%, #041016 100%);
+      touch-action: none;
+      user-select: none;
+    }
+
+    #pixel-stage {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      background: transparent;
+    }
+
+    #pixel-stage canvas {
+      position: relative;
+      z-index: 2;
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    #interact-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      cursor: pointer;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+</head>
+<body>
+  <div id="pixel-stage">
+    <div id="interact-layer" aria-label="唤醒潮汐仪"></div>
+  </div>
+
+  <script>
+    const CW = 720;
+    const CH = 960;
+    const PX = 2;
+
+    const BAYER_4X4 = [
+      [0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]
+    ];
+
+    const MOON_FRAMES = [
+      ['00011000','00111100','01111110','01111110','01111110','01111110','00111100','00011000'],
+      ['00011000','00111100','00111110','00111110','00111110','00111110','00111100','00011000'],
+      ['00001000','00011100','00111110','00111110','00111110','00111110','00011100','00001000'],
+      ['00000000','00001100','00011110','00011110','00111110','00111110','00001100','00000000'],
+      ['00000000','00000000','00011000','00111100','00111100','00011000','00000000','00000000'],
+      ['00000000','00110000','01111000','01111000','01111100','01111100','00110000','00000000'],
+      ['00010000','00111000','01111100','01111100','01111100','01111100','00111000','00010000'],
+      ['00011000','00111100','01111100','01111100','01111100','01111100','00111100','00011000']
+    ];
+
+    let simTime = 0;
+    let lastMs = 0;
+    let buoys = [];
+    let pulses = [];
+    let bubbles = [];
+    let tideHistory = [];
+
+    let bodyImpulse = 0;
+    let glassGlow = 0;
+    let tidePhaseOffset = 0;
+    let lastTickSecond = -1;
+
+    const instrument = { cx: 360, width: 340, radius: 170, cornerR: 60, topY: 150, bottomY: 770 };
+    const moonGear = { x: 360, y: 280, r: 65, teeth: 12, phaseIndex: 2, angle: 0, targetAngle: 0, angleVel: 0, pulseEnergy: 0 };
+
+    let audioCtx = null;
+    let masterGain = null;
+    let oceanFilter = null;
+    let oceanGain = null;
+    let echoDelay = null;
+    let isAudioAwake = false;
+
+    function setup() {
+      const c = createCanvas(CW, CH);
+      c.parent('pixel-stage');
+      pixelDensity(1);
+      drawingContext.imageSmoothingEnabled = true;
+
+      initWorld();
+      sizeStage();
+      window.addEventListener('resize', sizeStage);
+      bindInteraction();
+      lastMs = millis();
+    }
+
+    function draw() {
+      const now = millis();
+      const dt = Math.min(0.05, Math.max(0.001, (now - lastMs) * 0.001));
+      lastMs = now;
+      simTime += dt;
+
+      updatePhysics(dt);
+      syncAudioWithVisuals();
+
+      if (tideHistory.length === 0 || simTime - tideHistory[tideHistory.length - 1].t > 0.35) {
+        tideHistory.push({ t: simTime, y: getWaterY() });
+        if (tideHistory.length > 200) tideHistory.shift();
+      }
+
+      const ctx = drawingContext;
+      clear();
+
+      const pushY = bodyImpulse * 10;
+      ctx.save();
+      ctx.translate(0, pushY + Math.sin(simTime * 0.4) * 4);
+
+      drawPanelShadow(ctx);
+      drawBackGlass(ctx);
+
+      ctx.save();
+      defineCapsulePath(ctx);
+      ctx.clip();
+
+      ctx.imageSmoothingEnabled = false;
+      drawInternalAtmosphere(ctx);
+      drawTideSample(ctx);
+      drawMoonGear(ctx);
+      drawTideRecording(ctx);
+      drawBuoys(ctx);
+      drawBubbles(ctx);
+      ctx.restore();
+
+      ctx.imageSmoothingEnabled = true;
+      drawFrontGlass(ctx);
+      ctx.restore();
+    }
+
+    function sizeStage() {
+      const stage = document.getElementById('pixel-stage');
+      const scale = Math.min(window.innerWidth / CW, window.innerHeight / CH) * 0.96;
+      stage.style.width = Math.floor(CW * scale) + 'px';
+      stage.style.height = Math.floor(CH * scale) + 'px';
+    }
+
+    function initWorld() {
+      const xs = [240, 310, 390, 470];
+      for (let i = 0; i < xs.length; i++) buoys.push({ x: xs[i], yOffset: -8, phase: i * 1.5, bobEnergy: 0 });
+      const waterBase = instrument.bottomY + instrument.cornerR;
+      for (let i = 0; i < 22; i++) bubbles.push({ x: instrument.cx + (Math.random() - 0.5) * 260, y: waterBase - 40 - Math.random() * 450, r: 2 + Math.random() * 5, speed: 0.12 + Math.random() * 0.45, phase: Math.random() * Math.PI * 2, wobble: 0.3 + Math.random() * 0.7 });
+    }
+
+    function bindInteraction() {
+      const layer = document.getElementById('interact-layer');
+      layer.addEventListener('pointerdown', (e) => {
+        if(!isAudioAwake) initProceduralAudio();
+        const r = layer.getBoundingClientRect();
+        const x = (e.clientX - r.left) * (CW / r.width);
+        const y = (e.clientY - r.top) * (CH / r.height);
+        knockInstrument(x, y);
+      });
+    }
+
+    function knockInstrument(x, y) {
+      bodyImpulse = Math.min(1.2, bodyImpulse + 1);
+      glassGlow = 1;
+      tidePhaseOffset += TWO_PI * (1.5 / 12);
+      moonGear.phaseIndex = (moonGear.phaseIndex + 1) % 8;
+      moonGear.targetAngle += TWO_PI / moonGear.teeth;
+      moonGear.angle -= 0.15;
+      moonGear.angleVel -= 1.2;
+      moonGear.pulseEnergy = 1;
+
+      pulses.push({ x: constrain(x, instrument.cx - instrument.radius, instrument.cx + instrument.radius), y: getWaterY(), age: 0, life: 2.5, strength: 1 });
+      for (const b of buoys) b.bobEnergy = 1;
+
+      playGlassKnock();
+    }
+
+    function updatePhysics(dt) {
+      bodyImpulse *= Math.pow(0.04, dt);
+      glassGlow *= Math.pow(0.12, dt);
+      const spring = (moonGear.targetAngle - moonGear.angle) * 50;
+      moonGear.angleVel += spring * dt;
+      moonGear.angleVel *= Math.pow(0.01, dt);
+      moonGear.angle += moonGear.angleVel * dt;
+      moonGear.pulseEnergy *= Math.pow(0.08, dt);
+      for (let i = pulses.length - 1; i >= 0; i--) { pulses[i].age += dt; if (pulses[i].age > pulses[i].life) pulses.splice(i, 1); }
+      for (const b of buoys) b.bobEnergy *= Math.pow(0.15, dt);
+
+      const virtualSeconds = ((simTime * TWO_PI / 12 + tidePhaseOffset) / TWO_PI) * 12;
+      const currentTick = Math.floor(virtualSeconds);
+      if (currentTick !== lastTickSecond && lastTickSecond !== -1) playTickSound();
+      lastTickSecond = currentTick;
+    }
+
+    function defineCapsulePath(ctx) {
+      const g = instrument; const r = g.cornerR; const L = g.cx - g.radius; const R = g.cx + g.radius;
+      ctx.beginPath(); ctx.moveTo(L + r, g.topY); ctx.lineTo(R - r, g.topY); ctx.arcTo(R, g.topY, R, g.topY + r, r); ctx.lineTo(R, g.bottomY - r); ctx.arcTo(R, g.bottomY, R - r, g.bottomY, r); ctx.lineTo(L + r, g.bottomY); ctx.arcTo(L, g.bottomY, L, g.bottomY - r, r); ctx.lineTo(L, g.topY + r); ctx.arcTo(L, g.topY, L + r, g.topY, r); ctx.closePath();
+    }
+
+    function drawPanelShadow(ctx) {
+      ctx.save();
+      defineCapsulePath(ctx);
+      ctx.shadowColor = 'rgba(0, 15, 35, 0.45)';
+      ctx.shadowBlur = 40;
+      ctx.shadowOffsetY = 25;
+      ctx.fillStyle = 'rgba(0,0,0,1)';
+      ctx.fill();
+      ctx.shadowBlur = 15;
+      ctx.shadowOffsetY = 10;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBackGlass(ctx) {
+      ctx.save();
+      defineCapsulePath(ctx);
+      const g = ctx.createLinearGradient(0, instrument.topY - instrument.cornerR, 0, instrument.bottomY + instrument.cornerR);
+      g.addColorStop(0, 'rgba(181,246,255,0.18)');
+      g.addColorStop(0.5, 'rgba(80,202,223,0.15)');
+      g.addColorStop(1, 'rgba(9,45,60,0.4)');
+      ctx.fillStyle = g;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawInternalAtmosphere(ctx) {
+      ctx.globalCompositeOperation = 'screen';
+      const mg = ctx.createRadialGradient(moonGear.x, moonGear.y, 10, moonGear.x, moonGear.y, 220);
+      mg.addColorStop(0, `rgba(112,229,255,${0.25 + moonGear.pulseEnergy * 0.4})`);
+      mg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = mg;
+      ctx.fillRect(100, 100, 520, 500);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function getTidePhase() { return (simTime * TWO_PI / 12) + tidePhaseOffset; }
+    function getWaterY() {
+      const tidePhase = getTidePhase();
+      const tide = Math.sin(tidePhase) * 45;
+      const breath = Math.sin(simTime * 0.6) * 3;
+      const pull = moonGear.pulseEnergy * 30 * Math.sin(moonGear.pulseEnergy * Math.PI);
+      return 600 + tide + breath - pull;
+    }
+
+    function drawTideSample(ctx) {
+      const waterY = getWaterY(); const bottomY = instrument.bottomY + instrument.cornerR; const minX = instrument.cx - instrument.radius; const maxX = instrument.cx + instrument.radius;
+
+      const wg = ctx.createLinearGradient(0, waterY, 0, bottomY);
+      wg.addColorStop(0, 'rgba(122,208,245,0.78)');
+      wg.addColorStop(0.48, 'rgba(64,184,224,0.65)');
+      wg.addColorStop(1, 'rgba(8,48,64,0.85)');
+      ctx.fillStyle = wg;
+      ctx.fillRect(minX, waterY, instrument.width, bottomY - waterY);
+
+      for (let y = snap(waterY); y < bottomY; y += PX * 3) {
+        const depth = constrain((y - waterY) / 140, 0, 1);
+        for (let x = minX; x < maxX; x += PX * 3) {
+          const wave = Math.sin(x * 0.025 + simTime * 0.55) * 0.4 + Math.sin(x * 0.06 - simTime * 0.72) * 0.35;
+          const threshold = BAYER_4X4[((y / PX) % 4 + 4) % 4 | 0][((x / PX) % 4 + 4) % 4 | 0] / 16;
+          let pulseLight = 0;
+          for (const p of pulses) { const ageT = p.age / p.life; const radius = ageT * 260; const d = Math.hypot(x - p.x, (y - p.y) * 2.2); pulseLight += Math.max(0, 1 - Math.abs(d - radius) / 45) * (1 - ageT) * p.strength; }
+
+          if (threshold < depth * 0.45 + wave * 0.12 + pulseLight * 0.5) {
+            ctx.fillStyle = pulseLight > 0.15 ? `rgba(0,240,255,${0.35 + pulseLight})` : (depth > 0.55 ? 'rgba(8,48,64,0.58)' : 'rgba(177,230,245,0.45)');
+            ctx.fillRect(x, y, PX * 3, PX * 3);
+          }
+        }
+      }
+      ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 1.5; ctx.beginPath();
+      for (let x = minX; x <= maxX; x += 6) { const y = waterY + Math.sin(x * 0.035 + simTime * 1.1) * 3.5 + Math.sin(x * 0.07 - simTime * 0.75) * 2.0; x === minX ? ctx.moveTo(x, snap(y)) : ctx.lineTo(x, snap(y)); }
+      ctx.stroke(); ctx.restore();
+    }
+
+    function drawMoonGear(ctx) {
+      const g = moonGear; const pulse = g.pulseEnergy; const cx = snap(g.x); const cy = snap(g.y + Math.sin(simTime * 0.8) * 4);
+      ctx.save();
+      if(pulse > 0.02) { ctx.strokeStyle = `rgba(0,240,255,${pulse * 0.6})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, getWaterY()); ctx.stroke(); }
+      ctx.translate(cx, cy); ctx.rotate(g.angle);
+
+      for (let i = 0; i < g.teeth; i++) {
+        ctx.save();
+        ctx.rotate(i * TWO_PI / g.teeth);
+        ctx.fillStyle = i % 2 === 0 ? '#e8f8ff' : '#a0e8f8';
+        ctx.fillRect(-6, -g.r - 12, 12, 14);
+        ctx.fillStyle = '#207080';
+        ctx.fillRect(-2, -g.r - 8, 4, 10);
+        ctx.restore();
+      }
+      drawPixelCircle(ctx, 0, 0, g.r, '#083040');
+      drawPixelCircle(ctx, 0, 0, g.r - 8, '#207080');
+
+      for (let i = 0; i < 12; i++) {
+        const angle = i * (TWO_PI / 12); const rMark = g.r - 18;
+        if (i % 3 === 0) { ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'; ctx.fillRect(Math.cos(angle) * rMark - 2, Math.sin(angle) * rMark - 2, 4, 4); }
+        else { ctx.fillStyle = 'rgba(177, 230, 245, 0.7)'; ctx.fillRect(Math.cos(angle) * rMark - 1, Math.sin(angle) * rMark - 1, 2, 2); }
+      }
+
+      drawPixelCircle(ctx, 0, 0, 36, '#030d12');
+      ctx.rotate(-g.angle); drawMoonPhase(ctx, 0, 0, g.phaseIndex);
+
+      const tidePhase = getTidePhase();
+      ctx.save(); ctx.rotate(tidePhase - Math.PI / 2);
+      ctx.globalCompositeOperation = 'screen'; ctx.strokeStyle = 'rgba(255, 170, 0, 0.4)'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(g.r - 20, 0); ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(g.r - 20, 0); ctx.stroke();
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(g.r - 22, -1, 3, 3); ctx.restore();
+      ctx.fillStyle = '#1e3845'; ctx.fillRect(-3, -3, 6, 6); ctx.fillStyle = '#ffcc00'; ctx.fillRect(-1, -1, 2, 2); ctx.restore();
+    }
+
+    function drawMoonPhase(ctx, cx, cy, phase) {
+      const rows = MOON_FRAMES[phase]; const s = 4; const ox = cx - (rows[0].length * s) / 2; const oy = cy - (rows.length * s) / 2;
+      for (let y = 0; y < rows.length; y++) { for (let x = 0; x < rows[y].length; x++) { if (rows[y][x] === '1') { ctx.fillStyle = (y < 2 || x < 2) ? '#ffffff' : '#fff8d8'; ctx.fillRect(snap(ox + x * s), snap(oy + y * s), s, s); } } }
+    }
+
+    function drawBuoys(ctx) {
+      const waterY = getWaterY();
+      for (const b of buoys) { const bob = Math.sin(simTime * 2.5 + b.phase) * 6 + b.bobEnergy * 18; const x = snap(b.x + Math.sin(simTime * 1.2 + b.phase) * 5); const y = snap(waterY + b.yOffset + bob); ctx.fillStyle = '#083040'; ctx.fillRect(x - 5, y - 10, 10, 14); ctx.fillStyle = '#70d8f0'; ctx.fillRect(x - 7, y - 6, 14, 8); ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 2, y - 14, 4, 4); if (b.bobEnergy > 0.05) { ctx.fillStyle = `rgba(0,240,255,${b.bobEnergy * 0.4})`; ctx.fillRect(x - 12, y - 18, 24, 20); } }
+    }
+
+    function drawBubbles(ctx) {
+      const waterY = getWaterY(); const minX = instrument.cx - instrument.radius; const maxX = instrument.cx + instrument.radius; const bottomY = instrument.bottomY + instrument.cornerR;
+      for (const b of bubbles) { b.y -= b.speed * 0.02; if (b.y < waterY + 6 || b.y > bottomY) { b.y = bottomY - 10 - Math.random() * 30; b.x = instrument.cx + (Math.random() - 0.5) * 240; } const wx = snap(b.x + Math.sin(simTime * b.wobble + b.phase) * 4); const wy = snap(b.y); if (wx < minX + 10 || wx > maxX - 10) continue;
+        ctx.fillStyle = 'rgba(8,48,64,0.2)'; ctx.fillRect(wx - b.r - 1, wy - b.r - 1, b.r * 2 + 2, b.r * 2 + 2);
+        ctx.fillStyle = 'rgba(177,230,245,0.25)'; ctx.fillRect(wx - b.r, wy - b.r, b.r * 2, b.r * 2);
+        ctx.globalCompositeOperation = 'screen'; ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(wx - Math.ceil(b.r / 2), wy - b.r, Math.ceil(b.r / 2) + 1, Math.ceil(b.r / 2) + 1); ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+
+    function drawTideRecording(ctx) {
+      if (tideHistory.length < 2) return;
+      const g = instrument; const chartX = g.cx - g.radius + 30; const chartW = g.width - 60; const chartY = 400; const chartH = 90;
+      ctx.fillStyle = 'rgba(4,32,48,0.15)'; ctx.fillRect(chartX, chartY, chartW, chartH);
+      const tideMin = 540; const tideMax = 660; const tideRange = tideMax - tideMin;
+      ctx.save(); ctx.globalCompositeOperation = 'screen'; ctx.beginPath(); ctx.strokeStyle = 'rgba(114,235,255,0.45)'; ctx.lineWidth = PX;
+      for (let i = 0; i < tideHistory.length; i++) { const fx = i / (tideHistory.length - 1 || 1); const x = chartX + fx * chartW; const normalizedY = constrain((tideHistory[i].y - tideMin) / tideRange, 0, 1); const y = chartY + chartH - normalizedY * chartH; if (i === 0) ctx.moveTo(snap(x), snap(y)); else ctx.lineTo(snap(x), snap(y)); }
+      ctx.stroke(); const currentNorm = constrain((getWaterY() - tideMin) / tideRange, 0, 1); const dotX = snap(chartX + chartW - 2); const dotY = snap(chartY + chartH - currentNorm * chartH); ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(dotX - 2, dotY - 2, 4, 4); ctx.restore();
+    }
+
+    function drawFrontGlass(ctx) {
+      ctx.save(); defineCapsulePath(ctx);
+
+      ctx.lineWidth = 1.5;
+      const edgeGrad = ctx.createLinearGradient(instrument.cx - instrument.radius, instrument.topY, instrument.cx + instrument.radius, instrument.bottomY);
+      edgeGrad.addColorStop(0, 'rgba(255,255,255,0.7)');
+      edgeGrad.addColorStop(0.3, 'rgba(255,255,255,0.15)');
+      edgeGrad.addColorStop(0.7, 'rgba(0,0,0,0.05)');
+      edgeGrad.addColorStop(1, 'rgba(255,255,255,0.2)');
+      ctx.strokeStyle = edgeGrad; ctx.stroke();
+
+      ctx.clip();
+
+      ctx.shadowColor = 'rgba(255,255,255,0.9)'; ctx.shadowBlur = 12; ctx.shadowOffsetX = -4; ctx.shadowOffsetY = -4;
+      ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(0,0,0,1)'; ctx.globalCompositeOperation = 'screen';
+      ctx.beginPath(); const r = instrument.cornerR; const L = instrument.cx - instrument.radius - 5; const R = instrument.cx + instrument.radius + 5; const T = instrument.topY - 5; const B = instrument.bottomY + 5;
+      ctx.moveTo(L + r, T); ctx.lineTo(R - r, T); ctx.arcTo(R, T, R, T + r, r); ctx.lineTo(R, B - r); ctx.arcTo(R, B, R - r, B, r); ctx.lineTo(L + r, B); ctx.arcTo(L, B, L, B - r, r); ctx.lineTo(L, T + r); ctx.arcTo(L, T, L + r, T, r); ctx.closePath();
+      ctx.stroke();
+
+      if (glassGlow > 0.01) { ctx.fillStyle = `rgba(114,235,255,${glassGlow * 0.1})`; defineCapsulePath(ctx); ctx.fill(); }
+      ctx.restore();
+    }
+
+    function drawPixelCircle(ctx, cx, cy, r, color) { ctx.fillStyle = color; for (let y = -r; y <= r; y += PX) { const x = Math.round(Math.sqrt(r * r - y * y) / PX) * PX; ctx.fillRect(snap(cx - x), snap(cy + y), x * 2, PX); } }
+    function snap(v) { return Math.round(v / PX) * PX; }
+
+    function initProceduralAudio() {
+      if (audioCtx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      audioCtx = new AC();
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.85;
+      masterGain.connect(audioCtx.destination);
+
+      echoDelay = audioCtx.createDelay();
+      echoDelay.delayTime.value = 0.45;
+
+      const feedback = audioCtx.createGain();
+      feedback.gain.value = 0.25;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 800;
+
+      echoDelay.connect(feedback);
+      feedback.connect(filter);
+      filter.connect(echoDelay);
+      echoDelay.connect(masterGain);
+
+      const noiseSize = audioCtx.sampleRate * 2;
+      const noiseBuffer = audioCtx.createBuffer(1, noiseSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < noiseSize; i++) {
+        output[i] = Math.random() * 2 - 1;
+      }
+      const noiseSource = audioCtx.createBufferSource();
+      noiseSource.buffer = noiseBuffer;
+      noiseSource.loop = true;
+
+      oceanFilter = audioCtx.createBiquadFilter();
+      oceanFilter.type = 'lowpass';
+      oceanFilter.frequency.value = 150;
+      oceanFilter.Q.value = 0.7;
+
+      oceanGain = audioCtx.createGain();
+      oceanGain.gain.value = 0.0;
+      oceanGain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + 2.0);
+
+      noiseSource.connect(oceanFilter);
+      oceanFilter.connect(oceanGain);
+      oceanGain.connect(masterGain);
+      noiseSource.start();
+
+      isAudioAwake = true;
+    }
+
+    function syncAudioWithVisuals() {
+      if (!isAudioAwake || !audioCtx) return;
+      const tidePhase = getTidePhase();
+      const tideSine = Math.sin(tidePhase);
+
+      const targetFreq = 200 + (tideSine + 1) * 200;
+      oceanFilter.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.1);
+
+      const energy = moonGear.pulseEnergy;
+      oceanGain.gain.setTargetAtTime(0.4 + energy * 0.3, audioCtx.currentTime, 0.1);
+    }
+
+    function playTickSound() {
+      if (!isAudioAwake || !audioCtx) return;
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(800, now);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.15, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+      gain.connect(echoDelay);
+
+      osc.start(now);
+      osc.stop(now + 0.05);
+    }
+
+    function playGlassKnock() {
+      if (!audioCtx) return;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+
+      const glassFreqs = [1850, 2600, 3150];
+      glassFreqs.forEach((freq, index) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2 - index * 0.05, now + 0.002);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15 + index * 0.05);
+
+        osc.connect(gain);
+        gain.connect(masterGain);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      });
+
+      const thudOsc = audioCtx.createOscillator();
+      const thudGain = audioCtx.createGain();
+      thudOsc.type = 'triangle';
+
+      thudOsc.frequency.setValueAtTime(250, now);
+      thudOsc.frequency.exponentialRampToValueAtTime(50, now + 0.03);
+
+      thudGain.gain.setValueAtTime(0, now);
+      thudGain.gain.linearRampToValueAtTime(0.6, now + 0.005);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+      thudOsc.connect(thudGain);
+      thudGain.connect(masterGain);
+      thudGain.connect(echoDelay);
+
+      thudOsc.start(now);
+      thudOsc.stop(now + 0.1);
+    }
+  </script>
+</body>
+</html>
