@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 24,
-  "updated": "2026-07-09",
+  "total": 25,
+  "updated": "2026-07-11",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -19,6 +19,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "firefly-seed-jar",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -49,6 +50,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "firefly-seed-jar",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -70,6 +72,7 @@
       "cosmic-recollection"
     ],
     "particle_system": [
+      "firefly-seed-jar",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -96,6 +99,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "firefly-seed-jar",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -117,6 +121,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "firefly-seed-jar",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -133,6 +138,47 @@
     ]
   },
   "works": [
+    {
+      "slug": "firefly-seed-jar",
+      "title_en": "Firefly Seed Jar",
+      "title_zh": "密封瓶里的萤火种子",
+      "tagline": "你碰到哪颗琥珀晶种，它就短暂相信春天来了，探出一根被拴住的萤光触角。",
+      "tech": [
+        "p5.js 1.9.0 Canvas 2D pixel rendering",
+        "Canvas bezierCurveTo clip glass pipeline",
+        "Web Audio API OscillatorNode sine-wave chime synthesis (648Hz/864Hz/1296Hz)",
+        "BiquadFilterNode low-pass drone (108Hz + 162Hz dual oscillator)",
+        "Canvas globalCompositeOperation lighter/screen blend mode",
+        "press-and-hold touch interaction with Manhattan distance seed matching",
+        "pixel grid snapping (PX=2) on 720×960 canvas",
+        "seed bank simulation (29 pods + ~130 amber seeds)"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "~130 seeds + sprout motes + ripples concurrently active",
+      "dependencies": 1,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "pixel terrarium",
+        "canvas glass container",
+        "web audio oscillator synthesis",
+        "additive blending",
+        "pixel seed bank",
+        "press-and-hold animation",
+        "frutiger aero glassmorphism",
+        "biquad filter drone"
+      ],
+      "use_cases": [
+        "p5.js interactive terrarium",
+        "canvas glass bottle rendering",
+        "web audio healing visualization",
+        "pixel seed bank H5",
+        "press-and-hold particle animation",
+        "frutiger aero H5"
+      ],
+      "date": "2026-07-11"
+    },
     {
       "slug": "tidal-moon-moss",
       "title_en": "Tidal Moon Moss",
