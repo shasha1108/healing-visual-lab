@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 25,
+  "total": 26,
   "updated": "2026-07-11",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -20,6 +20,7 @@
     ],
     "canvas_2d": [
       "firefly-seed-jar",
+      "clockwork-tidal-gauge",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -51,6 +52,7 @@
     ],
     "web_audio": [
       "firefly-seed-jar",
+      "clockwork-tidal-gauge",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -73,6 +75,7 @@
     ],
     "particle_system": [
       "firefly-seed-jar",
+      "clockwork-tidal-gauge",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -100,6 +103,7 @@
     ],
     "touch_interaction": [
       "firefly-seed-jar",
+      "clockwork-tidal-gauge",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -122,6 +126,7 @@
     ],
     "p5js": [
       "firefly-seed-jar",
+      "clockwork-tidal-gauge",
       "tidal-moon-moss",
       "pocket-forest-radio",
       "oxygen-chamber",
@@ -176,6 +181,49 @@
         "pixel seed bank H5",
         "press-and-hold particle animation",
         "frutiger aero H5"
+      ],
+      "date": "2026-07-11"
+    },
+    {
+      "slug": "clockwork-tidal-gauge",
+      "title_en": "Clockwork Tidal Gauge",
+      "title_zh": "发条潮汐仪",
+      "tagline": "触碰玻璃舱体，月相齿轮转动一格，潮汐随之涨落——一台封存在像素胶囊里的发条潮汐仪。",
+      "tech": [
+        "p5.js 1.9.4 Canvas 2D pixel rendering",
+        "Canvas arcTo capsule glass clip pipeline",
+        "Web Audio API OscillatorNode glass knock chime (1850/2600/3150Hz sine)",
+        "OscillatorNode triangle thud sweep (250→50Hz exponentialRampToValueAtTime)",
+        "DelayNode echo feedback loop (0.45s delay)",
+        "BiquadFilter low-pass ocean noise (BufferSource white noise)",
+        "Bayer 4x4 ordered dithering on water surface",
+        "spring-damper gear physics (12-tooth moon gear)",
+        "sinusoidal tide simulation (12s period)",
+        "8-frame pixel moon phase animation"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A (4 buoys + 22 bubbles + 8-frame moon phase sprites)",
+      "dependencies": 1,
+      "healing_domain": "meditation",
+      "keywords": [
+        "clockwork instrument",
+        "tide simulation",
+        "canvas glass capsule",
+        "web audio glass chime",
+        "bayer dithering",
+        "moon phase gear",
+        "frutiger aero capsule",
+        "spring physics"
+      ],
+      "use_cases": [
+        "p5.js clockwork instrument",
+        "canvas tide simulation H5",
+        "web audio glass chime synthesis",
+        "frutiger aero capsule interactive",
+        "bayer dithering water rendering",
+        "moon phase pixel animation"
       ],
       "date": "2026-07-11"
     },
