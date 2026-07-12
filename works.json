@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 26,
-  "updated": "2026-07-11",
+  "total": 27,
+  "updated": "2026-07-12",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -19,6 +19,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "transparent-dream-stratigraph",
       "firefly-seed-jar",
       "clockwork-tidal-gauge",
       "tidal-moon-moss",
@@ -51,6 +52,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "transparent-dream-stratigraph",
       "firefly-seed-jar",
       "clockwork-tidal-gauge",
       "tidal-moon-moss",
@@ -74,6 +76,7 @@
       "cosmic-recollection"
     ],
     "particle_system": [
+      "transparent-dream-stratigraph",
       "firefly-seed-jar",
       "clockwork-tidal-gauge",
       "tidal-moon-moss",
@@ -102,6 +105,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "transparent-dream-stratigraph",
       "firefly-seed-jar",
       "clockwork-tidal-gauge",
       "tidal-moon-moss",
@@ -125,6 +129,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "transparent-dream-stratigraph",
       "firefly-seed-jar",
       "clockwork-tidal-gauge",
       "tidal-moon-moss",
@@ -143,6 +148,48 @@
     ]
   },
   "works": [
+    {
+      "slug": "transparent-dream-stratigraph",
+      "title_en": "Transparent Dream Stratigraph",
+      "title_zh": "透明梦境地层仪",
+      "tagline": "转动冠轮，地层仪将未说出口的梦压入一层发光的地质年轮。",
+      "tech": [
+        "p5.js 1.9.4 Canvas 2D pixel rendering",
+        "Canvas bezierCurve transparent glass shell pipeline",
+        "Web Audio API OscillatorNode synthesis (triangle/sine, exponentialRampToValueAtTime, detune)",
+        "deterministic hash-based procedural strata generation (hash01 sin-based)",
+        "spring-damped mechanism physics (stiffness=92, damping=14)",
+        "Canvas globalCompositeOperation screen blend glass highlights",
+        "p5.createGraphics offscreen pixel canvas (112×192px)",
+        "Pointer Events API tap-to-wake fossil interaction",
+        "localStorage persistent memory across sessions"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "dynamic mineral motes (~10 per interaction)",
+      "dependencies": 1,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "pixel art strata",
+        "procedural generation",
+        "web audio oscillator synthesis",
+        "canvas 2d glass rendering",
+        "spring-damped mechanism",
+        "fossil wake interaction",
+        "healing visualization",
+        "deterministic hash generation"
+      ],
+      "use_cases": [
+        "canvas 2d pixel art healing",
+        "p5.js createGraphics offscreen rendering",
+        "web audio oscillator synthesis H5",
+        "procedural strata generation interactive",
+        "dream instrument H5",
+        "spring physics mechanism animation"
+      ],
+      "date": "2026-07-12"
+    },
     {
       "slug": "firefly-seed-jar",
       "title_en": "Firefly Seed Jar",
