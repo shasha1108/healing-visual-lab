@@ -1,0 +1,811 @@
+<!doctype html>
+<!--
+  Title: Transparent Dream Stratigraph · 透明梦境地层仪
+  Tech: Canvas 2D (p5.js 1.9.4), Web Audio API (OscillatorNode + GainNode exponentialRampToValueAtTime), Canvas 2D Native API (bezierCurve + createLinearGradient + createRadialGradient + globalCompositeOperation screen), Pointer Events API, deterministic hash-based procedural generation (hash01), localStorage persistence, prefers-reduced-motion media query
+  Keywords: pixel art strata, procedural generation, web audio oscillator synthesis, canvas 2d glass rendering, spring-damped mechanism, fossil wake interaction, healing visualization, deterministic hash generation
+  Features: 112×192 pixel offscreen canvas core with procedurally generated geological strata. Crown rotation advances layers with spring-damped physics and persistent memory. Tap-to-wake fossil mechanics with energy decay, mineral mote particle bursts, and screen-blend glass highlights.
+  Render: Canvas 2D (p5.js)
+  Audio: yes
+  Touch: yes
+  Particles: dynamic mineral motes (~10 per interaction)
+  Standalone: yes, single HTML file, 1 CDN dependency
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#071c2a">
+  <title>Transparent Dream Stratigraph</title>
+  <!-- Pixel Bloom | Mode: C | Render: fullViewport -->
+  <!-- Title: Transparent Dream Stratigraph -->
+  <!-- Concept: Turn the crown once, and the instrument presses one unspoken dream into a luminous geological layer. -->
+  <!-- Summary: A quiet transparent mechanical object with a persistent pixel core; tap a layer to wake its fossil, then let it sleep again. -->
+  <!-- Palette: Dream Strata Mint (Cyber Mint + Lavender Mist, locally adapted) -->
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      background: #061722;
+      touch-action: none;
+      overscroll-behavior: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #canvas-container { position: fixed; inset: 0; z-index: 1; }
+    canvas { position: relative; z-index: 1; display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <main id="canvas-container" aria-label="梦境地层仪"></main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"
+    onerror="this.onerror=null;this.src='https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.4/p5.min.js'"></script>
+  <script>
+  'use strict';
+
+  const BASE_W = 720;
+  const BASE_H = 960;
+  const CORE_PX_W = 112;
+  const CORE_PX_H = 192;
+  const CORE = { x: 220, y: 246, w: 280, h: 480, r: 26 };
+  const STORAGE_KEY = 'pixel-bloom-dream-stratigraph-v1';
+
+  const PALETTE = {
+    name: 'Dream Strata Mint',
+    source: 'Cyber Mint + Lavender Mist, adapted for a dark geological instrument',
+    background: '#061722',
+    backgroundTop: '#0a2935',
+    deep: '#07131e',
+    shell: '#9ee9e5',
+    shellBright: '#e8ffff',
+    metal: '#b5d8d5',
+    metalDark: '#456a70',
+    warmMetal: '#d5b878',
+    pixel: ['#101c2c', '#173447', '#24545a', '#3d7770', '#69a68f', '#a8d3b6'],
+    dream: ['#2d2e49', '#4a486d', '#68628a', '#938aaf'],
+    amber: ['#4b3b2b', '#705431', '#947342', '#c0a05f'],
+    wake: '#a7fff0'
+  };
+
+  let stageCanvas;
+  let coreG;
+  let simTime = 0;
+  let strataBands = [];
+  let mineralMotes = [];
+  let memoryCount = 12;
+  let layout = { scale: 1, x: 0, y: 0 };
+  let hoveredControl = false;
+  let reducedMotion = false;
+
+  const mechanism = {
+    gearIndex: 0,
+    angle: 0,
+    targetAngle: 0,
+    angularVelocity: 0,
+    pulse: 0,
+    corePulse: 0
+  };
+
+  let audioCtx = null;
+  let masterGain = null;
+  const activeAudio = { sources: [], timers: [] };
+
+  function setup() {
+    stageCanvas = createCanvas(windowWidth, windowHeight);
+    stageCanvas.parent('canvas-container');
+    stageCanvas.elt.setAttribute('aria-label', '透明梦境地层仪，转动冠轮生成新地层，轻敲地层唤醒梦化石');
+    pixelDensity(1);
+    noSmooth();
+    drawingContext.imageSmoothingEnabled = false;
+    coreG = createGraphics(CORE_PX_W, CORE_PX_H);
+    coreG.pixelDensity(1);
+    coreG.noSmooth();
+    coreG.drawingContext.imageSmoothingEnabled = false;
+    reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    loadMemory();
+    initStrata();
+    bindPointerEvents();
+  }
+
+  function draw() {
+    const dt = Math.min(deltaTime * 0.001, 0.05);
+    simTime += dt * (reducedMotion ? 0.35 : 1);
+    updateLayout();
+    updateMechanism(dt);
+    updateStrata(dt);
+    updateMotes(dt);
+
+    drawBackground();
+    push();
+    translate(layout.x, layout.y);
+    scale(layout.scale);
+    drawInstrumentShadow();
+    drawInstrumentBack();
+    renderPixelCore();
+    drawCoreWindow();
+    drawInstrumentFront();
+    drawCrown();
+    pop();
+  }
+
+  function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    drawingContext.imageSmoothingEnabled = false;
+  }
+
+  function updateLayout() {
+    const s = Math.min(width / 560, height / 920) * 0.96;
+    layout.scale = s;
+    layout.x = (width - BASE_W * s) * 0.5;
+    layout.y = (height - BASE_H * s) * 0.5;
+  }
+
+  function basePoint(evt) {
+    const rect = stageCanvas.elt.getBoundingClientRect();
+    const canvasX = (evt.clientX - rect.left) * (width / rect.width);
+    const canvasY = (evt.clientY - rect.top) * (height / rect.height);
+    return {
+      x: (canvasX - layout.x) / layout.scale,
+      y: (canvasY - layout.y) / layout.scale
+    };
+  }
+
+  function bindPointerEvents() {
+    const el = stageCanvas.elt;
+    el.addEventListener('pointerdown', function(evt) {
+      evt.preventDefault();
+      ensureAudio();
+      const p = basePoint(evt);
+      if (dist(p.x, p.y, 360, 151) < 62) {
+        advanceStratum();
+        playMechanismSound();
+        return;
+      }
+      if (p.x >= CORE.x && p.x <= CORE.x + CORE.w && p.y >= CORE.y && p.y <= CORE.y + CORE.h) {
+        const px = (p.x - CORE.x) * CORE_PX_W / CORE.w;
+        const py = (p.y - CORE.y) * CORE_PX_H / CORE.h;
+        wakeStratum(px, py);
+        playLayerWakeSound();
+      }
+    }, { passive: false });
+
+    el.addEventListener('pointermove', function(evt) {
+      const p = basePoint(evt);
+      const inCrown = dist(p.x, p.y, 360, 151) < 62;
+      const inCore = p.x >= CORE.x && p.x <= CORE.x + CORE.w && p.y >= CORE.y && p.y <= CORE.y + CORE.h;
+      const nextHover = inCrown || inCore;
+      if (nextHover !== hoveredControl) {
+        hoveredControl = nextHover;
+        el.style.cursor = hoveredControl ? 'pointer' : 'default';
+      }
+    }, { passive: true });
+
+    window.addEventListener('pagehide', stopAllAudio, { once: true });
+  }
+
+  function hash01(n) {
+    const x = Math.sin(n * 127.1 + 311.7) * 43758.5453123;
+    return x - Math.floor(x);
+  }
+
+  function loadMemory() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      memoryCount = constrain(Number(stored.memoryCount) || 12, 12, 9999);
+      mechanism.gearIndex = memoryCount % 12;
+      mechanism.angle = mechanism.gearIndex * TWO_PI / 12;
+      mechanism.targetAngle = mechanism.angle;
+    } catch (err) {
+      memoryCount = 12;
+    }
+  }
+
+  function saveMemory() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ memoryCount: memoryCount }));
+    } catch (err) {
+      // The work remains functional when storage is unavailable.
+    }
+  }
+
+  function makeBand(id) {
+    const h = 11 + Math.floor(hash01(id * 3.19) * 7);
+    const familyRoll = hash01(id * 7.73);
+    const family = familyRoll > 0.84 ? 'amber' : familyRoll > 0.64 ? 'dream' : 'pixel';
+    const fossilRoll = hash01(id * 19.17);
+    return {
+      id: id,
+      h: h,
+      y: 0,
+      targetY: 0,
+      family: family,
+      fossil: fossilRoll > 0.56 ? 1 + Math.floor(hash01(id * 29.1) * 3) : 0,
+      fossilX: 22 + Math.floor(hash01(id * 13.4) * 67),
+      energy: 0,
+      targetEnergy: 0,
+      hold: 0,
+      phase: hash01(id * 41.9) * TWO_PI
+    };
+  }
+
+  function initStrata() {
+    strataBands = [];
+    for (let i = 0; i < 15; i++) {
+      strataBands.push(makeBand(memoryCount - i));
+    }
+    assignBandTargets(true);
+  }
+
+  function assignBandTargets(immediate) {
+    let cursor = -2;
+    for (let i = 0; i < strataBands.length; i++) {
+      const band = strataBands[i];
+      band.targetY = cursor;
+      if (immediate) band.y = cursor;
+      cursor += band.h;
+    }
+  }
+
+  function advanceStratum() {
+    memoryCount += 1;
+    const fresh = makeBand(memoryCount);
+    fresh.y = -fresh.h - 8;
+    fresh.energy = 0.78;
+    fresh.targetEnergy = 1;
+    fresh.hold = 2.2;
+    strataBands.unshift(fresh);
+    assignBandTargets(false);
+    while (strataBands.length > 17) strataBands.pop();
+
+    const step = TWO_PI / 12;
+    mechanism.gearIndex = (mechanism.gearIndex + 1) % 12;
+    mechanism.targetAngle += step;
+    mechanism.pulse = 1;
+    mechanism.corePulse = 1;
+    spawnMotes(fresh.fossilX, 10, 10, fresh.id);
+    saveMemory();
+  }
+
+  function wakeStratum(px, py) {
+    let nearest = null;
+    let bestDistance = Infinity;
+    for (let i = 0; i < strataBands.length; i++) {
+      const band = strataBands[i];
+      const centerY = band.y + band.h * 0.5;
+      const distance = Math.abs(py - centerY);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        nearest = band;
+      }
+    }
+    if (!nearest) return;
+    nearest.targetEnergy = 1;
+    nearest.hold = Math.max(nearest.hold, 1.8);
+    mechanism.corePulse = Math.max(mechanism.corePulse, 0.72);
+    spawnMotes(constrain(px, 8, CORE_PX_W - 8), nearest.y + nearest.h * 0.45, 7, nearest.id);
+  }
+
+  function updateMechanism(dt) {
+    const stiffness = 92;
+    const damping = 14;
+    const error = mechanism.targetAngle - mechanism.angle;
+    mechanism.angularVelocity += error * stiffness * dt;
+    mechanism.angularVelocity *= Math.exp(-damping * dt);
+    mechanism.angle += mechanism.angularVelocity * dt;
+    mechanism.pulse *= Math.exp(-2.1 * dt);
+    mechanism.corePulse *= Math.exp(-1.35 * dt);
+  }
+
+  function updateStrata(dt) {
+    for (let i = strataBands.length - 1; i >= 0; i--) {
+      const band = strataBands[i];
+      band.y += (band.targetY - band.y) * (1 - Math.exp(-7.5 * dt));
+      if (band.hold > 0) {
+        band.hold -= dt;
+      } else {
+        band.targetEnergy *= Math.exp(-1.05 * dt);
+      }
+      band.energy += (band.targetEnergy - band.energy) * (1 - Math.exp(-8 * dt));
+      if (band.targetY > CORE_PX_H + 20) strataBands.splice(i, 1);
+    }
+  }
+
+  function spawnMotes(x, y, amount, seed) {
+    for (let i = 0; i < amount; i++) {
+      const k = seed * 31 + i * 17 + memoryCount;
+      mineralMotes.push({
+        x: x + (hash01(k) - 0.5) * 8,
+        y: y + (hash01(k + 4) - 0.5) * 5,
+        vx: (hash01(k + 9) - 0.5) * 7,
+        vy: -5 - hash01(k + 12) * 8,
+        phase: hash01(k + 20) * TWO_PI,
+        age: 0,
+        life: 1.6 + hash01(k + 27) * 1.4,
+        size: hash01(k + 33) > 0.72 ? 2 : 1
+      });
+    }
+  }
+
+  function updateMotes(dt) {
+    for (let i = mineralMotes.length - 1; i >= 0; i--) {
+      const mote = mineralMotes[i];
+      mote.age += dt;
+      mote.x += (mote.vx + Math.sin(mote.age * 2.1 + mote.phase) * 2.4) * dt;
+      mote.y += mote.vy * dt;
+      mote.vy += 2.4 * dt;
+      if (mote.age >= mote.life) mineralMotes.splice(i, 1);
+    }
+  }
+
+  function drawBackground() {
+    const ctx = drawingContext;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, PALETTE.backgroundTop);
+    gradient.addColorStop(0.52, PALETTE.background);
+    gradient.addColorStop(1, PALETTE.deep);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const center = width * 0.5;
+    const beam = ctx.createLinearGradient(center - width * 0.34, 0, center + width * 0.34, 0);
+    beam.addColorStop(0, 'rgba(60,150,157,0)');
+    beam.addColorStop(0.5, 'rgba(91,186,178,0.12)');
+    beam.addColorStop(1, 'rgba(60,150,157,0)');
+    ctx.fillStyle = beam;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+
+    noFill();
+    stroke(91, 164, 166, 20);
+    strokeWeight(1);
+    const spacing = Math.max(44, width / 17);
+    for (let x = (width % spacing) * 0.5; x < width; x += spacing) line(x, 0, x, height);
+    for (let y = 72; y < height; y += 72) line(0, y, width, y);
+  }
+
+  function defineInstrumentPath(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(238, 151);
+    ctx.bezierCurveTo(195, 160, 165, 207, 157, 286);
+    ctx.bezierCurveTo(145, 420, 149, 680, 176, 787);
+    ctx.bezierCurveTo(185, 821, 214, 839, 254, 844);
+    ctx.lineTo(466, 844);
+    ctx.bezierCurveTo(506, 839, 535, 821, 544, 787);
+    ctx.bezierCurveTo(571, 680, 575, 420, 563, 286);
+    ctx.bezierCurveTo(555, 207, 525, 160, 482, 151);
+    ctx.bezierCurveTo(420, 137, 300, 137, 238, 151);
+    ctx.closePath();
+  }
+
+  function roundedRectPath(ctx, x, y, w, h, r) {
+    const radius = Math.min(r, w * 0.5, h * 0.5);
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + w - radius, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+    ctx.lineTo(x + w, y + h - radius);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    ctx.lineTo(x + radius, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  function drawInstrumentShadow() {
+    noStroke();
+    fill(0, 8, 13, 104);
+    ellipse(360, 866, 424, 58);
+    fill(50, 122, 121, 23);
+    ellipse(360, 850, 332, 34);
+  }
+
+  function drawInstrumentBack() {
+    const ctx = drawingContext;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    defineInstrumentPath(ctx);
+    ctx.shadowColor = 'rgba(3,12,18,.65)';
+    ctx.shadowBlur = 28;
+    ctx.shadowOffsetY = 18;
+    const body = ctx.createLinearGradient(150, 160, 570, 830);
+    body.addColorStop(0, 'rgba(181,239,236,.24)');
+    body.addColorStop(0.34, 'rgba(70,145,151,.13)');
+    body.addColorStop(0.72, 'rgba(24,78,89,.28)');
+    body.addColorStop(1, 'rgba(141,220,215,.18)');
+    ctx.fillStyle = body;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    roundedRectPath(ctx, CORE.x - 24, CORE.y - 24, CORE.w + 48, CORE.h + 48, 42);
+    const inset = ctx.createLinearGradient(CORE.x, CORE.y, CORE.x + CORE.w, CORE.y + CORE.h);
+    inset.addColorStop(0, 'rgba(5,21,31,.94)');
+    inset.addColorStop(0.55, 'rgba(14,44,52,.92)');
+    inset.addColorStop(1, 'rgba(3,14,23,.98)');
+    ctx.fillStyle = inset;
+    ctx.fill();
+    ctx.restore();
+
+    noStroke();
+    fill(19, 48, 55, 210);
+    rect(181, 300, 17, 382, 7);
+    rect(522, 300, 17, 382, 7);
+  }
+
+  function renderPixelCore() {
+    coreG.background(8, 18, 29);
+    coreG.noStroke();
+
+    for (let y = 0; y < CORE_PX_H; y += 4) {
+      const t = y / CORE_PX_H;
+      const c = lerpColor(color('#102839'), color('#07131f'), t);
+      coreG.fill(c);
+      coreG.rect(0, y, CORE_PX_W, 4);
+    }
+
+    for (let i = strataBands.length - 1; i >= 0; i--) drawPixelBand(strataBands[i]);
+    drawMineralMotes();
+
+    coreG.noStroke();
+    for (let x = 2; x < CORE_PX_W; x += 4) {
+      const threshold = ((x / 4) % 4) / 4;
+      if (hash01(x * 9.2) > 0.63 + threshold * 0.12) {
+        const alpha = 24 + mechanism.corePulse * 30;
+        coreG.fill(130, 225, 213, alpha);
+        coreG.rect(x, 2, 1, 1);
+      }
+    }
+  }
+
+  function bandColors(band) {
+    if (band.family === 'dream') return PALETTE.dream;
+    if (band.family === 'amber') return PALETTE.amber;
+    return PALETTE.pixel;
+  }
+
+  function drawPixelBand(band) {
+    const colors = bandColors(band);
+    const energy = constrain(band.energy, 0, 1);
+    const baseShade = Math.floor(hash01(band.id * 11.3) * Math.max(1, colors.length - 1));
+    for (let x = 0; x < CORE_PX_W; x += 2) {
+      const wave = Math.round(Math.sin(x * 0.13 + band.phase) * 1.2 + Math.sin(x * 0.041 + band.id) * 0.8);
+      const top = Math.round(band.y + wave);
+      const localH = band.h + Math.round((hash01(band.id * 43 + x) - 0.5) * 2);
+      const chunk = Math.floor(x / 14);
+      const shadeShift = hash01(band.id * 17 + chunk * 5.7) > 0.72 ? 1 : 0;
+      const shade = Math.min(colors.length - 1, baseShade + shadeShift);
+      const base = color(colors[shade]);
+      const awake = color(PALETTE.wake);
+      coreG.fill(lerpColor(base, awake, energy * 0.38));
+      coreG.rect(x, top, 2, Math.max(2, localH));
+
+      if (hash01(band.id * 83 + x * 2.7) > 0.94) {
+        coreG.fill(lerpColor(color(colors[colors.length - 1]), awake, energy * 0.8));
+        coreG.rect(x, top + 2 + Math.floor(hash01(x + band.id) * Math.max(2, localH - 4)), 1, 1);
+      }
+    }
+
+    coreG.fill(8, 19, 28, 100);
+    for (let x = 0; x < CORE_PX_W; x += 6) {
+      if (hash01(band.id * 23 + x) > 0.24) {
+        const seamY = Math.round(band.y + band.h * 0.62 + Math.sin(x * 0.09 + band.phase));
+        coreG.rect(x, seamY, 5, 1);
+      }
+    }
+
+    const seamAlpha = 74 + energy * 181;
+    coreG.fill(126, 236, 218, seamAlpha);
+    for (let x = 0; x < CORE_PX_W; x += 4) {
+      if (hash01(band.id * 5 + x) > 0.46) coreG.rect(x, Math.round(band.y), 3, 1);
+    }
+
+    if (band.fossil) drawFossil(band);
+  }
+
+  function drawFossil(band) {
+    const x = band.fossilX;
+    const y = Math.round(band.y + band.h * 0.55);
+    if (y < 4 || y > CORE_PX_H - 4) return;
+    const glow = constrain(band.energy, 0, 1);
+    coreG.noStroke();
+    coreG.fill(217, 205, 155, 120 + glow * 120);
+
+    if (band.fossil === 1) {
+      coreG.rect(x - 5, y, 11, 1);
+      coreG.rect(x - 3, y - 3, 7, 1);
+      coreG.rect(x - 3, y + 3, 7, 1);
+      coreG.rect(x, y - 5, 1, 11);
+      coreG.rect(x - 5, y - 2, 1, 5);
+    } else if (band.fossil === 2) {
+      coreG.rect(x, y - 6, 1, 13);
+      coreG.rect(x - 4, y - 4, 4, 2);
+      coreG.rect(x + 1, y - 2, 5, 2);
+      coreG.rect(x - 5, y + 1, 5, 2);
+      coreG.rect(x + 1, y + 4, 4, 2);
+    } else {
+      coreG.rect(x - 5, y - 3, 9, 1);
+      coreG.rect(x - 6, y - 2, 2, 5);
+      coreG.rect(x - 5, y + 3, 9, 1);
+      coreG.rect(x + 4, y - 2, 2, 5);
+      coreG.rect(x - 2, y - 2, 5, 5);
+    }
+
+    if (glow > 0.12) {
+      coreG.fill(167, 255, 240, 24 + glow * 90);
+      coreG.rect(x - 8, y - 7, 17, 15);
+      coreG.fill(239, 255, 247, 160 + glow * 95);
+      coreG.rect(x, y, 1, 1);
+    }
+  }
+
+  function drawMineralMotes() {
+    coreG.noStroke();
+    for (let i = 0; i < mineralMotes.length; i++) {
+      const mote = mineralMotes[i];
+      const life = constrain(1 - mote.age / mote.life, 0, 1);
+      coreG.fill(183, 255, 238, 38 * life);
+      coreG.rect(Math.round(mote.x) - 2, Math.round(mote.y) - 2, 5, 5);
+      coreG.fill(232, 255, 245, 220 * life);
+      coreG.rect(Math.round(mote.x), Math.round(mote.y), mote.size, mote.size);
+    }
+  }
+
+  function drawCoreWindow() {
+    const ctx = drawingContext;
+    ctx.save();
+    roundedRectPath(ctx, CORE.x, CORE.y, CORE.w, CORE.h, CORE.r);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = false;
+    image(coreG, CORE.x, CORE.y, CORE.w, CORE.h);
+
+    const topGlass = ctx.createLinearGradient(CORE.x, CORE.y, CORE.x + CORE.w, CORE.y + CORE.h);
+    topGlass.addColorStop(0, 'rgba(210,255,251,.08)');
+    topGlass.addColorStop(0.36, 'rgba(210,255,251,0)');
+    topGlass.addColorStop(0.72, 'rgba(145,217,225,.08)');
+    topGlass.addColorStop(1, 'rgba(210,255,251,.02)');
+    ctx.fillStyle = topGlass;
+    ctx.fillRect(CORE.x, CORE.y, CORE.w, CORE.h);
+    ctx.restore();
+
+    noFill();
+    stroke(111, 185, 185, 145);
+    strokeWeight(8);
+    rect(CORE.x - 4, CORE.y - 4, CORE.w + 8, CORE.h + 8, CORE.r + 3);
+    stroke(222, 255, 251, 210);
+    strokeWeight(2);
+    rect(CORE.x, CORE.y, CORE.w, CORE.h, CORE.r);
+
+    noStroke();
+    fill(192, 255, 245, 34 + mechanism.corePulse * 30);
+    rect(CORE.x + 12, CORE.y + 12, 10, CORE.h - 24, 5);
+  }
+
+  function drawInstrumentFront() {
+    const ctx = drawingContext;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    defineInstrumentPath(ctx);
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = 'rgba(113,190,192,.35)';
+    ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(228,255,252,.9)';
+    ctx.stroke();
+
+    ctx.globalCompositeOperation = 'screen';
+    ctx.lineCap = 'round';
+    const leftRim = ctx.createLinearGradient(150, 200, 250, 800);
+    leftRim.addColorStop(0, 'rgba(255,255,255,.88)');
+    leftRim.addColorStop(0.42, 'rgba(145,242,236,.24)');
+    leftRim.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.strokeStyle = leftRim;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(233, 166);
+    ctx.bezierCurveTo(181, 208, 174, 400, 182, 628);
+    ctx.stroke();
+
+    const rightRim = ctx.createLinearGradient(470, 174, 545, 760);
+    rightRim.addColorStop(0, 'rgba(255,255,255,.05)');
+    rightRim.addColorStop(0.4, 'rgba(173,245,242,.52)');
+    rightRim.addColorStop(1, 'rgba(255,255,255,.1)');
+    ctx.strokeStyle = rightRim;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(497, 176);
+    ctx.bezierCurveTo(548, 276, 554, 610, 526, 771);
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+
+    drawSideGauge();
+    drawBaseAssembly();
+  }
+
+  function drawSideGauge() {
+    noStroke();
+    fill(38, 76, 82, 170);
+    rect(514, 352, 30, 274, 15);
+    fill(179, 230, 224, 95);
+    rect(524, 372, 4, 234, 2);
+    for (let i = 0; i < 8; i++) {
+      const y = 384 + i * 28;
+      fill(186, 231, 224, i === mechanism.gearIndex % 8 ? 230 : 88);
+      rect(530, y, i % 2 ? 8 : 12, 2, 1);
+    }
+    const markerY = 384 + (mechanism.gearIndex % 8) * 28;
+    fill(213, 255, 241, 190 + mechanism.pulse * 65);
+    circle(520, markerY + 1, 8 + mechanism.pulse * 3);
+  }
+
+  function drawBaseAssembly() {
+    const ctx = drawingContext;
+    ctx.save();
+    const metal = ctx.createLinearGradient(190, 770, 530, 840);
+    metal.addColorStop(0, 'rgba(54,89,94,.94)');
+    metal.addColorStop(0.24, 'rgba(207,233,226,.82)');
+    metal.addColorStop(0.5, 'rgba(91,128,132,.94)');
+    metal.addColorStop(0.78, 'rgba(229,244,235,.74)');
+    metal.addColorStop(1, 'rgba(45,73,79,.95)');
+    roundedRectPath(ctx, 192, 766, 336, 64, 28);
+    ctx.fillStyle = metal;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(224,255,249,.72)';
+    ctx.stroke();
+
+    roundedRectPath(ctx, 223, 786, 274, 26, 13);
+    ctx.fillStyle = 'rgba(14,39,46,.82)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(114,179,178,.5)';
+    ctx.stroke();
+    ctx.restore();
+
+    noStroke();
+    fill(212, 184, 120, 180);
+    circle(248, 799, 8);
+    circle(472, 799, 8);
+  }
+
+  function drawCrown() {
+    push();
+    translate(360, 151);
+
+    noStroke();
+    fill(39, 74, 79, 230);
+    rect(-52, 22, 104, 44, 18);
+    fill(174, 220, 214, 150);
+    rect(-37, 30, 74, 10, 5);
+
+    rotate(mechanism.angle);
+    for (let i = 0; i < 12; i++) {
+      push();
+      rotate(i * TWO_PI / 12);
+      noStroke();
+      fill(91, 130, 132, 255);
+      rect(-8, -66, 16, 24, 5);
+      fill(217, 238, 228, 170);
+      rect(-4, -64, 5, 17, 2);
+      pop();
+    }
+
+    const ctx = drawingContext;
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    const gear = ctx.createRadialGradient(-13, -18, 5, 0, 0, 58);
+    gear.addColorStop(0, 'rgba(244,255,245,.96)');
+    gear.addColorStop(0.35, 'rgba(167,205,199,.98)');
+    gear.addColorStop(0.7, 'rgba(67,104,111,.98)');
+    gear.addColorStop(1, 'rgba(199,229,219,.92)');
+    ctx.fillStyle = gear;
+    ctx.beginPath();
+    ctx.arc(0, 0, 51, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(239,255,247,.88)';
+    ctx.stroke();
+    ctx.restore();
+
+    noFill();
+    stroke(54, 88, 94, 190);
+    strokeWeight(9);
+    circle(0, 0, 61);
+    stroke(223, 255, 242, 160 + mechanism.pulse * 90);
+    strokeWeight(2);
+    circle(0, 0, 40 + mechanism.pulse * 5);
+
+    noStroke();
+    fill(232, 202, 132, 230);
+    circle(0, -35, 8 + mechanism.pulse * 2);
+    fill(255, 244, 198, 220);
+    circle(-1, -37, 3);
+
+    noStroke();
+    fill(58, 94, 99, 220);
+    circle(0, 0, 14);
+    fill(234, 255, 243, 205);
+    circle(-3, -4, 4);
+    pop();
+  }
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      audioCtx = new AudioContextClass();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(0.7, audioCtx.currentTime + 0.18);
+      masterGain.connect(audioCtx.destination);
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function trackSource(node, gain) {
+    activeAudio.sources.push({ node: node, gain: gain });
+    node.addEventListener('ended', function() {
+      try { node.disconnect(); } catch (err) {}
+      try { gain.disconnect(); } catch (err) {}
+      activeAudio.sources = activeAudio.sources.filter(function(item) { return item.node !== node; });
+    }, { once: true });
+  }
+
+  function tone(freq, type, volume, attack, release, destination, detune) {
+    if (!audioCtx || !masterGain) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    if (detune) osc.detune.setValueAtTime(detune, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), now + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + release);
+    osc.connect(gain).connect(destination || masterGain);
+    osc.start(now);
+    osc.stop(now + release + 0.06);
+    trackSource(osc, gain);
+    return osc;
+  }
+
+  function playMechanismSound() {
+    if (!audioCtx || !masterGain) return;
+    const now = audioCtx.currentTime;
+    const click = tone(560, 'triangle', 0.055, 0.004, 0.11, masterGain, -7);
+    if (click) click.frequency.exponentialRampToValueAtTime(190, now + 0.09);
+    tone(92, 'sine', 0.026, 0.008, 0.36, masterGain, 0);
+    tone(523.25, 'sine', 0.016, 0.018, 2.1, masterGain, -4);
+    tone(784.88, 'sine', 0.009, 0.024, 2.6, masterGain, 5);
+  }
+
+  function playLayerWakeSound() {
+    if (!audioCtx || !masterGain) return;
+    tone(659.25, 'sine', 0.012, 0.018, 1.35, masterGain, -6);
+    tone(988.88, 'sine', 0.006, 0.028, 1.8, masterGain, 7);
+  }
+
+  function stopAllAudio() {
+    activeAudio.timers.forEach(function(id) {
+      clearTimeout(id);
+      clearInterval(id);
+    });
+    activeAudio.timers = [];
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    activeAudio.sources.forEach(function(item) {
+      try {
+        item.gain.gain.cancelScheduledValues(now);
+        item.gain.gain.setValueAtTime(Math.max(item.gain.gain.value, 0.0001), now);
+        item.gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
+        item.node.stop(now + 0.06);
+      } catch (err) {}
+      try { item.node.disconnect(); } catch (err) {}
+      try { item.gain.disconnect(); } catch (err) {}
+    });
+    activeAudio.sources = [];
+  }
+  </script>
+</body>
+</html>
