@@ -29,11 +29,11 @@ Q: "I need frutiger aero capsule H5" → [clockwork-tidal-gauge/](clockwork-tida
 ## TECH COVERAGE MATRIX
 | Work | Key Technologies | Use Cases |
 |------|-----------------|-----------|
-| [transparent-dream-stratigraph](transparent-dream-stratigraph/transparent-dream-stratigraph.html) | p5.js 1.9.4 Canvas 2D pixel rendering, Canvas bezierCurve transparent glass shell pipeline, Web Audio API OscillatorNode synthesis (triangle/sine, exponentialRampToValueAtTime, detune) | canvas 2d pixel art healing / p5.js createGraphics offscreen |
-| [firefly-seed-jar](firefly-seed-jar/firefly-seed-jar.html) | p5.js 1.9.0 Canvas 2D pixel rendering, Canvas bezierCurveTo clip glass pipeline, Web Audio API OscillatorNode sine-wave chime synthesis (648Hz/864Hz/1296Hz) | p5.js interactive terrarium / web audio healing visualization |
-| [clockwork-tidal-gauge](clockwork-tidal-gauge/clockwork-tidal-gauge.html) | p5.js 1.9.4 Canvas 2D pixel rendering, Canvas arcTo capsule glass clip pipeline, Web Audio API OscillatorNode glass knock chime (1850/2600/3150Hz sine) | p5.js clockwork instrument / canvas tide simulation |
-| [tidal-moon-moss](tidal-moon-moss/tidal-moon-moss.html) | p5.js 1.9.0 Canvas 2D noSmooth pixel rendering, Canvas bezierCurveTo clip glass pipeline, Web Audio OscillatorNode pentatonic synthesis (432Hz root) | pixel terrarium digital object / canvas glass container rendering |
-| [pocket-forest-radio](pocket-forest-radio/pocket-forest-radio.html) | p5.js 1.9.0 Canvas 2D dual-canvas (180×126 pixel sub-canvas + smooth main canvas), Web Audio oscillator synthesis (86Hz sine drone + noise buffer + triangle-wave glass ping), AnalyserNode FFT 256-bin audio reactive (bass/mid/high band splitting, beat detection) | p5.js interactive radio device / canvas 2d pixel forest |
+| [transparent-dream-stratigraph](transparent-dream-stratigraph/transparent-dream-stratigraph.html) | p5.js, Canvas 2D, Canvas Glass Pipeline | canvas 2d pixel art healing / p5.js createGraphics offscreen |
+| [firefly-seed-jar](firefly-seed-jar/firefly-seed-jar.html) | p5.js, Canvas 2D, Canvas Glass Pipeline | p5.js interactive terrarium / web audio healing visualization |
+| [clockwork-tidal-gauge](clockwork-tidal-gauge/clockwork-tidal-gauge.html) | p5.js, Canvas 2D, Canvas Glass Pipeline | p5.js clockwork instrument / canvas tide simulation |
+| [tidal-moon-moss](tidal-moon-moss/tidal-moon-moss.html) | p5.js, Canvas 2D, Canvas Glass Pipeline | pixel terrarium digital object / canvas glass container rendering |
+| [pocket-forest-radio](pocket-forest-radio/pocket-forest-radio.html) | p5.js, Canvas 2D, Web Audio API | p5.js interactive radio device / canvas 2d pixel forest |
 | [oxygen-chamber](oxygen-chamber/oxygen-chamber.html) | p5.js Canvas 2D, Web Audio API OscillatorNode, BiquadFilterNode ambient synthesis | pixel weather diary / emotional breathing tool |
 | [luminous-sea-bottle](luminous-sea-bottle/luminous-sea-bottle.html) | p5.js Canvas 2D, Bayer ordered dithering, canvas glass container pipeline | pixel terrarium / frutiger aero digital object |
 | [crystal-turntable](crystal-turntable/crystal-turntable.html) | p5.js, Canvas 2D, Web Audio API | web audio healing soundscape / digital healing visualization |
