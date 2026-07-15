@@ -1,0 +1,1229 @@
+<!doctype html>
+<!--
+  Title: overwork · 下班回家了，脑子却还在加班
+  Tech: p5.js, Canvas 2D, Canvas Glass Pipeline, Bezier Collision Detection, CSS Text Animation, Frutiger Aero Glassmorphism
+  Keywords: p5.js canvas 2d, text dissolve animation, particle settlement physics, bezier glass container, pointer interaction, healing visualization, work-stress relief, frutiger aero glassmorphism
+  Features: 6 thought-fragment phrases bounce inside a bezier-curved echo box — pointer-triggered surge wave pushes text outward, then gravity settles dissolved fragments as 24 pixel motes with coral glow at the bottom
+  Render: Canvas 2D (p5.js)
+  Audio: no
+  Touch: yes
+  Particles: 24 motes + 12 fireflies
+  Standalone: yes, single HTML file, 1 CDN dependency
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <title>下班回家了，脑子却还在加班</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #eefaff;
+      --ink-soft: #a8d1da;
+      --paper: #f4ecf8;
+      --coral: #ff756a;
+      --night: #041520;
+      --night-teal: #0a2a35;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--night);
+    }
+
+    body {
+      position: relative;
+      font-family: "SF Pro Text", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(circle at 88% 18%, rgba(255, 117, 106, 0.24) 0 6%, rgba(255, 117, 106, 0.08) 19%, rgba(255, 117, 106, 0) 38%),
+        radial-gradient(circle at 12% 84%, rgba(84, 199, 217, 0.18) 0 10%, rgba(84, 199, 217, 0) 38%),
+        radial-gradient(ellipse at 50% 50%, rgba(31, 104, 117, 0.30) 0 24%, rgba(4, 21, 32, 0) 62%),
+        linear-gradient(155deg, #03111b 0%, #061c29 38%, #0a2a35 72%, #102b34 100%);
+      pointer-events: none;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(216, 192, 224, 0.11) 0.7px, transparent 0.7px);
+      background-size: 18px 18px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.32), transparent 34%, transparent 76%, rgba(0, 0, 0, 0.24));
+      pointer-events: none;
+    }
+
+    #pixel-stage {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    #pixel-stage canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      image-rendering: auto;
+      pointer-events: none;
+    }
+
+    #phrase-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      width: 540px;
+      height: 960px;
+      transform: scale(var(--stage-scale, 1));
+      transform-origin: 0 0;
+      pointer-events: none;
+    }
+
+    .thought-fragment {
+      position: absolute;
+      top: 0;
+      left: 0;
+      color: rgba(226, 246, 249, 0.88);
+      font-size: 16px;
+      font-weight: 650;
+      line-height: 1;
+      white-space: nowrap;
+      letter-spacing: 0.04em;
+      text-shadow: 0 1px 1px rgba(1, 12, 18, 0.78), 0 0 11px rgba(84, 199, 217, 0.28);
+      mix-blend-mode: normal;
+      will-change: transform, opacity, letter-spacing, filter, text-shadow;
+    }
+
+    .thought-fragment--warm {
+      color: rgba(255, 183, 168, 0.94);
+      text-shadow: 0 1px 1px rgba(25, 7, 8, 0.72), 0 0 12px rgba(255, 117, 106, 0.34);
+    }
+    .copy { 
+      position: absolute; 
+      left: 0; 
+      z-index: 4; 
+      width: 100%; 
+      padding: 0 10%; 
+      text-align: center; 
+      pointer-events: none; 
+    }
+
+    .copy--top { top: 6.5%; height: 120px; animation: textFadeIn 1.5s ease-out forwards; }
+    .copy--bottom { bottom: 6.5%; height: 80px; animation: textFadeIn 1.5s ease-out 0.3s forwards; opacity: 0; }
+
+    @keyframes textFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .copy-phase { position: absolute; inset: 0; transition: opacity 1000ms ease, transform 1000ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+    #quiet-top, #quiet-bottom { opacity: 0; transform: translateY(10px); }
+    #pixel-stage.is-quiet #intro-top, #pixel-stage.is-quiet #intro-bottom { opacity: 0; transform: translateY(-10px); filter: blur(2px); }
+    #pixel-stage.is-quiet #quiet-top, #pixel-stage.is-quiet #quiet-bottom { opacity: 1; transform: translateY(0); filter: blur(0); }
+    #pixel-stage.has-started:not(.is-quiet) #intro-bottom { opacity: 0.25; }
+
+    /* 眉题：加入微小的呼吸圆点作为UI点缀，字距拉开 */
+    .eyebrow {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      margin: 0 0 12px;
+      color: rgba(216, 192, 224, 0.65);
+      font-size: clamp(10px, 2.5vw, 11px);
+      font-weight: 500; letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    /* 新增的呼吸圆点动画（像设备待机灯一样缓慢跳动） */
+    .pulse-dot {
+      display: inline-block; width: 4px; height: 4px; border-radius: 50%;
+        background-color: #54c7d9; 
+        box-shadow: 0 0 6px #54c7d9; 
+      animation: pulse 2s infinite ease-in-out;
+    }
+    /* 沉降后圆点变色 */
+    .pulse-dot.quiet-dot { background-color: var(--coral); box-shadow: 0 0 6px var(--coral); }
+
+    @keyframes pulse { 0%, 100% { opacity: 0.4; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
+
+    /* 主标题：降低字重，拉开行高，让文字有呼吸感 */
+    h1 {
+      margin: 0;
+      font-size: clamp(20px, 5vw, 26px);
+      font-weight: 350; 
+      letter-spacing: 0.02em;
+      line-height: 1.45;
+      color: rgba(238, 250, 255, 0.95);
+      text-shadow: 0 2px 15px rgba(0, 8, 14, 0.5);
+    }
+
+    .headline-line { display: block; }
+    
+    /* 强调句的样式：加入微妙的底部高光，而不是直接变色 */
+    h1 .accent {
+      position: relative;
+      color: rgba(255, 183, 168, 1);
+      font-weight: 400; /* 强调句稍微加重一点点 */
+      text-shadow: 0 0 15px rgba(255, 117, 106, 0.4);
+    }
+   
+
+    /* 底部说明：增加层级对比 */
+    .caption {
+      margin: 0;
+      color: rgba(220, 239, 242, 1);
+      font-size: clamp(13px, 3.2vw, 15px);
+      font-weight: 300; line-height: 1.6; letter-spacing: 0.05em;
+    }
+
+    .caption-small {
+      margin: 6px 0 0;
+      color: rgba(168, 209, 218, 0.9);
+      font-size: clamp(10px, 2.5vw, 12px);
+      font-weight: 300; letter-spacing: 0.08em;
+    }
+
+    #interact-layer { position: absolute; inset: 0; z-index: 5; cursor: pointer; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <script>window.p5 || document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+</head>
+<body>
+  <main id="pixel-stage" aria-label="今晚不用再回答：把脑内短语交出去，让它们化成微光沉底">
+    <div id="phrase-layer" aria-hidden="true"></div>
+    <header class="copy copy--top">
+      <div id="intro-top" class="copy-phase">
+        <p class="eyebrow"><span class="pulse-dot"></span>下班以后<span class="pulse-dot"></p>
+        <h1>
+          <span class="headline-line">回家了</span>
+          <span class="headline-line">工作却还在脑子里作响</span>
+        </h1>
+      </div>
+      <div id="quiet-top" class="copy-phase">
+        <p class="eyebrow"><span class="pulse-dot quiet-dot"></span> 今天就到这里吧<span class="pulse-dot quiet-dot"></p>
+        <h1>
+          <span class="headline-line">现在</span>
+          <span class="headline-line accent">该好好休息了</span>
+        </h1>
+      </div>
+    </header>
+    <section class="copy copy--bottom" aria-label="作品说明">
+      <div id="intro-bottom" class="copy-phase">
+        <p class="caption">轻触回响盒，把杂乱的思绪都先放下来</p>
+        <p class="caption-small">有些事，留给明天就好</p>
+      </div>
+      <div id="quiet-bottom" class="copy-phase">
+        <p class="caption">你已经做完了今天能做的一切</p>
+        <p class="caption-small">停下来，享受夜晚的宁静</p>
+      </div>
+    </section>
+    <div id="interact-layer" role="button" aria-label="触碰玻璃盒，把还在打转的短语交出去"></div>
+  </main>
+
+  <script>
+    const PALETTE = {
+      name: "Midnight Teal + Lavender Mist + coral focus",
+      source: "pixel-bloom/assets/palettes.json:Lavender Mist + custom night roles",
+      colors: {
+        white: "#f4ecf8",
+        ice: "#d8f3f6",
+        pale: "#9fdce6",
+        aqua: "#70d8f0",
+        cyan: "#54c7d9",
+        blue: "#4aa8c4",
+        teal: "#1f6875",
+        deep: "#041520",
+        coral: "#ff756a",
+        peach: "#ffb7a8",
+        lavender: "#c0a0d0",
+        gold: "#ffd76a",
+        goldSoft: "#fff2ae"
+      }
+    };
+
+    const BASE_W = 540;
+    const BASE_H = 960;
+    const ECHO_PATH = {
+      start: [176, 214],
+      curves: [
+        [[142, 215], [118, 232], [107, 267]],
+        [[88, 330], [84, 484], [96, 580]],
+        [[102, 636], [121, 674], [158, 688]],
+        [[220, 706], [320, 706], [382, 688]],
+        [[419, 674], [438, 636], [444, 580]],
+        [[456, 484], [452, 330], [433, 267]],
+        [[422, 232], [398, 215], [364, 214]],
+        [[310, 207], [230, 207], [176, 214]]
+      ]
+    };
+    const ECHO_COLLISION_POLYGON = buildEchoCollisionPolygon(ECHO_PATH, 28);
+    const GLASS = {
+      topY: ECHO_PATH.start[1],
+      bottomY: 698,
+      left: 84,
+      right: 456,
+      centerX: 270
+    };
+    const motion = {
+      mode: "RESTLESS",
+      elapsed: 0,
+      touchX: 0,
+      touchY: 0,
+      duration: 1.02,
+      maxDelay: 0.46,
+      settleElapsed: 0,
+      settledCount: 0,
+      quietGlow: 0,
+      quietElapsed: 0
+    };
+    const SURGE_WAVE_POINTS = [
+      { angle: -2.84, reach: 0.92, size: 3 },
+      { angle: -2.18, reach: 0.68, size: 4 },
+      { angle: -1.42, reach: 1.08, size: 3 },
+      { angle: -0.67, reach: 0.78, size: 5 },
+      { angle: 0.12, reach: 1.02, size: 3 },
+      { angle: 0.86, reach: 0.71, size: 4 },
+      { angle: 1.64, reach: 0.96, size: 3 },
+      { angle: 2.42, reach: 0.81, size: 4 }
+    ];
+    const fireflies = [
+      { x: 150, y: 320, rx: 14, ry: 11, driftSpeed: 0.15, blinkSpeed: 0.31, phase: 0.2, delay: 0.00, size: 2.4 },
+      { x: 252, y: 278, rx: 20, ry: 9, driftSpeed: 0.12, blinkSpeed: 0.37, phase: 1.3, delay: 0.36, size: 2.8 },
+      { x: 370, y: 348, rx: 16, ry: 13, driftSpeed: 0.17, blinkSpeed: 0.28, phase: 2.5, delay: 0.72, size: 2.5 },
+      { x: 190, y: 444, rx: 22, ry: 12, driftSpeed: 0.14, blinkSpeed: 0.41, phase: 3.6, delay: 1.08, size: 2.9 },
+      { x: 330, y: 458, rx: 18, ry: 15, driftSpeed: 0.11, blinkSpeed: 0.34, phase: 4.8, delay: 1.44, size: 2.5 },
+      { x: 245, y: 555, rx: 19, ry: 12, driftSpeed: 0.16, blinkSpeed: 0.30, phase: 5.9, delay: 1.80, size: 2.7 },
+      { x: 377, y: 570, rx: 13, ry: 10, driftSpeed: 0.13, blinkSpeed: 0.39, phase: 7.1, delay: 2.16, size: 2.4 },
+      { x: 132, y: 520, rx: 12, ry: 10, driftSpeed: 0.18, blinkSpeed: 0.33, phase: 8.2, delay: 2.52, size: 2.6 },
+      { x: 284, y: 365, rx: 15, ry: 12, driftSpeed: 0.10, blinkSpeed: 0.42, phase: 9.4, delay: 2.88, size: 2.5 },
+      { x: 400, y: 430, rx: 11, ry: 13, driftSpeed: 0.15, blinkSpeed: 0.29, phase: 10.5, delay: 3.24, size: 2.7 },
+      { x: 165, y: 590, rx: 13, ry: 8, driftSpeed: 0.12, blinkSpeed: 0.36, phase: 11.7, delay: 3.60, size: 2.4 },
+      { x: 302, y: 585, rx: 17, ry: 11, driftSpeed: 0.16, blinkSpeed: 0.32, phase: 12.8, delay: 4.00, size: 2.8 }
+    ];
+   const thoughtFragments = [
+      /* 第1句：左上方，向右下慢速运动 */
+      { text: "刚才那句话是不是说重了", x: 185, y: 290, w: 160, h: 28, vx: 28, vy: 35, warm: true },
+      
+      /* 第2句：右上方，向左下中速运动 */
+      { text: "有条消息还没回", x: 348, y: 340, w: 144, h: 28, vx: -35, vy: 22, warm: false },
+      
+      /* 第3句（新增）：中左方，向右上快速飞掠 */
+      { text: "会议上那句话真多余", x: 210, y: 410, w: 180, h: 28, vx: 42, vy: -15, warm: true },
+      
+      /* 第4句：中右方，向左上运动 */
+      { text: "明天会不会来不及", x: 340, y: 480, w: 160, h: 28, vx: -25, vy: -38, warm: false },
+      
+      /* 第5句（新增）：左下方，向右上急窜（模拟突然想起来的焦虑） */
+      { text: "还有个文件忘了发", x: 190, y: 550, w: 144, h: 28, vx: 20, vy: -40, warm: false },
+      
+      /* 第6句：右下方，向左上缓慢移动（作为压轴的深层自我怀疑，带暖色调） */
+      { text: "是不是我做得还不够好", x: 320, y: 610, w: 192, h: 28, vx: -40, vy: -20, warm: true }
+    ];
+    const motes = [
+      { x: 144, y: 299, s: 8, c: "cyan" },
+      { x: 201, y: 266, s: 7, c: "white" },
+      { x: 258, y: 332, s: 9, c: "blue" },
+      { x: 339, y: 278, s: 7, c: "cyan" },
+      { x: 396, y: 326, s: 8, c: "white" },
+      { x: 121, y: 390, s: 7, c: "blue" },
+      { x: 187, y: 419, s: 8, c: "cyan" },
+      { x: 282, y: 392, s: 7, c: "white" },
+      { x: 355, y: 424, s: 9, c: "coral" },
+      { x: 413, y: 382, s: 7, c: "peach" },
+      { x: 152, y: 511, s: 8, c: "white" },
+      { x: 222, y: 484, s: 7, c: "blue" },
+      { x: 309, y: 533, s: 8, c: "cyan" },
+      { x: 386, y: 496, s: 7, c: "white" },
+      { x: 116, y: 592, s: 7, c: "cyan" },
+      { x: 178, y: 625, s: 8, c: "blue" },
+      { x: 245, y: 580, s: 7, c: "white" },
+      { x: 360, y: 590, s: 8, c: "cyan" },
+      { x: 280, y: 460, s: 9, c: "blue" },
+      { x: 150, y: 440, s: 7, c: "coral" },
+      { x: 210, y: 370, s: 8, c: "white" },
+      { x: 310, y: 310, s: 7, c: "cyan" },
+      { x: 390, y: 480, s: 8, c: "blue" },
+      { x: 230, y: 510, s: 7, c: "peach" }
+    ];
+
+    function setup() {
+      const canvas = createCanvas(BASE_W, BASE_H);
+      canvas.parent("pixel-stage");
+      pixelDensity(Math.min(window.devicePixelRatio || 1, 2));
+      smooth();
+      drawingContext.imageSmoothingEnabled = true;
+      sizeStage();
+      initRestlessMotes();
+      initThoughtFragments();
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      document.getElementById("interact-layer").addEventListener("pointerdown", handlePointerDown);
+    }
+
+    function sizeStage() {
+      const stage = document.getElementById("pixel-stage");
+      const scale = Math.min(windowWidth / BASE_W, windowHeight / BASE_H);
+      stage.style.width = `${Math.floor(BASE_W * scale)}px`;
+      stage.style.height = `${Math.floor(BASE_H * scale)}px`;
+      stage.style.setProperty("--stage-scale", scale);
+    }
+
+    function windowResized() {
+      sizeStage();
+    }
+
+    function handleVisibilityChange() {
+      if (document.hidden) noLoop();
+      else loop();
+    }
+
+    function initRestlessMotes() {
+      const directions = [
+        [-0.92, 0.39], [0.73, -0.68], [0.96, 0.28], [-0.58, -0.81],
+        [0.45, 0.89], [-0.85, -0.52], [0.67, 0.74], [-0.98, 0.18]
+      ];
+      const speeds = [82, 104, 92, 116, 88, 110, 98];
+      motes.forEach((mote, index) => {
+        const direction = directions[index % directions.length];
+        const speed = speeds[index % speeds.length];
+        mote.vx = direction[0] * speed;
+        mote.vy = direction[1] * speed;
+        mote.energy = 0;
+        mote.hold = 0;
+        mote.restTime = 0;
+        mote.state = "RESTLESS";
+      });
+    }
+
+    function initThoughtFragments() {
+      const layer = document.getElementById("phrase-layer");
+      for (const fragment of thoughtFragments) {
+        const element = document.createElement("span");
+        element.className = `thought-fragment${fragment.warm ? " thought-fragment--warm" : ""}`;
+        element.textContent = fragment.text;
+        layer.appendChild(element);
+        fragment.element = element;
+        fragment.energy = 0;
+        fragment.dissolve = 0;
+        fragment.state = "RESTLESS";
+      }
+      renderThoughtFragments();
+    }
+
+    function handlePointerDown(event) {
+      event.preventDefault();
+      if (motion.mode !== "RESTLESS") return;
+      const stage = document.getElementById("pixel-stage");
+      const rect = stage.getBoundingClientRect();
+      const x = (event.clientX - rect.left) * (BASE_W / rect.width);
+      const y = (event.clientY - rect.top) * (BASE_H / rect.height);
+      if (!isPointInEchoBox(x, y)) return;
+      document.getElementById("pixel-stage").classList.add("has-started");
+      triggerSurge(x, y);
+    }
+
+    function triggerSurge(x, y) {
+      motion.mode = "SURGE";
+      motion.elapsed = 0;
+      motion.touchX = x;
+      motion.touchY = y;
+      motion.quietGlow = 0;
+      motion.quietElapsed = 0;
+      for (const mote of motes) {
+        const distance = Math.hypot(mote.x - x, mote.y - y);
+        mote.surgeDelay = Math.min(distance / 620, motion.maxDelay);
+        mote.surgeStrength = Math.max(0.14, 1 - distance / 360);
+        mote.surgeX = mote.x;
+        mote.surgeY = mote.y;
+        mote.hold = motion.duration + mote.surgeDelay;
+        mote.state = "WAITING_FOR_SURGE";
+      }
+      for (const fragment of thoughtFragments) {
+        const distance = Math.hypot(fragment.x - x, fragment.y - y);
+        fragment.surgeDelay = Math.min(distance / 620, motion.maxDelay);
+        fragment.surgeStrength = Math.max(0.2, 1 - distance / 380);
+        fragment.surgeX = fragment.x;
+        fragment.surgeY = fragment.y;
+        fragment.energy = 0;
+        fragment.dissolve = 0;
+        fragment.state = "WAITING_FOR_SURGE";
+      }
+    }
+
+    function defineEchoBoxPath(ctx) {
+      ctx.beginPath();
+      ctx.moveTo(ECHO_PATH.start[0], ECHO_PATH.start[1]);
+      for (const curve of ECHO_PATH.curves) {
+        ctx.bezierCurveTo(
+          curve[0][0], curve[0][1],
+          curve[1][0], curve[1][1],
+          curve[2][0], curve[2][1]
+        );
+      }
+      ctx.closePath();
+    }
+
+    function buildEchoCollisionPolygon(path, stepsPerCurve) {
+      const points = [[path.start[0], path.start[1]]];
+      let from = path.start;
+      for (const curve of path.curves) {
+        const controlA = curve[0];
+        const controlB = curve[1];
+        const to = curve[2];
+        for (let step = 1; step <= stepsPerCurve; step += 1) {
+          const t = step / stepsPerCurve;
+          const u = 1 - t;
+          points.push([
+            u * u * u * from[0]
+              + 3 * u * u * t * controlA[0]
+              + 3 * u * t * t * controlB[0]
+              + t * t * t * to[0],
+            u * u * u * from[1]
+              + 3 * u * u * t * controlA[1]
+              + 3 * u * t * t * controlB[1]
+              + t * t * t * to[1]
+          ]);
+        }
+        from = to;
+      }
+      return points;
+    }
+
+    function isPointInEchoBox(x, y) {
+      let inside = false;
+      for (let index = 0, previous = ECHO_COLLISION_POLYGON.length - 1;
+        index < ECHO_COLLISION_POLYGON.length;
+        previous = index, index += 1) {
+        const currentPoint = ECHO_COLLISION_POLYGON[index];
+        const previousPoint = ECHO_COLLISION_POLYGON[previous];
+        const crosses = (currentPoint[1] > y) !== (previousPoint[1] > y)
+          && x < (previousPoint[0] - currentPoint[0])
+            * (y - currentPoint[1])
+            / (previousPoint[1] - currentPoint[1])
+            + currentPoint[0];
+        if (crosses) inside = !inside;
+      }
+      return inside;
+    }
+
+    function withEchoBoxClip(ctx, drawInside) {
+      ctx.save();
+      defineEchoBoxPath(ctx);
+      ctx.clip();
+      drawInside();
+      ctx.restore();
+    }
+
+    function draw() {
+      clear();
+      const ctx = drawingContext;
+      drawAmbientMarks();
+      drawBackGlass(ctx);
+      drawInterior(ctx);
+      drawFrontGlass(ctx);
+      renderThoughtFragments();
+    }
+
+    function drawAmbientMarks() {
+      const ctx = drawingContext;
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.shadowColor = "rgba(159,220,230,0.28)";
+      ctx.shadowBlur = 9;
+      noStroke();
+      fill(216, 243, 246, 58);
+      circle(66, 286, 5);
+      circle(478, 626, 4);
+      fill(159, 220, 230, 44);
+      circle(48, 346, 3);
+      circle(490, 548, 3);
+      fill(255, 117, 106, 52);
+      circle(474, 320, 4);
+      ctx.restore();
+    }
+
+    function drawBackGlass(ctx) {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      const ambientHalo = ctx.createRadialGradient(GLASS.centerX, 448, 116, GLASS.centerX, 448, 322);
+      ambientHalo.addColorStop(0, "rgba(84,199,217,0.10)");
+      ambientHalo.addColorStop(0.58, "rgba(84,199,217,0.035)");
+      ambientHalo.addColorStop(1, "rgba(84,199,217,0)");
+      ctx.fillStyle = ambientHalo;
+      ctx.fillRect(18, 126, 504, 650);
+      ctx.restore();
+
+      ctx.save();
+      defineEchoBoxPath(ctx);
+      const glassFill = ctx.createRadialGradient(214, 318, 26, 286, 454, 352);
+      glassFill.addColorStop(0, "rgba(216,243,246,0.10)");
+      glassFill.addColorStop(0.46, "rgba(31,104,117,0.09)");
+      glassFill.addColorStop(1, "rgba(2,14,22,0.25)");
+      ctx.fillStyle = glassFill;
+      ctx.fill();
+
+      ctx.shadowColor = "rgba(84,199,217,0.32)";
+      ctx.shadowBlur = 18;
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "rgba(112,216,240,0.30)";
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.25;
+      ctx.strokeStyle = "rgba(226,246,249,0.64)";
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      defineEchoBoxPath(ctx);
+      ctx.clip();
+      defineEchoBoxPath(ctx);
+      ctx.lineWidth = 18;
+      ctx.strokeStyle = "rgba(1,10,16,0.20)";
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawInterior(ctx) {
+      withEchoBoxClip(ctx, () => {
+        const wash = ctx.createLinearGradient(0, GLASS.topY, 0, GLASS.bottomY);
+        wash.addColorStop(0, "rgba(12,39,49,0.34)");
+        wash.addColorStop(0.48, "rgba(4,24,32,0.16)");
+        wash.addColorStop(1, "rgba(31,104,117,0.16)");
+        ctx.fillStyle = wash;
+        ctx.fillRect(GLASS.left, GLASS.topY, GLASS.right - GLASS.left, GLASS.bottomY - GLASS.topY);
+
+        const innerDepth = ctx.createRadialGradient(238, 382, 18, GLASS.centerX, 456, 286);
+        innerDepth.addColorStop(0, "rgba(216,243,246,0.05)");
+        innerDepth.addColorStop(0.58, "rgba(84,199,217,0.018)");
+        innerDepth.addColorStop(1, "rgba(0,7,12,0.10)");
+        ctx.fillStyle = innerDepth;
+        ctx.fillRect(GLASS.left, GLASS.topY, GLASS.right - GLASS.left, GLASS.bottomY - GLASS.topY);
+
+        drawSurgeField(ctx);
+        drawSettledBloom(ctx);
+        drawCoralFocus(ctx);
+        drawMotes(ctx);
+        drawFireflies(ctx);
+      });
+    }
+
+    function drawSurgeField(ctx) {
+      if (motion.mode !== "SURGE") return;
+      const life = Math.max(0, 1 - motion.elapsed / (motion.duration + motion.maxDelay));
+      const radius = 10 + Math.min(motion.elapsed / motion.duration, 1) * 190;
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      const touchHalo = ctx.createRadialGradient(motion.touchX, motion.touchY, 2, motion.touchX, motion.touchY, 48 + radius * 0.14);
+      touchHalo.addColorStop(0, `rgba(255,117,106,${0.22 + life * 0.28})`);
+      touchHalo.addColorStop(0.38, `rgba(112,216,240,${0.08 + life * 0.14})`);
+      touchHalo.addColorStop(1, "rgba(112,216,240,0)");
+      ctx.fillStyle = touchHalo;
+      ctx.fillRect(motion.touchX - 72, motion.touchY - 72, 144, 144);
+      ctx.shadowColor = PALETTE.colors.ice;
+      ctx.shadowBlur = 10;
+      noStroke();
+      for (const point of SURGE_WAVE_POINTS) {
+        const x = motion.touchX + Math.cos(point.angle) * radius * point.reach;
+        const y = motion.touchY + Math.sin(point.angle) * radius * point.reach;
+        fill(232, 248, 255, 40 + life * 145);
+        circle(x, y, point.size);
+      }
+      ctx.shadowBlur = 0;
+      fill(255, 117, 106, 90 + life * 155);
+      circle(motion.touchX, motion.touchY, 9);
+      fill(255, 255, 255, 220);
+      circle(motion.touchX, motion.touchY, 3);
+      ctx.restore();
+    }
+
+    function drawSettledBloom(ctx) {
+      if (motion.mode !== "SETTLE" && motion.mode !== "QUIET") return;
+      const resting = motes.filter((mote) => mote.state === "QUIET");
+      if (resting.length === 0 && motion.quietGlow < 0.01) return;
+
+      const centerX = resting.length
+        ? resting.reduce((sum, mote) => sum + mote.x, 0) / resting.length
+        : GLASS.centerX;
+      const centerY = resting.length
+        ? resting.reduce((sum, mote) => sum + mote.y, 0) / resting.length
+        : GLASS.bottomY - 26;
+      const breathe = motion.mode === "QUIET" ? 0.92 + Math.sin(frameCount * 0.035) * 0.08 : 1;
+      const glow = motion.quietGlow * breathe;
+
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      const halo = ctx.createRadialGradient(centerX, centerY, 4, centerX, centerY, 118);
+      halo.addColorStop(0, `rgba(255,183,168,${0.22 * glow})`);
+      halo.addColorStop(0.32, `rgba(160,240,255,${0.18 * glow})`);
+      halo.addColorStop(1, "rgba(112,216,240,0)");
+      ctx.fillStyle = halo;
+      ctx.fillRect(centerX - 120, centerY - 90, 240, 150);
+
+      noStroke();
+      for (const mote of resting) {
+        fill(232, 248, 255, 55 + glow * 90);
+        rect(Math.floor(mote.x - 2), Math.floor(mote.y + mote.s * 0.55 + 3), 4, 2);
+      }
+      ctx.restore();
+    }
+
+    function drawCoralFocus(ctx) {
+      if (motion.mode !== "SETTLE" && motion.mode !== "QUIET") return;
+      const focus = motes.find((mote) => mote.c === "coral");
+      const focusX = focus ? focus.x : 360;
+      const focusY = focus ? focus.y : 421;
+      const glow = ctx.createRadialGradient(focusX, focusY, 3, focusX, focusY, 72);
+      glow.addColorStop(0, "rgba(255,117,106,0.42)");
+      glow.addColorStop(0.38, "rgba(255,183,168,0.18)");
+      glow.addColorStop(1, "rgba(255,183,168,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(focusX - 76, focusY - 76, 152, 152);
+    }
+
+    function drawMotes(ctx) {
+      const dt = Math.min(deltaTime * 0.001, 0.034);
+      updateThoughtFragments(ctx, dt);
+      updateRestlessMotes(ctx, dt);
+      const reveal = motion.mode === "QUIET"
+        ? 1
+        : motion.mode === "SETTLE"
+          ? Math.min(motion.settleElapsed / 1.25, 1)
+          : 0;
+      if (reveal <= 0) return;
+      noStroke();
+      for (const mote of motes) {
+        const color = PALETTE.colors[mote.c];
+        ctx.save();
+        ctx.globalAlpha = reveal;
+        fill(color + "66");
+        rect(
+          Math.floor(mote.x - mote.vx * 0.075 - 2),
+          Math.floor(mote.y - mote.vy * 0.075 - 2),
+          4,
+          4
+        );
+        ctx.shadowColor = color;
+        ctx.shadowBlur = (mote.c === "coral" ? 16 : 9) + mote.energy * 14;
+        fill(color);
+        rect(Math.floor(mote.x - mote.s / 2), Math.floor(mote.y - mote.s / 2), mote.s, mote.s);
+        ctx.shadowBlur = 0;
+        fill(255, 255, 255, 215);
+        rect(Math.floor(mote.x - mote.s / 2) + 1, Math.floor(mote.y - mote.s / 2) + 1, 2, 2);
+        ctx.restore();
+      }
+    }
+
+    function updateRestlessMotes(ctx, dt) {
+      if (motion.mode === "SURGE") {
+        updateSurgeMotes(ctx, dt);
+        return;
+      }
+      if (motion.mode === "SETTLE") {
+        updateSettlingMotes(ctx, dt);
+        return;
+      }
+      if (motion.mode === "QUIET") {
+        updateQuietMotes(dt);
+        return;
+      }
+      for (const mote of motes) {
+        advanceRestlessMote(ctx, mote, dt);
+      }
+    }
+
+    function advanceRestlessMote(ctx, mote, dt) {
+      const radius = mote.s * 0.8;
+      let nextX = mote.x + mote.vx * dt;
+      let nextY = mote.y + mote.vy * dt;
+
+      if (!isMoteInside(ctx, nextX, mote.y, radius)) {
+        mote.vx *= -1;
+        nextX = mote.x + mote.vx * dt;
+      }
+      if (!isMoteInside(ctx, mote.x, nextY, radius)) {
+        mote.vy *= -1;
+        nextY = mote.y + mote.vy * dt;
+      }
+      if (!isMoteInside(ctx, nextX, nextY, radius)) {
+        mote.vx *= -1;
+        mote.vy *= -1;
+        nextX = mote.x + mote.vx * dt;
+        nextY = mote.y + mote.vy * dt;
+      }
+      if (!isMoteInside(ctx, nextX, nextY, radius)) {
+        nextX = mote.x;
+        nextY = mote.y;
+      }
+
+      mote.x = nextX;
+      mote.y = nextY;
+      mote.energy *= Math.pow(0.86, dt * 60);
+      mote.state = "RESTLESS";
+    }
+
+    function updateSurgeMotes(ctx, dt) {
+      motion.elapsed += dt;
+      let activeCount = 0;
+
+      for (const mote of motes) {
+        const localTime = motion.elapsed - mote.surgeDelay;
+        mote.hold = Math.max(0, mote.hold - dt);
+        if (localTime < 0) {
+          advanceRestlessMote(ctx, mote, dt);
+          mote.surgeX = mote.x;
+          mote.surgeY = mote.y;
+          mote.state = "WAITING_FOR_SURGE";
+          continue;
+        }
+
+        const progress = Math.min(localTime / motion.duration, 1);
+        if (progress < 1) activeCount += 1;
+        const envelope = Math.sin(Math.PI * progress);
+        const dx = mote.surgeX - motion.touchX;
+        const dy = mote.surgeY - motion.touchY;
+        const length = Math.max(1, Math.hypot(dx, dy));
+        const nx = dx / length;
+        const ny = dy / length;
+        const sideWave = Math.sin(TWO_PI * progress) * envelope;
+        const push = (10 + 18 * mote.surgeStrength) * envelope;
+        const lift = (16 + 14 * mote.surgeStrength) * envelope;
+        let nextX = mote.surgeX + nx * push - ny * 5 * mote.surgeStrength * sideWave;
+        let nextY = mote.surgeY + ny * push - lift + nx * 5 * mote.surgeStrength * sideWave;
+
+        if (!isMoteInside(ctx, nextX, nextY, mote.s * 0.8)) {
+          const offsetX = nextX - mote.surgeX;
+          const offsetY = nextY - mote.surgeY;
+          let scale = 0.5;
+          while (scale >= 0.0625) {
+            const testX = mote.surgeX + offsetX * scale;
+            const testY = mote.surgeY + offsetY * scale;
+            if (isMoteInside(ctx, testX, testY, mote.s * 0.8)) {
+              nextX = testX;
+              nextY = testY;
+              break;
+            }
+            scale *= 0.5;
+          }
+          if (scale < 0.0625) {
+            nextX = mote.surgeX;
+            nextY = mote.surgeY;
+          }
+        }
+
+        mote.x = nextX;
+        mote.y = nextY;
+        mote.energy = envelope * mote.surgeStrength;
+        mote.state = progress < 1 ? "SURGE" : "RESTLESS";
+      }
+
+      if (motion.elapsed >= motion.duration + motion.maxDelay && activeCount === 0) {
+        motion.mode = "SETTLE";
+        motion.settleElapsed = 0;
+        motion.settledCount = 0;
+        for (const mote of motes) {
+          mote.energy = 0;
+          mote.vx *= 0.34;
+          mote.vy = 0;
+          mote.restTime = 0;
+          mote.state = "SETTLE";
+        }
+        seedMotesFromThoughts();
+      }
+    }
+
+    function updateSettlingMotes(ctx, dt) {
+      motion.settleElapsed += dt;
+      let settledCount = 0;
+
+      for (const mote of motes) {
+        if (mote.state === "QUIET") {
+          settledCount += 1;
+          continue;
+        }
+
+        const radius = mote.s * 0.8;
+        mote.vy += 126 * dt;
+        mote.vx *= Math.pow(0.986, dt * 60);
+        let nextX = mote.x + mote.vx * dt;
+        let nextY = mote.y + mote.vy * dt;
+
+        if (!isMoteInside(ctx, nextX, mote.y, radius)) {
+          mote.vx *= -0.46;
+          nextX = mote.x + mote.vx * dt;
+        }
+
+        if (!isMoteInside(ctx, mote.x, nextY, radius)) {
+          const downwardImpact = mote.vy > 0;
+          const impactSpeed = Math.abs(mote.vy);
+          mote.vx *= 0.72;
+          if (downwardImpact && impactSpeed < 24) {
+            mote.vy = 0;
+            mote.vx *= 0.52;
+            mote.restTime += dt * 4;
+          } else {
+            mote.vy *= -0.34;
+            mote.restTime = 0;
+          }
+          nextY = mote.y + mote.vy * dt;
+        } else if (Math.abs(mote.vy) > 28) {
+          mote.restTime = 0;
+        }
+
+        if (!isMoteInside(ctx, nextX, nextY, radius)) {
+          nextX = mote.x;
+          nextY = mote.y;
+        }
+
+        mote.x = nextX;
+        mote.y = nextY;
+        mote.energy *= Math.pow(0.9, dt * 60);
+
+        if (mote.restTime >= 0.24 || (motion.settleElapsed > 7.2 && mote.y > GLASS.bottomY - 70)) {
+          mote.vx = 0;
+          mote.vy = 0;
+          mote.energy = 0.28;
+          mote.state = "QUIET";
+          settledCount += 1;
+        }
+      }
+
+      motion.settledCount = settledCount;
+      const targetGlow = settledCount / motes.length;
+      motion.quietGlow += (targetGlow - motion.quietGlow) * (1 - Math.pow(0.92, dt * 60));
+
+      if (settledCount === motes.length) {
+        motion.mode = "QUIET";
+        motion.quietGlow = 1;
+        motion.quietElapsed = 0;
+      }
+    }
+
+    function updateQuietMotes(dt) {
+      motion.quietElapsed += dt;
+      motion.quietGlow += (1 - motion.quietGlow) * (1 - Math.pow(0.94, dt * 60));
+      for (const mote of motes) {
+        mote.energy += (0.28 - mote.energy) * (1 - Math.pow(0.95, dt * 60));
+        mote.state = "QUIET";
+      }
+    }
+
+    function smoothstep01(value) {
+      const t = Math.max(0, Math.min(1, value));
+      return t * t * (3 - 2 * t);
+    }
+
+    function getFireflyState(firefly, time) {
+      const appearance = firefly.delay === 0
+        ? 0.38 + 0.62 * smoothstep01(time / 0.85)
+        : smoothstep01((time - firefly.delay) / 0.85);
+      const driftAngle = TWO_PI * firefly.driftSpeed * time + firefly.phase;
+      const blink = 0.68
+        + Math.sin(TWO_PI * firefly.blinkSpeed * time + firefly.phase) * 0.22
+        + Math.sin(TWO_PI * firefly.blinkSpeed * 0.43 * time + firefly.phase * 1.7) * 0.10;
+      return {
+        x: firefly.x + Math.sin(driftAngle) * firefly.rx,
+        y: firefly.y + Math.cos(driftAngle * 0.73 + firefly.phase) * firefly.ry,
+        appearance,
+        intensity: appearance * Math.max(0.34, Math.min(1, blink))
+      };
+    }
+
+    function drawFireflies(ctx) {
+      if (motion.mode !== "QUIET") return;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+
+      for (const firefly of fireflies) {
+        const state = getFireflyState(firefly, motion.quietElapsed);
+        if (state.appearance <= 0.001) continue;
+
+        const haloRadius = 13 + state.intensity * 9;
+        const halo = ctx.createRadialGradient(state.x, state.y, 0, state.x, state.y, haloRadius);
+        halo.addColorStop(0, `rgba(255,242,174,${0.28 * state.intensity})`);
+        halo.addColorStop(0.36, `rgba(255,215,106,${0.16 * state.intensity})`);
+        halo.addColorStop(1, "rgba(255,215,106,0)");
+        ctx.fillStyle = halo;
+        ctx.fillRect(state.x - haloRadius, state.y - haloRadius, haloRadius * 2, haloRadius * 2);
+
+        ctx.shadowColor = PALETTE.colors.gold;
+        ctx.shadowBlur = 8 + state.intensity * 10;
+        ctx.globalAlpha = 0.58 + state.intensity * 0.42;
+        ctx.fillStyle = PALETTE.colors.gold;
+        ctx.beginPath();
+        ctx.arc(state.x, state.y, firefly.size * (0.78 + state.intensity * 0.24), 0, TWO_PI);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 0.72 + state.intensity * 0.28;
+        ctx.fillStyle = PALETTE.colors.goldSoft;
+        ctx.beginPath();
+        ctx.arc(state.x - 0.45, state.y - 0.45, Math.max(0.8, firefly.size * 0.36), 0, TWO_PI);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    function updateThoughtFragments(ctx, dt) {
+      if (motion.mode === "RESTLESS") {
+        for (const fragment of thoughtFragments) advanceThoughtFragment(ctx, fragment, dt);
+        return;
+      }
+
+      if (motion.mode === "SURGE") {
+        for (const fragment of thoughtFragments) updateThoughtSurge(ctx, fragment, dt);
+        return;
+      }
+
+      if (motion.mode === "SETTLE") {
+        const dissolve = Math.min(motion.settleElapsed / 1.45, 1);
+        for (const fragment of thoughtFragments) {
+          fragment.dissolve = dissolve;
+          fragment.energy *= Math.pow(0.9, dt * 60);
+          fragment.state = dissolve < 1 ? "DISSOLVE" : "GONE";
+        }
+        return;
+      }
+
+      for (const fragment of thoughtFragments) {
+        fragment.dissolve = 1;
+        fragment.energy = 0;
+        fragment.state = "GONE";
+      }
+    }
+
+    function advanceThoughtFragment(ctx, fragment, dt) {
+      let nextX = fragment.x + fragment.vx * dt;
+      let nextY = fragment.y + fragment.vy * dt;
+
+      if (!isThoughtInside(ctx, nextX, fragment.y, fragment)) {
+        fragment.vx *= -1;
+        nextX = fragment.x + fragment.vx * dt;
+      }
+      if (!isThoughtInside(ctx, fragment.x, nextY, fragment)) {
+        fragment.vy *= -1;
+        nextY = fragment.y + fragment.vy * dt;
+      }
+      if (!isThoughtInside(ctx, nextX, nextY, fragment)) {
+        fragment.vx *= -1;
+        fragment.vy *= -1;
+        nextX = fragment.x + fragment.vx * dt;
+        nextY = fragment.y + fragment.vy * dt;
+      }
+      if (!isThoughtInside(ctx, nextX, nextY, fragment)) {
+        nextX = fragment.x;
+        nextY = fragment.y;
+      }
+
+      fragment.x = nextX;
+      fragment.y = nextY;
+      fragment.energy *= Math.pow(0.88, dt * 60);
+      fragment.state = "RESTLESS";
+    }
+
+    function updateThoughtSurge(ctx, fragment, dt) {
+      const localTime = motion.elapsed - fragment.surgeDelay;
+      if (localTime < 0) {
+        advanceThoughtFragment(ctx, fragment, dt);
+        fragment.surgeX = fragment.x;
+        fragment.surgeY = fragment.y;
+        fragment.state = "WAITING_FOR_SURGE";
+        return;
+      }
+
+      const progress = Math.min(localTime / motion.duration, 1);
+      const envelope = Math.sin(Math.PI * progress);
+      const dx = fragment.surgeX - motion.touchX;
+      const dy = fragment.surgeY - motion.touchY;
+      const length = Math.max(1, Math.hypot(dx, dy));
+      const nx = dx / length;
+      const ny = dy / length;
+      const sideWave = Math.sin(TWO_PI * progress) * envelope;
+      const push = (7 + 13 * fragment.surgeStrength) * envelope;
+      const lift = (20 + 11 * fragment.surgeStrength) * envelope;
+      let nextX = fragment.surgeX + nx * push - ny * 5 * fragment.surgeStrength * sideWave;
+      let nextY = fragment.surgeY + ny * push - lift + nx * 5 * fragment.surgeStrength * sideWave;
+
+      if (!isThoughtInside(ctx, nextX, nextY, fragment)) {
+        const offsetX = nextX - fragment.surgeX;
+        const offsetY = nextY - fragment.surgeY;
+        let scale = 0.5;
+        while (scale >= 0.0625) {
+          const testX = fragment.surgeX + offsetX * scale;
+          const testY = fragment.surgeY + offsetY * scale;
+          if (isThoughtInside(ctx, testX, testY, fragment)) {
+            nextX = testX;
+            nextY = testY;
+            break;
+          }
+          scale *= 0.5;
+        }
+        if (scale < 0.0625) {
+          nextX = fragment.surgeX;
+          nextY = fragment.surgeY;
+        }
+      }
+
+      fragment.x = nextX;
+      fragment.y = nextY;
+      fragment.energy = envelope * fragment.surgeStrength;
+      fragment.state = progress < 1 ? "SURGE" : "READY_TO_DISSOLVE";
+    }
+
+    function seedMotesFromThoughts() {
+      const colors = ["white", "cyan", "blue", "white"];
+      thoughtFragments.forEach((fragment, fragmentIndex) => {
+        for (let partIndex = 0; partIndex < 4; partIndex += 1) {
+          const mote = motes[fragmentIndex * 4 + partIndex];
+          if (!mote) continue;
+          const offsetX = (partIndex - 1.5) * (fragment.w / 5);
+          mote.x = fragment.x + offsetX;
+          mote.y = fragment.y + (partIndex % 2 === 0 ? -3 : 3);
+          mote.vx = offsetX * 0.62;
+          mote.vy = -8 - (partIndex % 2) * 4;
+          mote.c = fragment.warm && partIndex % 2 === 1 ? "coral" : colors[partIndex];
+          mote.energy = 0.56;
+          mote.restTime = 0;
+          mote.state = "SETTLE";
+        }
+      });
+    }
+
+    function renderThoughtFragments() {
+      const stage = document.getElementById("pixel-stage");
+      stage.classList.toggle("is-quiet", motion.mode === "QUIET");
+
+      for (const fragment of thoughtFragments) {
+        if (!fragment.element) continue;
+        let opacity = 0.84 + fragment.energy * 0.16;
+        if (motion.mode === "SETTLE") opacity = Math.pow(1 - fragment.dissolve, 1.35);
+        if (motion.mode === "QUIET") opacity = 0;
+        const scale = 1 + fragment.energy * 0.09 + fragment.dissolve * 0.05;
+        const glowRadius = 10 + fragment.energy * 24;
+        const outerRadius = 20 + fragment.energy * 30;
+        const glowAlpha = 0.24 + fragment.energy * 0.58;
+        const outerAlpha = fragment.energy * 0.30;
+        const glowColor = fragment.warm ? "255,117,106" : "84,199,217";
+        const shadowBase = fragment.warm ? "25,7,8" : "1,12,18";
+        fragment.element.style.opacity = opacity;
+        fragment.element.style.letterSpacing = `${0.04 + fragment.dissolve * 0.34}em`;
+        fragment.element.style.filter = `blur(${(fragment.dissolve * 1.8).toFixed(2)}px)`;
+        fragment.element.style.textShadow = `0 1px 1px rgba(${shadowBase},0.78), 0 0 ${glowRadius.toFixed(1)}px rgba(${glowColor},${glowAlpha.toFixed(2)}), 0 0 ${outerRadius.toFixed(1)}px rgba(${glowColor},${outerAlpha.toFixed(2)})`;
+        fragment.element.style.transform = `translate3d(${fragment.x}px, ${fragment.y}px, 0) translate(-50%, -50%) scale(${scale})`;
+      }
+    }
+
+    function isThoughtInside(ctx, x, y, fragment) {
+      const halfW = fragment.w * 0.5;
+      const halfH = fragment.h * 0.5;
+      return isPointInEchoBox(x - halfW, y - halfH)
+        && isPointInEchoBox(x + halfW, y - halfH)
+        && isPointInEchoBox(x - halfW, y + halfH)
+        && isPointInEchoBox(x + halfW, y + halfH);
+    }
+
+    function isMoteInside(ctx, x, y, radius) {
+      return isPointInEchoBox(x - radius, y - radius)
+        && isPointInEchoBox(x + radius, y - radius)
+        && isPointInEchoBox(x - radius, y + radius)
+        && isPointInEchoBox(x + radius, y + radius);
+    }
+
+    function drawFrontGlass(ctx) {
+      ctx.save();
+      defineEchoBoxPath(ctx);
+      ctx.clip();
+      ctx.globalCompositeOperation = "screen";
+
+      const leftRibbon = ctx.createLinearGradient(GLASS.left + 22, 250, GLASS.left + 70, 650);
+      leftRibbon.addColorStop(0, "rgba(216,243,246,0.12)");
+      leftRibbon.addColorStop(0.52, "rgba(159,220,230,0.22)");
+      leftRibbon.addColorStop(1, "rgba(84,199,217,0.40)");
+      ctx.strokeStyle = leftRibbon;
+      ctx.filter = "blur(4px)";
+      ctx.lineWidth = 11;
+      ctx.beginPath();
+      ctx.moveTo(GLASS.left + 42, GLASS.topY + 45);
+      ctx.bezierCurveTo(GLASS.left + 14, 362, GLASS.left + 24, 548, GLASS.left + 62, 646);
+      ctx.stroke();
+      ctx.filter = "none";
+      const leftSpecular = ctx.createLinearGradient(GLASS.left + 22, 250, GLASS.left + 70, 650);
+      leftSpecular.addColorStop(0, "rgba(232,250,252,0.18)");
+      leftSpecular.addColorStop(0.58, "rgba(216,243,246,0.28)");
+      leftSpecular.addColorStop(1, "rgba(216,243,246,0.60)");
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = leftSpecular;
+      ctx.stroke();
+
+      const rightRibbon = ctx.createLinearGradient(GLASS.right - 72, 246, GLASS.right - 18, 640);
+      rightRibbon.addColorStop(0, "rgba(255,183,168,0.46)");
+      rightRibbon.addColorStop(0.42, "rgba(255,117,106,0.18)");
+      rightRibbon.addColorStop(1, "rgba(216,243,246,0.04)");
+      ctx.strokeStyle = rightRibbon;
+      ctx.shadowColor = "rgba(255,117,106,0.24)";
+      ctx.shadowBlur = 9;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(GLASS.right - 42, GLASS.topY + 49);
+      ctx.bezierCurveTo(GLASS.right - 14, 374, GLASS.right - 24, 548, GLASS.right - 61, 647);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.strokeStyle = "rgba(216,243,246,0.18)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(174, GLASS.topY + 3);
+      ctx.bezierCurveTo(197, GLASS.topY - 2, 220, GLASS.topY - 4, 240, GLASS.topY - 3);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,183,168,0.46)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(322, GLASS.topY - 2);
+      ctx.bezierCurveTo(339, GLASS.topY - 1, 353, GLASS.topY + 1, 366, GLASS.topY + 5);
+      ctx.stroke();
+
+      ctx.shadowColor = "rgba(112,216,240,0.34)";
+      ctx.shadowBlur = 12;
+      const bottomRim = ctx.createLinearGradient(158, GLASS.bottomY, 382, GLASS.bottomY);
+      bottomRim.addColorStop(0, "rgba(112,216,240,0.46)");
+      bottomRim.addColorStop(0.55, "rgba(216,243,246,0.22)");
+      bottomRim.addColorStop(1, "rgba(216,243,246,0.10)");
+      ctx.strokeStyle = bottomRim;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(158, GLASS.bottomY - 10);
+      ctx.bezierCurveTo(221, GLASS.bottomY + 8, 319, GLASS.bottomY + 8, 382, GLASS.bottomY - 10);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      ctx.globalCompositeOperation = "source-over";
+      ctx.restore();
+
+      ctx.save();
+      defineEchoBoxPath(ctx);
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = "rgba(216,243,246,0.36)";
+      ctx.stroke();
+      ctx.restore();
+    }
+  </script>
+</body>
+</html>
