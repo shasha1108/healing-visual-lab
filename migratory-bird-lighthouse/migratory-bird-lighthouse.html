@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<!--
+  Title: Migratory Bird Lighthouse · 雾中候鸟灯塔
+  Tech: Canvas 2D, Web Audio API, Pointer Events
+  Keywords: canvas-2d, volumetric-beam, web-audio-api, pentatonic-chimes, boid-flocking, screen-blend, lighthouse, migratory-birds
+  Features: 35-boid flocking simulation with press-and-hold cylindrical beam aiming; pentatonic chime synthesis with feedback delay reverb on each bird rescue
+  Render: Canvas 2D (Vanilla)
+  Audio: yes
+  Touch: yes
+  Particles: ~200
+  Standalone: yes, single HTML file, 0 CDN dependencies
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>雾中候鸟灯塔</title>
+  <style>
+    :root { background-color: #030a13; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; touch-action: none; background: #030a13; font-family: system-ui, sans-serif; cursor: pointer; }
+    #canvas-container { position: fixed; inset: 0; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; }
+    
+    #hint {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      color: rgba(220, 240, 255, 0.9); font-size: 1.1rem; letter-spacing: 5px;
+      pointer-events: none; z-index: 10; text-align: center;
+      opacity: 0; filter: blur(5px);
+      transition: opacity 1.2s ease, filter 1.2s ease;
+      text-shadow: 0 0 15px rgba(0,0,0,1);
+    }
+    #hint.visible {
+      opacity: 1; filter: blur(0px);
+    }
+    .hint-sub { font-size: 0.8rem; color: rgba(200, 220, 230, 0.6); margin-top: 12px; letter-spacing: 2px; }
+
+    #saved-count {
+      position: absolute; bottom: 16px; right: 16px;
+      color: rgba(200, 220, 230, 0.5); font-size: 0.75rem; letter-spacing: 2px;
+      pointer-events: none; z-index: 10;
+    }
+
+    #share-btn {
+      position: absolute; bottom: 16px; left: 16px;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1px solid rgba(200, 220, 230, 0.25);
+      background: rgba(3, 10, 19, 0.45);
+      color: rgba(220, 240, 255, 0.85); font-size: 1rem;
+      cursor: pointer; z-index: 10; transition: transform 0.1s;
+    }
+    #share-btn:active { transform: scale(0.92); }
+  </style>
+</head>
+<body>
+  <div id="hint">
+    长明如晤<br>
+    <div class="hint-sub">光落处，漂泊暂歇</div>
+  </div>
+  <div id="saved-count"><span id="saved-num">0</span> 片漂泊的羽被光接住</div>
+  <button id="share-btn" aria-label="分享">✦</button>
+  <div id="canvas-container">
+    <canvas id="main-canvas"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('main-canvas');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    
+    let logicalW = 420;
+    let logicalH = 236;
+    let scaleRatio = 1;
+    let simTime = 0;
+    let lastFrameTime = 0;
+    let dt = 1 / 60;
+    let timeScale = 1;
+    
+    // --- 极简圆柱光束系统 ---
+    const beam = {
+      state: 'idle',
+      intensity: 0,
+      timer: 0,
+      fadeFrom: 0,
+      fadeTime: 0,
+      angle: 0,
+      isDragging: false,
+      pointerId: null,
+      minAngle: -0.35,
+      maxAngle: 0.17
+    };
+
+    // --- 提示文字状态 ---
+    const hint = {
+      el: null,
+      idle: 0,
+      visible: false,
+      firstHide: false
+    };
+
+    // --- 累计救赎计数 ---
+    const saved = {
+      lifetime: 0,
+      el: null
+    };
+
+    function loadSavedCount() {
+      try {
+        const v = parseInt(localStorage.getItem('healing_lighthouse_saved'), 10);
+        saved.lifetime = isNaN(v) ? 0 : v;
+      } catch(e) { saved.lifetime = 0; }
+    }
+
+    function addSavedCount(n) {
+      saved.lifetime += n;
+      if (saved.el) saved.el.textContent = saved.lifetime;
+      try { localStorage.setItem('healing_lighthouse_saved', saved.lifetime); } catch(e) {}
+    }
+
+    // --- 实体系统 ---
+    let stars = [];
+    let boids = [];
+    let fogBanks = [];
+    let dustMotes = []; // 保留一点点光束里的微尘增加立体感
+    let lampSparks = [];
+    let risingMists = [];
+
+    // --- 音频系统 ---
+    const audio = {
+      ctx: null, master: null, reverb: null, drone: null, filter: null, ready: false, rescueIndex: 0,
+      chimeCooldown: 0, igniteCooldown: 0
+    };
+
+    function hf(n) {
+      const value = Math.sin(n * 91.173 + 17.33) * 43758.5453;
+      return value - Math.floor(value);
+    }
+
+    function mix(a, b, t) { return a + (b - a) * t; }
+
+    function showHint(show) {
+      if (!hint.el) return;
+      hint.visible = show;
+      hint.el.classList.toggle('visible', show);
+    }
+
+    function pointerToLogical(e) {
+      const r = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - r.left) * (logicalW / r.width),
+        y: (e.clientY - r.top) * (logicalH / r.height)
+      };
+    }
+
+    function setBeamAngleFromPointer(e) {
+      const p = pointerToLogical(e);
+      const layout = world();
+      const dx = p.x - layout.lampX;
+      const dy = p.y - layout.lampY;
+      let angle = Math.atan2(dy, dx);
+      beam.angle = Math.max(beam.minAngle, Math.min(beam.maxAngle, angle));
+    }
+
+    function updateHint() {
+      if (hint.firstHide) {
+        hint.idle += dt;
+        if (hint.idle > 3.0 && !hint.visible) showHint(true);
+      }
+    }
+
+    function world() {
+      return {
+        seaY: Math.round(logicalH * 0.735),
+        lampX: Math.round(logicalW * 0.225),
+        lampY: Math.round(logicalH * 0.405),
+        cliffTop: Math.round(logicalH * 0.61),
+        moonX: Math.round(logicalW * 0.785),
+        moonY: Math.round(logicalH * 0.205)
+      };
+    }
+
+    function init() {
+      resize();
+      window.addEventListener('resize', resize);
+
+      const container = document.getElementById('canvas-container');
+      container.addEventListener('pointerdown', onPointerDown);
+      container.addEventListener('pointermove', onPointerMove);
+      container.addEventListener('pointerup', onPointerUp);
+      container.addEventListener('pointercancel', onPointerUp);
+      document.addEventListener('pointerup', onPointerUp);
+      document.addEventListener('visibilitychange', handleVisibility);
+
+      hint.el = document.getElementById('hint');
+      showHint(true);
+
+      saved.el = document.getElementById('saved-num');
+      loadSavedCount();
+      if (saved.el) saved.el.textContent = saved.lifetime;
+
+      const shareBtn = document.getElementById('share-btn');
+      if (shareBtn) shareBtn.addEventListener('click', shareCard);
+
+      spawnEntities();
+      requestAnimationFrame(loop);
+    }
+
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const prevW = logicalW;
+      const prevH = logicalH;
+      logicalW = Math.max(320, Math.min(420, Math.floor(w)));
+      logicalH = Math.max(220, Math.round(logicalW * h / Math.max(w, 1)));
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      scaleRatio = (w / logicalW) * dpr;
+      ctx.imageSmoothingEnabled = false;
+
+      if (logicalW !== prevW || logicalH !== prevH) {
+        spawnEntities();
+      }
+    }
+
+    function spawnEntities() {
+      const layout = world();
+      
+      stars = [];
+      for (let i = 0; i < 100; i++) {
+        const r = hf(i + 203);
+        stars.push({
+          x: hf(i + 11) * logicalW,
+          y: 5 + hf(i + 107) * layout.seaY * 0.72,
+          radius: r > 0.96 ? 1.6 : (r > 0.82 ? 1.1 : 0.55),
+          phase: hf(i + 311) * Math.PI * 2,
+          alpha: 0.15 + hf(i + 401) * 0.45
+        });
+      }
+
+      fogBanks = [];
+      for (let i = 0; i < 11; i++) {
+        fogBanks.push({
+          seed: i + 1,
+          x: hf(i + 517) * logicalW,
+          y: layout.seaY * (0.18 + hf(i + 619) * 0.52),
+          w: logicalW * (0.2 + hf(i + 719) * 0.3),
+          h: layout.seaY * (0.1 + hf(i + 811) * 0.15),
+          speed: 0.05 + hf(i + 907) * 0.1,
+          alpha: 0.04 + hf(i + 1009) * 0.07,
+          drift: hf(i + 1109) * Math.PI * 2
+        });
+      }
+
+      boids = [];
+      for(let i=0; i<35; i++) {
+        boids.push({
+          id: i,
+          x: logicalW * (0.4 + Math.random() * 0.6), 
+          y: layout.seaY * (0.1 + Math.random() * 0.6),
+          vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1.5,
+          history: [], state: 'lost', 
+          flash: 0, 
+          alpha: 1.0,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+
+      dustMotes = [];
+      for (let i = 0; i < 40; i++) {
+        dustMotes.push({
+          dist: 10 + hf(i + 1209) * (logicalW * 1.2),
+          offset: (hf(i + 1309) - 0.5) * 50,
+          speed: 0.1 + hf(i + 1409) * 0.4,
+          phase: hf(i + 1509) * Math.PI * 2,
+          size: hf(i + 1609) > 0.8 ? 1.5 : 0.8
+        });
+      }
+
+      // 灯塔底部忽明忽暗的暖黄光点
+      lampSparks = [];
+      for (let i = 0; i < 9; i++) {
+        lampSparks.push({
+          x: layout.lampX + (hf(i + 1709) - 0.5) * 32,
+          y: layout.seaY + 8 + hf(i + 1809) * 18,
+          phase: hf(i + 1909) * Math.PI * 2,
+          speed: 0.04 + hf(i + 2009) * 0.08,
+          size: hf(i + 2109) > 0.65 ? 1.4 : 0.8,
+          color: hf(i + 2209) > 0.5 ? '255, 195, 110' : '255, 175, 80'
+        });
+      }
+
+      risingMists = [];
+    }
+
+    function update() {
+      const layout = world();
+
+      // --- 1. 光束状态机 (3秒长明，ease-out 亮起，ease-in-out-sine 散场) ---
+      if (beam.state === 'on') {
+        beam.intensity += (1.0 - beam.intensity) * (1 - Math.exp(-dt * 12));
+        beam.timer -= dt;
+        if (beam.timer <= 0) {
+          beam.state = 'fading';
+          beam.fadeFrom = beam.intensity;
+          beam.fadeTime = 0;
+        }
+      } else if (beam.state === 'fading') {
+        beam.fadeTime += dt;
+        const p = Math.min(beam.fadeTime / 2.6, 1);
+        const eased = 0.5 * (1 - Math.cos(p * Math.PI));
+        beam.intensity = beam.fadeFrom * (1 - eased);
+        if (beam.intensity <= 0 || p >= 1) {
+          beam.intensity = 0;
+          beam.state = 'idle';
+        }
+      }
+
+      // 音频冷却
+      if (audio.chimeCooldown > 0) audio.chimeCooldown -= timeScale;
+      if (audio.igniteCooldown > 0) audio.igniteCooldown -= timeScale;
+
+      // --- 2. 迷途候鸟更新 ---
+      for (let i = 0; i < boids.length; i++) {
+        let b = boids[i];
+        
+        if (b.state === 'lost') {
+            // 迷失状态
+            let alignX = 0, alignY = 0, neighbors = 0;
+            for (let j = 0; j < boids.length; j++) {
+                if (i === j) continue;
+                let other = boids[j];
+                if (other.state === 'lost' && Math.hypot(b.x-other.x, b.y-other.y) < 40) {
+                    alignX += other.vx; alignY += other.vy; neighbors++;
+                }
+            }
+            if (neighbors > 0) { b.vx += (alignX/neighbors - b.vx)*0.03*timeScale; b.vy += (alignY/neighbors - b.vy)*0.03*timeScale; }
+
+            // 【圆柱体救赎判定】转换到光束本地坐标，支持角度瞄准
+            let dx = b.x - layout.lampX;
+            let dy = b.y - layout.lampY;
+            let localX = dx * Math.cos(beam.angle) + dy * Math.sin(beam.angle);
+            let localY = -dx * Math.sin(beam.angle) + dy * Math.cos(beam.angle);
+
+            // 光带高度大约为上下各 30 像素
+            if (localX > 15 && localX < logicalW * 1.5 && Math.abs(localY) < 30 && beam.intensity > 0.5) {
+                b.state = 'ascending';
+                b.flash = 1.0; // 瞬间爆发柔光晕
+
+                if (audio.chimeCooldown <= 0) {
+                    playChime(b.id);
+                    audio.chimeCooldown = 0.25;
+                }
+                if (navigator.vibrate) navigator.vibrate(8);
+            } else {
+                b.vx -= 0.01 * timeScale;
+                b.vy += Math.sin(simTime * 0.05 + b.phase) * 0.02 * timeScale; 
+                
+                if (b.x < -10) { b.x = logicalW + 20; b.y = layout.seaY * (0.1 + Math.random()*0.6); b.history = []; }
+                if (b.y < -10) { b.y = layout.seaY; b.history = []; }
+                if (b.y > layout.seaY + 30) { b.y = layout.seaY - 10; b.history = []; }
+            }
+        } 
+        else if (b.state === 'ascending') {
+            // 升华状态
+            b.flash *= Math.pow(0.88, timeScale);
+            b.alpha -= 0.005 * timeScale;
+
+            b.vy += (-0.6 - b.vy) * 0.05 * timeScale;
+            b.vx += (Math.sin(simTime * 0.06 + b.phase) * 0.4 - b.vx) * 0.05 * timeScale;
+
+            if (b.alpha <= 0) {
+                addSavedCount(1);
+                b.x = logicalW + 20 + Math.random() * 80;
+                b.y = layout.seaY * (0.1 + Math.random() * 0.6);
+                b.history = []; b.state = 'lost'; b.flash = 0; b.alpha = 1.0;
+                b.vx = (Math.random() - 0.5) * 1.5; b.vy = (Math.random() - 0.5) * 1.5;
+            }
+        }
+
+        let maxSpeed = b.state === 'ascending' ? 1.2 : 0.8;
+        let speed = Math.hypot(b.vx, b.vy);
+        if (speed > maxSpeed) { b.vx = (b.vx / speed) * maxSpeed; b.vy = (b.vy / speed) * maxSpeed; }
+
+        b.x += b.vx * timeScale; b.y += b.vy * timeScale;
+
+        b.history.push({x: b.x, y: b.y});
+        if (b.history.length > (b.state === 'ascending' ? 20 : 6)) b.history.shift(); 
+      }
+
+      if(audio.ready) {
+        audio.filter.frequency.setTargetAtTime(120 + beam.intensity * 400, audio.ctx.currentTime, 0.5);
+      }
+
+      // 灯塔底部光点闪烁
+      for (const s of lampSparks) {
+        s.alpha = 0.25 + 0.75 * (0.5 + 0.5 * Math.sin(simTime * s.speed + s.phase));
+      }
+
+      // 海面随机升起迷雾
+      if (Math.random() < 0.015 * timeScale) {
+        risingMists.push({
+          x: hf(risingMists.length + 3001) * logicalW,
+          y: layout.seaY + 5 + Math.random() * 10,
+          vx: (Math.random() - 0.5) * 0.15,
+          vy: -(0.08 + Math.random() * 0.12),
+          size: 8 + Math.random() * 18,
+          life: 0,
+          maxLife: 180 + Math.random() * 200,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+      for (let i = risingMists.length - 1; i >= 0; i--) {
+        const m = risingMists[i];
+        m.x += m.vx * timeScale;
+        m.y += m.vy * timeScale;
+        m.life += timeScale;
+        m.size += 0.04 * timeScale;
+        if (m.life > m.maxLife) risingMists.splice(i, 1);
+      }
+
+      updateHint();
+    }
+
+    // --- 渲染系统 ---
+    function render() {
+      ctx.save();
+      ctx.scale(scaleRatio, scaleRatio);
+      
+      const layout = world();
+
+      const bgGrad = ctx.createLinearGradient(0, 0, 0, layout.seaY);
+      bgGrad.addColorStop(0, '#040d1a');
+      bgGrad.addColorStop(1, '#1a2e3f');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, logicalW, logicalH);
+
+      ctx.globalCompositeOperation = "screen";
+      for (const star of stars) {
+        const shimmer = 0.2 + 0.8 * ((Math.sin(simTime * 0.02 + star.phase) + 1) * 0.5);
+        ctx.fillStyle = `rgba(215, 235, 240, ${star.alpha * shimmer})`;
+        ctx.beginPath(); ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+
+      drawMoon(ctx, layout);
+      drawHeadlands(ctx, layout);
+      drawSea(ctx, layout);
+      drawSeaBeamReflection(ctx, layout);
+
+      drawLighthouse(ctx, layout);
+      drawLampSparks(ctx);
+
+      // 绘制立体的圆柱光束
+      drawCylindricalBeam(ctx, layout);
+
+      drawRisingMists(ctx);
+      drawSoftFog(ctx, layout);
+      drawCrispSouls(ctx);
+
+      ctx.restore();
+    }
+
+    // ✨ 圆柱体积光：径向高斯衰减 + 纵向锥台扩散 + 大气抖动
+    function drawCylindricalBeam(ctx, layout) {
+      if (beam.intensity <= 0.01) return;
+
+      ctx.save();
+      ctx.translate(layout.lampX, layout.lampY);
+      ctx.rotate(beam.angle);
+      ctx.globalCompositeOperation = 'screen';
+
+      const length = logicalW * 1.5;
+      const time = simTime * 0.04;
+
+      // 1. 灯窗辉光：让光束从灯塔里“长”出来
+      const lampGlow = ctx.createRadialGradient(0, 0, 0, 0, 0, 22);
+      lampGlow.addColorStop(0, `rgba(255, 250, 220, ${beam.intensity})`);
+      lampGlow.addColorStop(0.3, `rgba(255, 245, 195, ${beam.intensity * 0.55})`);
+      lampGlow.addColorStop(1, 'rgba(255, 245, 195, 0)');
+      ctx.fillStyle = lampGlow;
+      ctx.fillRect(-22, -22, 44, 44);
+
+      // 2. 体积光柱：由远到近分层，外层宽淡、内层细亮
+      //    每层按距离切片，宽度逐渐扩散，alpha 按 (1-t)^p 衰减，边缘叠加正弦抖动
+      drawBeamLayer(ctx, length, beam.intensity * 0.14, 6, 52, 1.4, time, 0.06, '255, 244, 205');
+      drawBeamLayer(ctx, length, beam.intensity * 0.30, 4, 30, 1.6, time + 1.2, 0.04, '255, 248, 220');
+      drawBeamLayer(ctx, length, beam.intensity * 0.85, 2, 8, 1.9, time + 2.5, 0.02, '255, 255, 240');
+
+      // 3. 被光束照亮的尘埃：距离越远越淡，越靠近核心越亮
+      for (const mote of dustMotes) {
+        const py = mote.offset + Math.sin(simTime * mote.speed + mote.phase) * 8;
+        const beamHalfH = 2 + 32 * Math.pow(mote.dist / length, 0.55);
+        if (Math.abs(py) < beamHalfH) {
+          const fade = Math.max(0, 1 - Math.pow(mote.dist / length, 1.4));
+          const twinkle = 0.45 + 0.55 * Math.sin(simTime * 0.12 + mote.phase * 2);
+          ctx.globalAlpha = beam.intensity * fade * twinkle;
+          ctx.fillStyle = '#fffbe8';
+          ctx.fillRect(mote.dist, py, mote.size, mote.size);
+        }
+        mote.dist -= mote.speed * timeScale;
+        if (mote.dist < 0) mote.dist = length;
+      }
+
+      ctx.restore();
+    }
+
+    // 单个体积光层：用 clip + 垂直渐变 + destination-in 水平衰减，避免切片横纹
+    function drawBeamLayer(ctx, length, baseAlpha, startH, endH, fadePower, phase, jitterSpeed, color) {
+      if (baseAlpha <= 0.001) return;
+
+      ctx.save();
+      const segments = 48;
+      const beamPath = [];
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const x = t * length;
+        const h = startH + (endH - startH) * Math.pow(t, 0.55);
+        const jitter = Math.sin(phase + t * 16 + simTime * jitterSpeed) * 0.8;
+        beamPath.push({ x, halfH: Math.max(0.5, (h + jitter) * 0.5) });
+      }
+
+      ctx.beginPath();
+      for (let i = 0; i <= segments; i++) {
+        const p = beamPath[i];
+        if (i === 0) ctx.moveTo(p.x, -p.halfH); else ctx.lineTo(p.x, -p.halfH);
+      }
+      for (let i = segments; i >= 0; i--) {
+        const p = beamPath[i];
+        ctx.lineTo(p.x, p.halfH);
+      }
+      ctx.closePath();
+      ctx.clip();
+
+      // 垂直方向径向衰减
+      const maxH = Math.max(startH, endH);
+      const vGrad = ctx.createLinearGradient(0, -maxH * 0.7, 0, maxH * 0.7);
+      vGrad.addColorStop(0, `rgba(${color}, 0)`);
+      vGrad.addColorStop(0.18, `rgba(${color}, 0.22)`);
+      vGrad.addColorStop(0.38, `rgba(${color}, 0.6)`);
+      vGrad.addColorStop(0.5, `rgba(${color}, 1)`);
+      vGrad.addColorStop(0.62, `rgba(${color}, 0.6)`);
+      vGrad.addColorStop(0.82, `rgba(${color}, 0.22)`);
+      vGrad.addColorStop(1, `rgba(${color}, 0)`);
+      ctx.fillStyle = vGrad;
+      ctx.globalAlpha = baseAlpha;
+      ctx.fillRect(0, -maxH, length, maxH * 2);
+
+      // 水平方向距离衰减
+      ctx.globalCompositeOperation = 'destination-in';
+      const hGrad = ctx.createLinearGradient(0, 0, length, 0);
+      hGrad.addColorStop(0, 'rgba(0,0,0,1)');
+      hGrad.addColorStop(0.55, `rgba(0,0,0,${Math.pow(0.45, fadePower)})`);
+      hGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = hGrad;
+      ctx.globalAlpha = 1;
+      ctx.fillRect(0, -maxH, length, maxH * 2);
+
+      ctx.restore();
+    }
+
+    function drawCrispSouls(ctx) {
+      ctx.globalCompositeOperation = "screen";
+      for (const b of boids) {
+        if (b.history.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(b.history[0].x, b.history[0].y);
+          for(let k=1; k<b.history.length; k++) ctx.lineTo(b.history[k].x, b.history[k].y);
+          let trailAlpha = (b.state === 'ascending' ? 0.45 : 0.06) * b.alpha;
+          ctx.strokeStyle = `rgba(200, 240, 255, ${trailAlpha})`;
+          ctx.lineWidth = b.state === 'ascending' ? 1.0 : 0.5;
+          ctx.stroke();
+        }
+
+        // 救赎瞬间：柔光晕替代硬十字闪光
+        if (b.flash > 0.01) {
+          const glowR = 2 + b.flash * 14;
+          const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, glowR);
+          grad.addColorStop(0, `rgba(255, 255, 255, ${b.flash})`);
+          grad.addColorStop(0.4, `rgba(220, 245, 255, ${b.flash * 0.45})`);
+          grad.addColorStop(1, 'rgba(220, 245, 255, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath(); ctx.arc(b.x, b.y, glowR, 0, Math.PI*2); ctx.fill();
+        }
+
+        ctx.beginPath();
+        let size = b.state === 'ascending' ? 1.2 : 0.7;
+        ctx.arc(b.x, b.y, size, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${b.alpha})`;
+        ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    function drawMoon(ctx, layout) {
+      const mx = layout.moonX, my = layout.moonY;
+      // 外晕
+      ctx.fillStyle = 'rgba(212,231,225,0.06)';
+      ctx.beginPath(); ctx.arc(mx, my, 20, 0, Math.PI * 2); ctx.fill();
+
+      // 新月：两段二次贝塞尔画纤细月牙，右侧明亮
+      ctx.fillStyle = 'rgba(221, 231, 217, 0.8)';
+      ctx.beginPath();
+      ctx.moveTo(mx, my - 7);
+      ctx.quadraticCurveTo(mx + 10, my, mx, my + 7);   // 外弧凸向右
+      ctx.quadraticCurveTo(mx + 3.5, my, mx, my - 7);  // 内弧凹向右
+      ctx.fill();
+    }
+
+    function drawHeadlands(ctx, layout) {
+      ctx.fillStyle = 'rgba(16, 39, 53, 0.8)';
+      ctx.beginPath();
+      ctx.moveTo(logicalW * 0.28, layout.seaY + 4); ctx.lineTo(logicalW * 0.44, layout.seaY - 16);
+      ctx.lineTo(logicalW * 0.57, layout.seaY - 33); ctx.lineTo(logicalW * 0.69, layout.seaY - 18);
+      ctx.lineTo(logicalW * 0.82, layout.seaY - 27); ctx.lineTo(logicalW, layout.seaY - 9);
+      ctx.lineTo(logicalW, layout.seaY + 16); ctx.lineTo(logicalW * 0.28, layout.seaY + 16); ctx.fill();
+      
+      ctx.fillStyle = '#05131e';
+      ctx.beginPath();
+      ctx.moveTo(0, layout.seaY + 48); ctx.lineTo(logicalW * 0.03, layout.seaY + 23);
+      ctx.lineTo(logicalW * 0.15, layout.cliffTop + 20); ctx.lineTo(logicalW * 0.23, layout.cliffTop);
+      ctx.lineTo(logicalW * 0.31, layout.seaY + 14); ctx.lineTo(logicalW * 0.39, layout.seaY + 48);
+      ctx.lineTo(0, layout.seaY + 64); ctx.fill();
+    }
+
+    function drawSea(ctx, layout) {
+      ctx.fillStyle = '#061a29';
+      ctx.fillRect(0, layout.seaY, logicalW, logicalH - layout.seaY);
+      for (let y = layout.seaY; y < logicalH; y += 4) {
+        const t = (y - layout.seaY) / Math.max(1, logicalH - layout.seaY);
+        ctx.fillStyle = `rgb(${mix(12, 4, t)}, ${mix(48, 20, t)}, ${mix(65, 35, t)})`;
+        ctx.fillRect(0, y, logicalW, 4);
+      }
+      const drawWave = (baseY, amp, freq, speed, phase, r, g, b, alpha) => {
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+        for (let x = 0; x < logicalW; x += 2) {
+          const theta = x * freq + simTime * speed + phase;
+          ctx.fillRect(x, Math.round(baseY + Math.sin(theta) * amp), 2, 1);
+        }
+      };
+      drawWave(layout.seaY + 4, 1.2, 0.085, 0.02, 1.9, 90, 140, 150, 0.4);
+      drawWave(layout.seaY + 15, 2.2, 0.052, 0.015, 1.25, 50, 100, 120, 0.5);
+      drawWave(layout.seaY + 31, 3.6, 0.031, 0.01, 0.78, 20, 60, 80, 0.6);
+    }
+
+    // 海面光束反射：让光柱像真正落在水面上
+    function drawSeaBeamReflection(ctx, layout) {
+      if (beam.intensity <= 0.01) return;
+      const length = logicalW * 1.5;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+
+      // 计算光束与海面的交点；角度向上时无反射
+      const dy = layout.seaY - layout.lampY;
+      let hitX = layout.lampX;
+      let hitStrength = 1;
+      if (beam.angle > 0.001) {
+        const t = dy / Math.sin(beam.angle);
+        hitX = layout.lampX + t * Math.cos(beam.angle);
+      } else if (beam.angle < -0.001) {
+        hitStrength = 0;
+      }
+      hitX = Math.max(layout.lampX - length * 0.3, Math.min(layout.lampX + length * 1.2, hitX));
+
+      // 基础漫反射带：远端淡、边缘柔
+      const grad = ctx.createLinearGradient(hitX - length * 0.5, 0, hitX + length * 0.5, 0);
+      grad.addColorStop(0, `rgba(255, 242, 185, ${beam.intensity * 0.18 * hitStrength})`);
+      grad.addColorStop(0.5, `rgba(255, 232, 165, ${beam.intensity * 0.07 * hitStrength})`);
+      grad.addColorStop(1, 'rgba(255, 232, 165, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(hitX - length * 0.5, layout.seaY + 3, length, 10);
+
+      // 波纹高光：多频正弦叠加，模拟水面起伏
+      ctx.fillStyle = '#fff4d0';
+      for (let x = hitX - length * 0.5; x < hitX + length * 0.5; x += 4) {
+        const t = (x - hitX + length * 0.5) / length;
+        const fade = Math.pow(1 - t, 1.8);
+        const wave = Math.sin(x * 0.09 + simTime * 0.05) * 1.5
+                   + Math.sin(x * 0.17 + simTime * 0.03) * 0.8;
+        const y = layout.seaY + 5 + wave;
+        ctx.globalAlpha = beam.intensity * fade * 0.35 * hitStrength;
+        ctx.fillRect(x, y, 2, 1);
+      }
+
+      ctx.restore();
+    }
+    // 雾：光束经过时会被照亮，表现体积散射
+    function drawSoftFog(ctx, layout) {
+      ctx.globalCompositeOperation = "screen";
+      const beamLen = logicalW * 1.5;
+      for (const bank of fogBanks) {
+        bank.x -= bank.speed * timeScale;
+        if (bank.x < -bank.w) bank.x = logicalW + bank.w;
+        const cx = bank.x + bank.w/2, cy = bank.y + bank.h/2 + Math.sin(simTime * 0.01 + bank.drift) * 15;
+        const radius = Math.max(bank.w, bank.h) * 0.6;
+
+        // 计算光束照亮程度（转换到光束本地坐标）
+        let lit = 0;
+        const dx = cx - layout.lampX;
+        const dy = cy - layout.lampY;
+        const localX = dx * Math.cos(beam.angle) + dy * Math.sin(beam.angle);
+        const localY = -dx * Math.sin(beam.angle) + dy * Math.cos(beam.angle);
+        if (localX > 0 && localX < beamLen && beam.intensity > 0.01) {
+          const t = localX / beamLen;
+          const beamHalfH = 2 + 34 * Math.pow(t, 0.55);
+          lit = Math.max(0, 1 - Math.abs(localY) / Math.max(1, beamHalfH)) * (1 - Math.pow(t, 1.4));
+        }
+
+        ctx.save(); ctx.translate(cx, cy); ctx.scale(bank.w / radius, bank.h / radius);
+        const alpha = bank.alpha + beam.intensity * lit * 0.5;
+        const warm = Math.min(1, bank.alpha + beam.intensity * lit * 0.4);
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+        grad.addColorStop(0, `rgba(${mix(130, 170, warm)}, ${mix(160, 165, warm)}, ${mix(175, 145, warm)}, ${alpha})`);
+        grad.addColorStop(0.5, `rgba(${mix(90, 130, warm)}, ${mix(130, 130, warm)}, ${mix(150, 125, warm)}, ${alpha * 0.5})`);
+        grad.addColorStop(1, 'rgba(90,130,150,0)');
+        ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    function drawLighthouse(ctx, layout) {
+      const x = layout.lampX, top = layout.lampY + 8, bottom = layout.seaY + 7;
+      ctx.fillStyle = '#0c1d25';
+      ctx.beginPath(); ctx.moveTo(x-8, top); ctx.lineTo(x+8, top); ctx.lineTo(x+15, bottom); ctx.lineTo(x-15, bottom); ctx.fill();
+      ctx.fillStyle = '#3a5860'; ctx.fillRect(x-10, top+18, 20, 3); ctx.fillRect(x-12, top+43, 24, 3);
+      ctx.fillStyle = '#839e93'; ctx.fillRect(x-8, top+23, 16, 2); ctx.fillRect(x-10, top+48, 20, 2);
+      ctx.fillStyle = '#051016'; ctx.fillRect(x-3, top+30, 6, 13);
+      ctx.fillStyle = '#07151e'; ctx.fillRect(x-15, layout.lampY-5, 30, 8);
+      ctx.fillStyle = '#9cb8ad'; ctx.fillRect(x-13, layout.lampY-4, 26, 1);
+      ctx.fillStyle = '#dcb46a'; ctx.fillRect(x-7, layout.lampY-3, 14, 5);
+      
+      const ambientGlow = 0.15 + Math.sin(simTime * 0.03) * 0.05;
+      ctx.fillStyle = `rgba(255, 245, 197, ${ambientGlow + beam.intensity * 0.8})`;
+      ctx.fillRect(x-3, layout.lampY-2, 6, 3);
+
+      // 光束亮起时，给塔身右侧叠一层暖色 screen 辉光
+      if (beam.intensity > 0.01) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.fillStyle = `rgba(255, 230, 170, ${beam.intensity * 0.18})`;
+        ctx.beginPath();
+        ctx.moveTo(x-2, top);
+        ctx.lineTo(x+8, top);
+        ctx.lineTo(x+15, bottom);
+        ctx.lineTo(x+5, bottom);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.fillStyle = '#040d14';
+      ctx.beginPath(); ctx.moveTo(x-18, layout.lampY-6); ctx.lineTo(x+18, layout.lampY-6); ctx.lineTo(x, layout.lampY-17); ctx.fill();
+    }
+
+    // 灯塔底部忽明忽暗的暖黄光点
+    function drawLampSparks(ctx) {
+      if (lampSparks.length === 0) return;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (const s of lampSparks) {
+        ctx.globalAlpha = s.alpha * 0.75;
+        ctx.fillStyle = `rgba(${s.color}, ${s.alpha})`;
+        ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 海面随机升起的迷雾：生成、上升、扩散、隐去
+    function drawRisingMists(ctx) {
+      if (risingMists.length === 0) return;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      for (const m of risingMists) {
+        const p = Math.min(m.life / m.maxLife, 1);
+        const alpha = Math.sin(p * Math.PI) * 0.14;
+        if (alpha <= 0.001) continue;
+        const grad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.size);
+        grad.addColorStop(0, `rgba(145, 170, 185, ${alpha})`);
+        grad.addColorStop(1, 'rgba(145, 170, 185, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(m.x, m.y, m.size, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function loop(now) {
+      if (!lastFrameTime) lastFrameTime = now;
+      dt = Math.min((now - lastFrameTime) / 1000, 0.05);
+      lastFrameTime = now;
+      timeScale = dt * 60;
+      simTime += timeScale;
+      update();
+      render();
+      requestAnimationFrame(loop);
+    }
+
+    // --- 音频系统 ---
+    function initAudio() {
+      if(audio.ctx) return;
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audio.ctx = new AudioContext();
+      audio.master = audio.ctx.createGain(); audio.master.gain.value = 0.4; audio.master.connect(audio.ctx.destination);
+      audio.reverb = audio.ctx.createGain(); audio.reverb.gain.value = 0.85;
+      
+      const d1 = audio.ctx.createDelay(); d1.delayTime.value = 0.43;
+      const d2 = audio.ctx.createDelay(); d2.delayTime.value = 0.71;
+      const d3 = audio.ctx.createDelay(); d3.delayTime.value = 1.0;
+      const fb = audio.ctx.createGain(); fb.gain.value = 0.65;
+      const df = audio.ctx.createBiquadFilter(); df.type = 'lowpass'; df.frequency.value = 1200;
+
+      audio.reverb.connect(d1); d1.connect(d2); d2.connect(d3); d3.connect(df); df.connect(fb); fb.connect(d1);
+      d1.connect(audio.master); d3.connect(audio.master);
+
+      const bufSize = audio.ctx.sampleRate * 2;
+      const noiseBuf = audio.ctx.createBuffer(1, bufSize, audio.ctx.sampleRate);
+      const output = noiseBuf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) output[i] = (Math.random() * 2 - 1) * 0.2;
+      
+      audio.drone = audio.ctx.createBufferSource(); audio.drone.buffer = noiseBuf; audio.drone.loop = true;
+      audio.filter = audio.ctx.createBiquadFilter(); audio.filter.type = 'lowpass'; audio.filter.frequency.value = 100; audio.filter.Q.value = 1.0;
+      audio.droneGain = audio.ctx.createGain(); audio.droneGain.gain.value = 0.15;
+
+      audio.drone.connect(audio.filter).connect(audio.droneGain).connect(audio.master); audio.drone.start();
+      audio.ready = true;
+    }
+
+    function playChime(seed) {
+      if(!audio.ready) return;
+      const ctx = audio.ctx; const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      const pentatonic = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+      osc.frequency.value = pentatonic[(audio.rescueIndex + seed) % pentatonic.length];
+      audio.rescueIndex++; osc.type = 'sine';
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.04, ctx.currentTime + 0.05); 
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.5);
+      
+      osc.connect(gain); gain.connect(audio.master); gain.connect(audio.reverb);
+      osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch(e) {} };
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 4.0);
+
+      // 钟声响起时底噪轻微 ducking，让出中高频空间
+      if (audio.droneGain) {
+        audio.droneGain.gain.cancelScheduledValues(ctx.currentTime);
+        audio.droneGain.gain.setTargetAtTime(0.04, ctx.currentTime, 0.06);
+        audio.droneGain.gain.setTargetAtTime(0.15, ctx.currentTime + 0.55, 0.45);
+      }
+    }
+
+    function playIgnite() {
+      if(!audio.ready) return;
+      const ctx = audio.ctx; const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.frequency.value = 130.81; // 低音 C3
+      osc.type = 'sine';
+      
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.1); 
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.0); 
+      
+      osc.connect(gain); gain.connect(audio.master); gain.connect(audio.reverb);
+      osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch(e) {} };
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 3.5);
+    }
+
+    // --- 交互处理 (长明三秒 + 拖动瞄准) ---
+    function onPointerDown(e) {
+      if(audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume();
+      if(!audio.ready) initAudio();
+
+      beam.isDragging = true;
+      beam.pointerId = e.pointerId;
+      try { canvas.setPointerCapture(e.pointerId); } catch(_) {}
+      setBeamAngleFromPointer(e);
+
+      // 用户已交互，隐藏提示并进入可重复提示状态
+      if (!hint.firstHide) hint.firstHide = true;
+      hint.idle = 0;
+      showHint(false);
+
+      // 状态机重置：开启光束，定时3秒
+      beam.state = 'on';
+      beam.timer = 3.0;
+
+      if (audio.igniteCooldown <= 0) {
+        playIgnite();
+        audio.igniteCooldown = 3.0;
+      }
+
+      if (navigator.vibrate) navigator.vibrate(12);
+    }
+
+    function onPointerMove(e) {
+      if (!beam.isDragging || e.pointerId !== beam.pointerId) return;
+      setBeamAngleFromPointer(e);
+    }
+
+    function onPointerUp(e) {
+      if (e.pointerId !== beam.pointerId) return;
+      beam.isDragging = false;
+      beam.pointerId = null;
+    }
+
+    // --- 分享卡片：把当前画面生成 PNG ---
+    function drawShareOverlay(ctx) {
+      ctx.save();
+      ctx.scale(scaleRatio, scaleRatio);
+      ctx.fillStyle = 'rgba(3, 10, 19, 0.55)';
+      ctx.fillRect(0, logicalH - 40, logicalW, 36);
+      ctx.fillStyle = 'rgba(220, 240, 255, 0.9)';
+      ctx.font = '11px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const text = saved.lifetime > 0
+        ? `今夜，${saved.lifetime} 片漂泊的羽找到了岸`
+        : '今夜，做一片漂泊的羽的岸';
+      ctx.fillText(text, logicalW / 2, logicalH - 22);
+      ctx.restore();
+    }
+
+    function shareCard() {
+      render();
+      drawShareOverlay(ctx);
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '雾中候鸟灯塔.png';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function handleVisibility() {
+      if (!audio.ctx || !audio.master) return;
+      audio.master.gain.setTargetAtTime(document.hidden ? 0.0001 : 0.4, audio.ctx.currentTime, 0.25);
+    }
+    
+    init();
+  </script>
+</body>
+</html>
