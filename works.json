@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 28,
-  "updated": "2026-07-15",
+  "total": 29,
+  "updated": "2026-07-18",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -19,6 +19,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "migratory-bird-lighthouse",
       "overwork",
       "transparent-dream-stratigraph",
       "firefly-seed-jar",
@@ -53,6 +54,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "migratory-bird-lighthouse",
       "transparent-dream-stratigraph",
       "firefly-seed-jar",
       "clockwork-tidal-gauge",
@@ -77,6 +79,7 @@
       "cosmic-recollection"
     ],
     "particle_system": [
+      "migratory-bird-lighthouse",
       "overwork",
       "transparent-dream-stratigraph",
       "firefly-seed-jar",
@@ -107,6 +110,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "migratory-bird-lighthouse",
       "overwork",
       "transparent-dream-stratigraph",
       "firefly-seed-jar",
@@ -129,6 +133,7 @@
       "inkmeditation"
     ],
     "zero_dependency": [
+      "migratory-bird-lighthouse",
       "silent-translator"
     ],
     "p5js": [
@@ -152,6 +157,42 @@
     ]
   },
   "works": [
+    {
+      "slug": "migratory-bird-lighthouse",
+      "title_en": "Migratory Bird Lighthouse",
+      "title_zh": "雾中候鸟灯塔",
+      "tagline": "光落处，漂泊暂歇",
+      "tech": [
+        "Canvas 2D",
+        "Web Audio API",
+        "Pointer Events"
+      ],
+      "render": "Canvas 2D (Vanilla)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "~200 (35 boids, 100 stars, 40 dust motes, 11 fog banks, 9 lamp sparks, rising mists)",
+      "dependencies": 0,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "canvas-2d",
+        "volumetric-beam",
+        "web-audio-api",
+        "pentatonic-chimes",
+        "boid-flocking",
+        "screen-blend",
+        "lighthouse",
+        "migratory-birds"
+      ],
+      "use_cases": [
+        "canvas 2d lighthouse beam",
+        "web audio healing visualization",
+        "migratory bird interactive H5",
+        "volumetric light canvas",
+        "boid flocking demo",
+        "cylindrical beam rendering"
+      ],
+      "date": "2026-07-18"
+    },
     {
       "slug": "overwork",
       "title_en": "Overwork",
