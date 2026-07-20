@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<!--
+  Title: tree-remembers-wind · 记得风的树
+  Tech: p5.js, Canvas 2D, Web Audio API
+  Keywords: p5.js, canvas 2d, pixel art, procedural wind, fractal tree, web audio api, particle system, healing visualization
+  Features: Pixel-perfect fractal tree with graph-distance wind propagation along branches; leaf flip animation, firefly quadratic-bezier arc trajectories, grass wave simulation, and procedural pentatonic audio synthesis via Web Audio API oscillators
+  Render: Canvas 2D (p5.js)
+  Audio: yes
+  Touch: yes
+  Particles: ~80 dust motes, 6 fireflies, ~200+ leaves, dynamic stars
+  Standalone: yes, single HTML file, 2 CDN dependencies
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>记得风的树 · The Tree That Remembers Wind</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;background:#050b14;font-family:sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
+#canvas-container{position:absolute;inset:0;overflow:hidden}
+canvas{display:block;image-rendering:pixelated}
+</style>
+</head>
+<body>
+<div id="canvas-container"></div>
+<script>
+const PALETTE={
+  skyTop:'#050b14', skyMid:'#0d1f38', skyLow:'#1a3a5c', skyGlow:'#6dc9ff',
+  star:'#fff8e7',
+  island:'#162b45', islandLight:'#334a66', islandShadow:'#091e26',
+  trunk:'#4a3123', trunkLight:'#735238',
+  leafDark:'#204026', leafMid:'#44993a', leafLight:'#88e3b2',
+  grass:'#2e6635', grassLight:'#62b845',
+  dust:'#a6e0ff'
+};
+
+let CW,CH,CX,CY;
+let PX=2;
+let island,treeTop={x:0,y:0};
+let branches=[],leaves=[],grassBlades=[],stars=[],fireflies=[];
+let motes=[],clouds=[],meteor=null,meteorCount=0,meteorNext=5;
+let windEvent=null,currentStroke=null,dust=[],bends=[],hasInteracted=false,noteAt=-1,treeHeight=0,audioCtx=null,masterGain=null,audioBed=null;
+let globalTime=0;
+
+const WIND_SPEED=300;          
+const FLIP_DURATION=0.55;      
+const SETTLE_DURATION=1.6;     
+const STAR_TRAIL_LIFE=2.2;     
+const ISLAND_FLOAT_AMP=5;      
+const BREATH_PERIOD=9;         
+const BEND_STEP=0.005;         
+const BEND_CAP=0.12;           
+const PENTA=[523.25,587.33,659.25,783.99,880.0]; 
+
+function setup(){
+  const cvs=createCanvas(windowWidth,windowHeight);
+  cvs.parent('canvas-container');
+  noSmooth();
+  pixelDensity(1);
+  drawingContext.imageSmoothingEnabled=false;
+  rebuildWorld();
+  bindInput();
+}
+
+function windowResized(){
+  resizeCanvas(windowWidth,windowHeight);
+  pixelDensity(1);
+  rebuildWorld();
+}
+
+function bindInput(){
+  const el=document.getElementById('canvas-container');
+  el.addEventListener('pointerdown',onPointerDown,{passive:false});
+  el.addEventListener('pointermove',onPointerMove,{passive:false});
+  el.addEventListener('pointerup',onPointerUp,{passive:false});
+  el.addEventListener('pointerleave',onPointerUp,{passive:false});
+  el.addEventListener('pointercancel',onPointerUp,{passive:false});
+}
+
+function canvasPoint(e){
+  const r=document.getElementById('canvas-container').getBoundingClientRect();
+  return {x:(e.clientX-r.left)*(CW/r.width),y:(e.clientY-r.top)*(CH/r.height)};
+}
+
+function onPointerDown(e){
+  e.preventDefault();
+  hasInteracted=true;
+  ensureAudio();
+  const p=canvasPoint(e);
+  spawnDust(p.x,p.y,0,-0.3,1);
+  currentStroke={points:[{x:p.x,y:p.y,t:millis()*0.001}]};
+}
+
+function onPointerMove(e){
+  if(!currentStroke)return;
+  e.preventDefault();
+  const p=canvasPoint(e);
+  const last=currentStroke.points[currentStroke.points.length-1];
+  if(pbDist(p.x,p.y,last.x,last.y)>8){
+    currentStroke.points.push({x:p.x,y:p.y,t:millis()*0.001});
+    const dx=p.x-last.x,dy=p.y-last.y;
+    const dl=Math.sqrt(dx*dx+dy*dy)||1;
+    spawnDust(p.x,p.y,dx/dl,dy/dl,1.2);
+  }
+}
+
+function onPointerUp(e){
+  if(!currentStroke)return;
+  e.preventDefault();
+  const pts=currentStroke.points;
+  if(pts.length<2){currentStroke=null;return;}
+  const dx=pts[pts.length-1].x-pts[0].x;
+  const dy=pts[pts.length-1].y-pts[0].y;
+  const len=Math.sqrt(dx*dx+dy*dy);
+  if(len<14){currentStroke=null;return;}
+  const dir={x:dx/len,y:dy/len};
+  const strength=Math.min(1,len/(Math.min(CW,CH)*0.4));
+  
+  windEvent={startTime:millis()*0.001, dir, strength, path:pts};
+  computeWindArrivals(windEvent);
+  
+  for(const g of grassBlades) g.arrival=windEvent.startTime+0.15+Math.abs(g.x-CX)*0.003;
+  
+  for(const b of branches){
+    const ux=Math.cos(b.angle),uy=Math.sin(b.angle);
+    const cross=dir.x*uy-dir.y*ux;
+    const infl=(b.arrival!==Infinity)?1:0.3;
+    b.bend=pbClamp((b.bend||0)+cross*BEND_STEP*strength*(0.5+0.5*b.level/4)*infl,-BEND_CAP,BEND_CAP);
+    bends[b.id]=b.bend;
+  }
+  
+  computeArcAnchors(windEvent);
+  let maxOff=0;
+  for(const b of branches)if(b.graphDist<Infinity)maxOff=Math.max(maxOff,b.graphDist/WIND_SPEED);
+  noteAt=windEvent.startTime+maxOff+0.05;
+  
+  playWindGust(strength,dir);
+  for(const p of pts) spawnDust(p.x,p.y,dir.x,dir.y,1.8);
+  currentStroke=null;
+}
+
+function rebuildWorld(){
+  CW=width; CH=height;
+  CX=CW/2; CY=CH*0.75;
+  PX=Math.max(2,Math.floor(Math.min(CW,CH)/240)); 
+  const base=Math.min(CW,CH);
+  randomSeed(2026); 
+  
+  island=buildIsland(CX,CY,base*0.5,base*0.12);
+  buildTree(CX,CY-island.h*0.4,base*0.55);
+  for(let i=0;i<branches.length;i++)branches[i].bend=bends[i]||0;
+  buildGrass(CX,CY-island.h*0.35,island.w*0.75);
+  
+  buildStars();
+  buildMotes();
+  buildClouds(); // 恢复了原版的云海
+  buildFireflies();
+  windEvent=null;
+}
+
+function snap(v){return Math.round(v/PX)*PX;}
+function pbDist(x1,y1,x2,y2){return Math.sqrt((x1-x2)**2+(y1-y2)**2);}
+function pbLerp(a,b,t){return a+(b-a)*t;}
+function pbClamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
+function pbHash(i){return ((i*2654435761)%1000)/1000;}
+
+// ===== 纯净夜空与星辰 =====
+function buildStars(){
+  stars=[];
+  const n=Math.floor(CW*CH*0.00015);
+  for(let i=0;i<n;i++){
+    stars.push({
+      x:random(CW), y:random(CH*0.65),
+      size:Math.random()<0.92?PX:PX*2,
+      phase:random(TWO_PI),
+      speed:random(0.5,1.5),
+      alpha:random(0.2,0.8),
+      bright:Math.random()<0.1
+    });
+  }
+}
+
+function drawSky(t){
+  noStroke();
+  const step=PX*3;
+  for(let y=0;y<CH;y+=step){
+    const p=y/CH;
+    let c;
+    if(p<0.5)c=lerpColor(color(PALETTE.skyTop),color(PALETTE.skyMid),p/0.5);
+    else c=lerpColor(color(PALETTE.skyMid),color(PALETTE.skyLow),(p-0.5)/0.5);
+    fill(c); rect(0,y,CW,step);
+  }
+  // 恢复：底部的广域柔光呼吸
+  const ga=0.065+0.03*(0.5+0.5*Math.sin(t*TWO_PI/BREATH_PERIOD));
+  const g=drawingContext.createRadialGradient(CX*0.35,CH*0.18,0,CX*0.35,CH*0.18,CH*0.45);
+  g.addColorStop(0,'rgba(109,201,255,'+ga.toFixed(3)+')');
+  g.addColorStop(1,'rgba(109,201,255,0)');
+  drawingContext.fillStyle=g;
+  drawingContext.fillRect(0,0,CW,CH);
+}
+
+function drawStars(t){
+  noStroke();
+  const sc=color(PALETTE.star);
+  for(const s of stars){
+    const a=pbClamp(s.alpha*(0.6+0.4*Math.sin(t*s.speed+s.phase)),0,1);
+    fill(red(sc),green(sc),blue(sc),a*255);
+    rect(snap(s.x),snap(s.y),s.size,s.size);
+    if(s.bright){
+      const sa=a*(0.5+0.5*Math.sin(t*0.9+s.phase));
+      fill(red(sc),green(sc),blue(sc),sa*160);
+      rect(snap(s.x-s.size*1.6),snap(s.y-PX*0.5),snap(s.size*3.2),PX);
+      rect(snap(s.x-PX*0.5),snap(s.y-s.size*1.6),PX,snap(s.size*3.2));
+    }
+  }
+}
+
+// ===== 恢复：原版极其迷人的柔光流星 =====
+function updateMeteor(t){
+  if(!meteor){
+    if(t>meteorNext&&!windEvent){
+      const c=meteorCount;
+      meteor={
+        start:t,
+        dur:1.1+0.5*pbHash(c+3),
+        x0:CW*(0.08+0.84*pbHash(c+1)),
+        y0:CH*(0.06+0.18*pbHash(c+2)),
+        ang:0.42+0.2*pbHash(c+4),
+        len:CW*(0.18+0.1*pbHash(c+5))
+      };
+      meteorCount++;
+    }
+    return;
+  }
+  const p=(t-meteor.start)/meteor.dur;
+  if(p>=1){meteor=null;meteorNext=t+2.6+pbHash(meteorCount)*0.9;return;}
+  const dx=Math.cos(meteor.ang),dy=Math.sin(meteor.ang);
+  const hx=meteor.x0+dx*meteor.len*p;
+  const hy=meteor.y0+dy*meteor.len*p;
+  const fade=Math.sin(p*PI);
+  push();
+  blendMode(ADD);
+  noStroke();
+  for(let j=0;j<10;j++){
+    const a=fade*(1-j/10)*110;
+    fill(200,230,255,a);
+    rect(snap(hx-dx*j*PX*2.2-PX*0.5),snap(hy-dy*j*PX*2.2-PX*0.5),PX,PX);
+  }
+  const ctx=drawingContext;
+  const mg=ctx.createRadialGradient(hx,hy,0,hx,hy,PX*5);
+  mg.addColorStop(0,'rgba(255,250,230,'+(0.55*fade).toFixed(3)+')');
+  mg.addColorStop(1,'rgba(255,250,230,0)');
+  ctx.fillStyle=mg;
+  ctx.fillRect(hx-PX*5,hy-PX*5,PX*10,PX*10);
+  fill(255,252,240,230*fade);
+  rect(snap(hx-PX),snap(hy-PX),PX*2,PX*2);
+  pop();
+}
+
+// ===== 恢复：原版底层缓慢漂移的柔光云海 =====
+function buildClouds(){
+  clouds=[];
+  for(let i=0;i<5;i++){
+    clouds.push({
+      x:random(CW),y:CH*(0.78+random(0.14)),
+      w:CW*(0.22+random(0.28)),h:PX*(5+random(5)),
+      speed:random(1.2,3.5)*(i%2?1:-1),
+      alpha:0.05+random(0.04)
+    });
+  }
+}
+
+function drawClouds(){
+  const ctx=drawingContext;
+  for(const c of clouds){
+    c.x+=c.speed*deltaTime*0.001*PX;
+    if(c.x-c.w>CW)c.x=-c.w;
+    if(c.x+c.w<0)c.x=CW+c.w;
+    const g=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.w);
+    g.addColorStop(0,'rgba(120,170,220,'+c.alpha.toFixed(3)+')');
+    g.addColorStop(1,'rgba(120,170,220,0)');
+    ctx.fillStyle=g;
+    ctx.save();
+    ctx.translate(c.x,c.y);ctx.scale(1,c.h/c.w);ctx.translate(-c.x,-c.y);
+    ctx.fillRect(c.x-c.w,c.y-c.w,c.w*2,c.w*2);
+    ctx.restore();
+  }
+}
+
+// ===== 浮游光尘 =====
+function buildMotes(){
+  motes=[];
+  for(let i=0;i<15;i++){
+    motes.push({
+      x:random(CW), y:random(CH*0.2,CH*0.8),
+      phase:random(TWO_PI), speed:random(0.2,0.5), drift:random(5,12)*PX
+    });
+  }
+}
+
+function drawMotes(t){
+  noStroke();
+  for(const m of motes){
+    const x=m.x+Math.sin(t*m.speed+m.phase)*m.drift;
+    const y=m.y+Math.cos(t*m.speed*0.7+m.phase)*m.drift;
+    const a=(0.4+0.4*Math.sin(t*0.8+m.phase))*40;
+    fill(190,225,250,a);
+    rect(snap(x),snap(y),PX,PX);
+  }
+}
+
+// ===== 岛屿 =====
+function buildIsland(cx,cy,w,h){
+  return {cx,cy,w,h,tiltX:0};
+}
+
+function drawIsland(t){
+  const floatY=Math.sin(t*TWO_PI/BREATH_PERIOD)*ISLAND_FLOAT_AMP;
+  const tilt=island.tiltX||0;
+  const ix=snap(island.cx+tilt*0.5);
+  const iy=snap(island.cy+floatY-island.h*0.1);
+  noStroke();
+  
+  fill(PALETTE.islandShadow);
+  drawPixelEllipse(ix+PX*2,iy+PX*3,island.w*0.5,island.h*0.52,PX);
+  fill(PALETTE.island);
+  drawPixelEllipse(ix,iy,island.w*0.5,island.h*0.5,PX);
+  fill(PALETTE.islandLight);
+  drawPixelEllipse(ix,iy-PX*2,island.w*0.4,island.h*0.35,PX);
+}
+
+// ===== 树与分形叶簇（保留上一版的优点） =====
+function buildTree(rx,ry,height){
+  treeHeight=height;
+  branches=[]; leaves=[];
+  
+  const trunk={
+    id:0, level:0,
+    startX:rx, startY:ry,
+    endX:rx, endY:ry-height*0.35,
+    len:height*0.35, angle:-HALF_PI,
+    radius:height*0.06, parent:null, children:[],
+    phase:random(TWO_PI)
+  };
+  branches.push(trunk);
+  growBranch(trunk, 1, height);
+}
+
+function growBranch(parent, level, totalH){
+  if(level > 4) return;
+  const count = (level===1) ? 3 : (level===2 ? 3 : 2);
+  
+  for(let i=0;i<count;i++){
+    let spread = 0;
+    if(count===3) spread = (i-1)*0.45;
+    if(count===2) spread = (i===0?-1:1)*0.35;
+    spread += random(-0.1, 0.1);
+    
+    let angle = parent.angle + spread;
+    angle = pbClamp(angle, -PI*0.9, -PI*0.1); 
+    
+    const len = parent.len * random(0.65, 0.85);
+    const startT = (level===1) ? map(i,0,2,0.4,0.9) : random(0.6,0.95);
+    
+    const startX = pbLerp(parent.startX,parent.endX,startT);
+    const startY = pbLerp(parent.startY,parent.endY,startT);
+    const endX = startX + cos(angle)*len;
+    const endY = startY + sin(angle)*len;
+    
+    const b = {
+      id:branches.length, level,
+      startX, startY, endX, endY, len, angle,
+      radius: parent.radius * 0.65,
+      parent, children:[], parentAttach:startT,
+      phase:random(TWO_PI)
+    };
+    parent.children.push(b);
+    branches.push(b);
+    
+    growBranch(b, level+1, totalH);
+    
+    if(level >= 3){
+      generateLeafCluster(b, totalH*0.16);
+    }
+  }
+}
+
+function generateLeafCluster(b, clusterR){
+  const step=PX*1.5;
+  for(let yy=-clusterR; yy<=clusterR; yy+=step){
+    for(let xx=-clusterR; xx<=clusterR; xx+=step){
+      const edge = Math.sqrt(xx*xx+yy*yy)/clusterR;
+      if(edge + random(-0.2,0.2) > 0.85) continue; 
+      
+      const lx = b.endX + xx;
+      const ly = b.endY + yy;
+      leaves.push({
+        x:lx, y:ly,
+        relX: xx, relY: yy,
+        branch: b,
+        size: Math.random()<0.8?PX:PX*2,
+        color: random()>0.4?PALETTE.leafMid:PALETTE.leafDark,
+        flipColor: PALETTE.leafLight,
+        phase: random(TWO_PI),
+        arrival: Infinity, activeUntil: -Infinity, flip: 0
+      });
+    }
+  }
+}
+
+function computeWindArrivals(ev){
+  const touchR=Math.min(CW,CH)*0.15;
+  let best=Infinity, bestB=branches[0];
+  for(const b of branches){
+    b.sourceTime=Infinity; b.graphDist=Infinity;
+    const d=distBranchToPath(b,ev.path);
+    if(d<touchR) b.sourceTime=ev.startTime;
+    if(d<best){best=d; bestB=b;}
+  }
+  if(bestB && bestB.sourceTime===Infinity) bestB.sourceTime=ev.startTime;
+  
+  const q=branches.filter(b=>b.sourceTime!==Infinity);
+  for(const s of q) s.graphDist=0;
+  
+  while(q.length){
+    const cur=q.shift();
+    const neighs=[];
+    if(cur.parent)neighs.push(cur.parent);
+    neighs.push(...cur.children);
+    for(const n of neighs){
+      const w=cur.len;
+      if(cur.graphDist+w < n.graphDist){
+        n.graphDist=cur.graphDist+w;
+        q.push(n);
+      }
+    }
+  }
+  for(const b of branches) b.arrival = (b.graphDist<Infinity) ? ev.startTime+b.graphDist/WIND_SPEED : Infinity;
+  for(const leaf of leaves){
+    const b=leaf.branch;
+    if(b.arrival===Infinity){ leaf.arrival=Infinity; leaf.flip=0; }
+    else {
+      leaf.arrival = b.arrival + pbDist(0,0,leaf.relX,leaf.relY)/WIND_SPEED;
+      leaf.activeUntil = leaf.arrival+FLIP_DURATION+SETTLE_DURATION;
+    }
+  }
+}
+
+function distBranchToPath(b,path){
+  let minD=Infinity;
+  for(let i=0;i<path.length-1;i++){
+    minD=Math.min(minD,distPointToSegment(b.endX,b.endY,path[i].x,path[i].y,path[i+1].x,path[i+1].y));
+  }
+  return minD;
+}
+function distPointToSegment(px,py,x1,y1,x2,y2){
+  const len2=(x2-x1)**2+(y2-y1)**2;
+  if(len2===0)return pbDist(px,py,x1,y1);
+  const t=pbClamp(((px-x1)*(x2-x1)+(py-y1)*(y2-y1))/len2,0,1);
+  return pbDist(px,py,x1+t*(x2-x1),y1+t*(y2-y1));
+}
+
+function drawTree(t){
+  const floatY=Math.sin(t*TWO_PI/BREATH_PERIOD)*ISLAND_FLOAT_AMP;
+  const tilt=(island.tiltX||0)*0.5;
+  const rootX=CX+tilt;
+  const rootY=CY+floatY-island.h*0.35;
+  const idleStrength=0.15+0.05*Math.sin(t*0.3);
+  noStroke();
+
+  // 稳固的根基喇叭口 (保留)
+  const rootW = branches[0].radius*2;
+  for(let i=0; i<6; i++){
+    const rw = rootW + i*PX*1.5;
+    fill(i%2===0?PALETTE.trunk:PALETTE.trunkLight);
+    rect(snap(rootX-rw*0.5), snap(rootY+i*PX*1.5), snap(rw), PX*2);
+  }
+
+  for(const b of branches){
+    const idleSway=Math.sin(t*(1.2+b.level*0.3)+b.phase)*(b.level+1)*0.5*PX*idleStrength;
+    let windSway=0;
+    if(windEvent&&b.arrival!==Infinity){
+      windSway=windEvent.dir.x*swayEnvelope(t-b.arrival)*(b.level+1)*3.0*PX*windEvent.strength;
+    }
+    b.swayX=idleSway+windSway;
+  }
+
+  for(const b of branches){
+    const a=b.angle+(b.bend||0);
+    if(b.level===0){
+      b.drawStartX=rootX; b.drawStartY=rootY;
+    }else{
+      const p=b.parent;
+      b.drawStartX=pbLerp(p.drawStartX,p.drawEndX,b.parentAttach);
+      b.drawStartY=pbLerp(p.drawStartY,p.drawEndY,b.parentAttach);
+    }
+    b.drawEndX=b.drawStartX+Math.cos(a)*b.len+b.swayX;
+    b.drawEndY=b.drawStartY+Math.sin(a)*b.len;
+  }
+
+  for(const b of branches){
+    const n=Math.max(2,Math.floor(b.len/(PX*2)));
+    for(let i=0;i<n;i++){
+      const p=i/n;
+      const sx=pbLerp(b.drawStartX,b.drawEndX,p);
+      const sy=pbLerp(b.drawStartY,b.drawEndY,p);
+      const r=pbLerp(b.radius*(b.level===0?0.9:1),b.radius*0.5,p);
+      fill(i%2===0?PALETTE.trunk:PALETTE.trunkLight);
+      rect(snap(sx-r),snap(sy),snap(r*2),PX*2);
+    }
+  }
+
+  let topY=Infinity, topX=rootX;
+  for(const leaf of leaves){
+    const b=leaf.branch;
+    const bx = b.drawEndX + leaf.relX + (b.bend||0)*leaf.relY*0.5;
+    const by = b.drawEndY + leaf.relY;
+    
+    let flip=0;
+    if(windEvent){
+      const dt=t-leaf.arrival;
+      if(dt>=0&&dt<FLIP_DURATION+SETTLE_DURATION){
+        if(dt<FLIP_DURATION) flip=Math.sin(dt/FLIP_DURATION*PI);
+        else flip=Math.max(0,Math.exp(-3*(dt-FLIP_DURATION))*Math.cos(6*(dt-FLIP_DURATION)));
+      }
+    }
+    leaf.flip=flip;
+    const flutterX=Math.sin(t*7+leaf.phase)*PX*0.5*idleStrength;
+    const flutterY=Math.cos(t*6+leaf.phase*1.3)*PX*0.3*idleStrength;
+    const windPush=(windEvent&&flip>0)?windEvent.dir.x*PX*1.5*flip:0;
+    
+    const wx = bx+flutterX+windPush;
+    const wy = by+flutterY;
+    const col=flip>0.2?lerpColor(color(leaf.color),color(leaf.flipColor),pbClamp(flip*1.5,0,1)):color(leaf.color);
+    
+    fill(col);
+    const s=leaf.size;
+    rect(snap(wx-s*0.5),snap(wy-s*0.5),s,s);
+    if(wy<topY){topY=wy; topX=wx;}
+  }
+  treeTop={x:topX,y:topY};
+}
+
+function windEnvelope(dt){
+  if(dt<0)return 0;
+  if(dt<0.3)return dt/0.3;
+  return Math.exp(-(dt-0.3)*2.5);
+}
+function swayEnvelope(dt){
+  if(dt<0)return 0;
+  if(dt<0.3)return dt/0.3;
+  return Math.exp(-(dt-0.3)*2.2)*Math.cos((dt-0.3)*8);
+}
+
+// ===== 草 =====
+function buildGrass(cx,baseY,w){
+  grassBlades=[];
+  const count=Math.floor(w/(PX*2.2));
+  for(let i=0;i<count;i++){
+    const x=cx-w*0.5+(i/count)*w+random(-PX,PX);
+    grassBlades.push({
+      x, y:baseY+random(-2,4)*PX,
+      h:random(6,12)*PX,
+      phase:random(TWO_PI), speed:random(1.0,1.8),
+      arrival:Infinity, width:PX
+    });
+  }
+}
+
+function drawGrass(t){
+  const floatY=Math.sin(t*TWO_PI/BREATH_PERIOD)*ISLAND_FLOAT_AMP;
+  const tilt=(island.tiltX||0)*0.5;
+  noStroke();
+  for(const g of grassBlades){
+    const gx=g.x+tilt*(1-Math.abs(g.x-CX)/(island.w*0.5))*0.3;
+    const gy=g.y+floatY;
+    let sway=Math.sin(t*g.speed+g.phase)*PX*(0.2+0.05*Math.sin(t*0.3));
+    if(windEvent){
+      const dt=t-g.arrival;
+      const env=swayEnvelope(dt);
+      const wave=Math.sin(dt*5 - (g.x-CX)*0.01)*0.5+0.5;
+      sway+=windEvent.dir.x*env*wave*g.h*0.4*windEvent.strength;
+    }
+    fill(PALETTE.grass);
+    rect(snap(gx-g.width*0.5),snap(gy-g.h),g.width,g.h);
+    fill(sway>0?PALETTE.grassLight:PALETTE.leafDark);
+    rect(snap(gx+sway),snap(gy-g.h),PX,PX*2);
+  }
+}
+
+// ===== 恢复：带柔和径向光晕的萤火虫星迹 =====
+function buildFireflies(){
+  fireflies=[];
+  for(let i=0;i<6;i++){
+    const ang=i/6*TWO_PI;
+    fireflies.push({
+      hdx:Math.cos(ang)*25*PX, hdy:Math.sin(ang)*15*PX - 10*PX,
+      x:CX,y:CY-treeHeight, vx:0,vy:0,
+      phase:random(TWO_PI), speed:random(0.6,1.2),
+      mass:0.8+pbHash(i)*0.5, delay:0.1+i*0.08, trail:[]
+    });
+  }
+}
+
+function computeArcAnchors(ev){
+  const start={x:treeTop.x, y:treeTop.y};
+  const dir=ev.dir;
+  let perp={x:-dir.y, y:dir.x};
+  if(perp.y>0){perp.x*=-1;perp.y*=-1;}
+  const len=Math.min(CW,CH)*0.35*ev.strength;
+  const lift=len*0.3;
+  const p1={x:start.x+dir.x*len*0.5+perp.x*lift, y:start.y+dir.y*len*0.5+perp.y*lift};
+  const p2={x:start.x+dir.x*len, y:start.y+dir.y*len};
+  
+  ev.anchors=fireflies.map((_,i)=>{
+    const u=i/(fireflies.length-1), v=1-u;
+    return {x:v*v*start.x+2*v*u*p1.x+u*u*p2.x, y:v*v*start.y+2*v*u*p1.y+u*u*p2.y};
+  });
+}
+
+function drawFireflies(t){
+  const dtf=Math.min(deltaTime/1000,0.05);
+  const homeY=CY+Math.sin(t*TWO_PI/BREATH_PERIOD)*ISLAND_FLOAT_AMP-island.h*0.35-treeHeight*0.8;
+  
+  push();
+  blendMode(ADD);
+  noStroke();
+  
+  for(let i=0;i<fireflies.length;i++){
+    const f=fireflies[i];
+    let tx=CX+f.hdx+Math.sin(t*f.speed+f.phase)*8*PX;
+    let ty=homeY+f.hdy+Math.cos(t*f.speed*0.8+f.phase)*6*PX;
+    let stiff=18/f.mass, damp=5;
+    
+    if(windEvent&&windEvent.anchors){
+      const dt=t-windEvent.startTime;
+      if(dt>f.delay&&dt<STAR_TRAIL_LIFE+f.delay){
+        tx=windEvent.anchors[i].x; ty=windEvent.anchors[i].y;
+        stiff=45/f.mass; damp=6.5;
+      }else if(dt>0&&dt<=f.delay+0.3){
+        f.vx+=windEvent.dir.x*(12+5*Math.sin(t*10+f.phase))*windEvent.strength*dtf;
+        f.vy+=(windEvent.dir.y*6-4)*windEvent.strength*dtf;
+      }
+    }
+    f.vx+=((tx-f.x)*stiff-f.vx*damp)*dtf;
+    f.vy+=((ty-f.y)*stiff-f.vy*damp)*dtf;
+    f.x+=f.vx*dtf; f.y+=f.vy*dtf;
+    
+    f.trail.push({x:f.x,y:f.y});
+    if(f.trail.length>9)f.trail.shift();
+    
+    for(let j=0;j<f.trail.length;j++){
+      const k=(j+1)/f.trail.length;
+      fill(255,240,170, 26*k);
+      rect(snap(f.trail[j].x), snap(f.trail[j].y), PX, PX);
+    }
+    
+    // 恢复：非常细腻空灵的径向柔光
+    const pulse = 0.5+0.5*Math.sin(t*3+f.phase);
+    const ctx=drawingContext;
+    const fg=ctx.createRadialGradient(f.x,f.y,0,f.x,f.y,PX*5.5);
+    fg.addColorStop(0,'rgba(255,240,170,'+(0.34*pulse).toFixed(3)+')');
+    fg.addColorStop(1,'rgba(255,240,170,0)');
+    ctx.fillStyle=fg;
+    ctx.fillRect(f.x-PX*5.5,f.y-PX*5.5,PX*11,PX*11);
+    
+    fill(255,245,200, 210*pulse);
+    rect(snap(f.x-PX*0.5), snap(f.y-PX*0.5), PX*2, PX*2);
+  }
+  pop();
+}
+
+// ===== 像素风尘 =====
+function spawnDust(x,y,dx,dy,boost){
+  if(dust.length>=80)dust.shift();
+  const sp=(3+Math.random()*2)*boost;
+  dust.push({
+    x, y, vx:dx*sp+(Math.random()-0.5)*1.5, vy:dy*sp+(Math.random()-0.5)*1.5,
+    life:1, size:PX
+  });
+}
+
+function drawDust(){
+  noStroke();
+  for(let i=dust.length-1;i>=0;i--){
+    const d=dust[i];
+    d.x+=d.vx; d.y+=d.vy;
+    d.vx*=0.94; d.vy*=0.94; d.vy-=0.03; 
+    d.life*=0.92;
+    if(d.life<0.05){dust.splice(i,1);continue;}
+    fill(180,230,255, d.life*160);
+    rect(snap(d.x),snap(d.y),d.size,d.size);
+  }
+}
+
+// ===== 生成式音频 =====
+function ensureAudio(){
+  if(typeof window==='undefined')return;
+  if(audioCtx){if(audioCtx.state==='suspended')audioCtx.resume();return;}
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC)return;
+  try{
+    audioCtx=new AC();
+    masterGain=audioCtx.createGain(); masterGain.gain.value=0;
+    masterGain.connect(audioCtx.destination);
+    masterGain.gain.linearRampToValueAtTime(0.8,audioCtx.currentTime+0.5);
+    startWindBed();
+  }catch(e){}
+}
+
+function startWindBed(){
+  const len=audioCtx.sampleRate*2;
+  const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+  const data=buf.getChannelData(0);
+  for(let i=0;i<len;i++)data[i]=Math.random()*2-1;
+  const src=audioCtx.createBufferSource(); src.buffer=buf; src.loop=true;
+  const filt=audioCtx.createBiquadFilter(); filt.type='bandpass'; filt.frequency.value=350; filt.Q.value=0.5;
+  const g=audioCtx.createGain(); g.gain.value=0.01;
+  src.connect(filt); filt.connect(g); g.connect(masterGain); src.start();
+  audioBed={g};
+}
+
+function playWindGust(strength,dir){
+  if(!audioCtx)return;
+  const dur=1.0+strength*0.5;
+  const len=Math.floor(audioCtx.sampleRate*dur);
+  const buf=audioCtx.createBuffer(1,len,audioCtx.sampleRate);
+  const data=buf.getChannelData(0);
+  for(let i=0;i<len;i++)data[i]=Math.random()*2-1;
+  const src=audioCtx.createBufferSource(); src.buffer=buf;
+  const filt=audioCtx.createBiquadFilter(); filt.type='bandpass'; filt.Q.value=1.5;
+  const t0=audioCtx.currentTime;
+  filt.frequency.setValueAtTime(400+strength*500,t0);
+  filt.frequency.exponentialRampToValueAtTime(150,t0+dur);
+  const g=audioCtx.createGain();
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(0.2*strength+0.05,t0+0.08);
+  g.gain.exponentialRampToValueAtTime(0.001,t0+dur);
+  src.connect(filt); filt.connect(g); g.connect(masterGain);
+  src.start(t0); src.stop(t0+dur+0.1);
+}
+
+function playTreetopNote(strength,dir){
+  if(!audioCtx)return;
+  const idx=pbClamp(Math.floor(strength*3+(dir.y<0?2:0)+(dir.x>0?1:0)),0,PENTA.length-1);
+  const f0=PENTA[idx];
+  const t0=audioCtx.currentTime;
+  [[f0,0.15],[f0*2,0.04]].forEach(([fq,vol])=>{
+    const o=audioCtx.createOscillator(); o.type='sine'; o.frequency.value=fq;
+    const g=audioCtx.createGain();
+    g.gain.setValueAtTime(0,t0);
+    g.gain.linearRampToValueAtTime(vol,t0+0.04);
+    g.gain.exponentialRampToValueAtTime(0.001,t0+2.2);
+    o.connect(g); g.connect(masterGain);
+    o.start(t0); o.stop(t0+2.3);
+  });
+}
+
+// ===== 触碰邀请 =====
+function drawHint(t){
+  if(hasInteracted)return;
+  const cyc=(t%6)/6;
+  if(cyc>0.4)return; 
+  const cx=CX, cy=CY+Math.sin(t*TWO_PI/BREATH_PERIOD)*ISLAND_FLOAT_AMP-island.h*0.35-treeHeight*0.5;
+  const r=treeHeight*(0.3+cyc*0.6);
+  const a=(1-cyc/0.4)*60;
+  noStroke(); fill(180,230,255,a);
+  for(let i=0;i<20;i++){
+    const ang=i/20*TWO_PI;
+    rect(snap(cx+Math.cos(ang)*r),snap(cy+Math.sin(ang)*r*0.7),PX,PX);
+  }
+}
+
+function drawPixelEllipse(cx,cy,rx,ry,step){
+  for(let y=-ry;y<=ry;y+=step){
+    const rw=Math.round(Math.sqrt(Math.max(0,1-(y/ry)**2))*rx);
+    rect(Math.round(cx-rw),Math.round(cy+y),rw*2,step);
+  }
+}
+
+function draw(){
+  const t=millis()*0.001;
+  drawSky(t);
+  drawStars(t);
+  drawClouds(); // 飘渺的柔光云带
+  drawMotes(t);
+  updateMeteor(t); // 流星雨回归
+
+  if(windEvent){
+    island.tiltX=windEvent.dir.x*windEnvelope(t-windEvent.startTime)*10*PX*windEvent.strength;
+  }else{
+    island.tiltX=pbLerp(island.tiltX||0,0,0.1);
+  }
+
+  drawIsland(t);
+  drawTree(t);
+  drawGrass(t);
+  drawDust();
+  drawFireflies(t); // 萤火虫带软光晕
+  drawHint(t);
+
+  if(noteAt>0&&t>=noteAt){
+    playTreetopNote(windEvent?windEvent.strength:0.5,windEvent?windEvent.dir:{x:1,y:0});
+    noteAt=-1;
+  }
+  if(audioBed){
+    audioBed.g.gain.value=0.008+0.005*Math.sin(t*TWO_PI/BREATH_PERIOD);
+  }
+  if(windEvent&&t-windEvent.startTime>5.5){
+    windEvent=null; island.tiltX=0;
+    for(const b of branches){b.arrival=Infinity;b.sourceTime=Infinity;}
+    for(const leaf of leaves){leaf.arrival=Infinity;leaf.activeUntil=-Infinity;leaf.flip=0;}
+    for(const g of grassBlades)g.arrival=Infinity;
+  }
+}
+</script>
+</body>
+</html>
