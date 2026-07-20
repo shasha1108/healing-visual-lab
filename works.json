@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 29,
-  "updated": "2026-07-18",
+  "total": 30,
+  "updated": "2026-07-20",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -19,6 +19,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "overwork",
       "transparent-dream-stratigraph",
@@ -54,6 +55,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "transparent-dream-stratigraph",
       "firefly-seed-jar",
@@ -79,6 +81,7 @@
       "cosmic-recollection"
     ],
     "particle_system": [
+      "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "overwork",
       "transparent-dream-stratigraph",
@@ -110,6 +113,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "overwork",
       "transparent-dream-stratigraph",
@@ -137,6 +141,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "tree-remembers-wind",
       "overwork",
       "transparent-dream-stratigraph",
       "firefly-seed-jar",
@@ -157,6 +162,45 @@
     ]
   },
   "works": [
+    {
+      "slug": "tree-remembers-wind",
+      "title_en": "The Tree That Remembers Wind",
+      "title_zh": "记得风的树",
+      "tagline": "释放与辽阔 —— 一座悬浮小岛上，像素树把每一次拂过树冠的手势变成一阵沿枝传播的风。",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API",
+        "Pointer Events",
+        "Graph-Distance Wind Propagation",
+        "Pentatonic Oscillator Synthesis"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "~80 dust motes + 6 fireflies + ~200 leaves + dynamic stars + ~40 grass blades",
+      "dependencies": 2,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "p5.js",
+        "canvas 2d",
+        "pixel art",
+        "procedural wind",
+        "fractal tree",
+        "web audio api",
+        "particle system",
+        "healing visualization"
+      ],
+      "use_cases": [
+        "p5.js pixel art tree",
+        "canvas wind simulation",
+        "web audio procedural sound",
+        "fractal tree interaction",
+        "healing H5 visualization",
+        "graph-distance propagation"
+      ],
+      "date": "2026-07-20"
+    },
     {
       "slug": "migratory-bird-lighthouse",
       "title_en": "Migratory Bird Lighthouse",
