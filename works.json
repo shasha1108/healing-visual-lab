@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 30,
-  "updated": "2026-07-20",
+  "total": 31,
+  "updated": "2026-07-22",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -19,6 +19,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "aquarium-2003",
       "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "overwork",
@@ -55,6 +56,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "aquarium-2003",
       "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "transparent-dream-stratigraph",
@@ -113,6 +115,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "aquarium-2003",
       "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "overwork",
@@ -141,6 +144,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "aquarium-2003",
       "tree-remembers-wind",
       "overwork",
       "transparent-dream-stratigraph",
@@ -1030,6 +1034,48 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
+    },
+    {
+      "slug": "aquarium-2003",
+      "title_en": "Aquarium 2003",
+      "title_zh": "2003 水族馆",
+      "tagline": "你小时候盯过的那个屏保活了——缸里的鱼记得你",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API",
+        "localStorage"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 1,
+      "healing_domain": "meditation",
+      "keywords": [
+        "pixel art aquarium",
+        "canvas 2d",
+        "p5.js",
+        "web audio api",
+        "touch interaction",
+        "fish flocking",
+        "localstorage persistence",
+        "healing visualization"
+      ],
+      "use_cases": [
+        "p5.js pixel art aquarium",
+        "canvas fish simulation",
+        "localStorage memory persistence",
+        "web audio underwater ambience",
+        "healing H5 screensaver",
+        "touch flocking interaction"
+      ],
+      "files": [
+        "aquarium-2003.html",
+        "aquarium-2003.md",
+        "aquarium-2003_1.gif"
+      ],
+      "date": "2026-07-22"
     }
   ]
 }

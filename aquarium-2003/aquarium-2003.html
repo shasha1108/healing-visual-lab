@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<!--
+  Title: Aquarium 2003 · 2003 水族馆
+  Concept: 你小时候盯过的那个屏保活了——缸里的鱼记得你
+  Summary: 玻璃缸 + 5条有名字的像素热带鱼；指尖贴玻璃鱼群聚拢，轻敲受惊，离开再回来它们认得你
+  Tech: p5.js, Canvas 2D, Web Audio API, localStorage
+  Keywords: pixel art aquarium, canvas 2d, p5.js, web audio api, touch interaction, fish flocking, localstorage persistence, healing visualization
+  Features: 5 named pixel tropical fish with persistent memory — press a finger to the glass and they gather, tap and they startle, leave and return days later and they still remember you. Feeding, bubbles, depth-of-field, chromatic dispersion and a Polaroid photo mode.
+  Render: Canvas 2D (p5.js)
+  Audio: yes
+  Touch: yes
+  Particles: N/A (bubble & food sprites)
+  Standalone: yes, single HTML file, 1 CDN dependency
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>2003 水族馆</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100vw;height:100vh;overflow:hidden;
+  background:linear-gradient(180deg,#8ecdf5 0%,#bfe6fb 34%,#e3f5ff 62%,#fdf3d8 100%);
+  font-family:"Segoe UI","Frutiger","PingFang SC",sans-serif;
+  user-select:none;-webkit-user-select:none;touch-action:none}
+/* 环境光：独立于 pixel-stage，position:fixed，允许溢出容器 */
+#env-glow{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:640px;height:760px;border-radius:50%;pointer-events:none;z-index:0;
+  background:radial-gradient(circle,rgba(255,255,255,.55) 0%,rgba(190,230,255,.22) 45%,rgba(190,230,255,0) 70%);
+  filter:blur(50px)}
+#sun-glare{position:fixed;top:-120px;right:-100px;width:420px;height:420px;border-radius:50%;
+  pointer-events:none;z-index:0;filter:blur(40px);
+  background:radial-gradient(circle,rgba(255,248,214,.9) 0%,rgba(255,248,214,0) 70%)}
+#pixel-stage{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  overflow:hidden;border-radius:24px;z-index:2;
+  box-shadow:0 30px 80px rgba(30,90,140,.35),0 4px 18px rgba(30,90,140,.18)}
+#pixel-stage canvas{display:block;position:absolute;top:0;left:0;width:100%!important;height:100%!important;
+  image-rendering:pixelated;pointer-events:none;z-index:3}
+#interact-layer{position:absolute;inset:0;z-index:10;cursor:pointer;touch-action:none}
+#ui-layer{position:absolute;inset:0;z-index:5;pointer-events:none}
+#status-line{position:absolute;left:50%;bottom:3.2%;transform:translateX(-50%);
+  max-width:86%;padding:7px 18px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:rgba(10,52,88,.42);box-shadow:0 2px 12px rgba(10,52,88,.25),inset 0 1px 0 rgba(255,255,255,.22);
+  color:#f2faff;font-size:13px;letter-spacing:.1em;text-align:center;
+  text-shadow:0 1px 3px rgba(6,30,55,.8);opacity:0;transition:opacity 1.6s ease}
+#hint-line{position:absolute;left:50%;bottom:8%;transform:translateX(-50%);
+  padding:6px 16px;border-radius:999px;white-space:nowrap;
+  background:rgba(10,52,88,.36);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);
+  color:#ffffff;font-size:12px;letter-spacing:.2em;text-align:center;
+  text-shadow:0 1px 3px rgba(6,30,55,.75);opacity:0;transition:opacity 1.4s ease}
+#title{position:fixed;top:4.5%;left:0;right:0;text-align:center;z-index:4;pointer-events:none;
+  font-size:15px;letter-spacing:.42em;color:#ffffff;opacity:0;
+  text-shadow:0 1px 0 rgba(255,255,255,.6),0 2px 10px rgba(20,80,130,.45);
+  animation:titleIn 2.2s ease .9s forwards}
+#title small{display:block;margin-top:6px;font-size:9px;letter-spacing:.5em;color:rgba(255,255,255,.85)}
+@keyframes titleIn{to{opacity:.92}}
+/* 快门闪光 */
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:60;
+  transition:opacity .55s ease-out}
+#flash.on{opacity:.95;transition:opacity .04s ease-in}
+/* 宝丽来相纸覆盖层：DOM 层独立 smooth UI，不属于像素渲染面 */
+#polaroid-overlay{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+  background:rgba(8,30,48,.55);opacity:0;pointer-events:none;transition:opacity .5s ease}
+#polaroid-overlay.on{opacity:1;pointer-events:auto}
+#polaroid-card{background:#fdfcf7;padding:14px 14px 18px;border-radius:3px;
+  box-shadow:0 24px 60px rgba(5,25,45,.5),0 3px 10px rgba(5,25,45,.3);
+  transform:rotate(-2.5deg) translateY(30px) scale(.82);opacity:0;
+  transition:transform .8s cubic-bezier(.2,1.4,.35,1),opacity .5s ease;
+  max-width:78vw}
+#polaroid-overlay.on #polaroid-card{transform:rotate(-2.5deg) translateY(0) scale(1);opacity:1}
+#polaroid-card img{display:block;width:100%;border-radius:1px;image-rendering:pixelated}
+#polaroid-caption{margin-top:12px;font-size:12px;line-height:1.9;color:#5a4a3a;
+  font-family:"PingFang SC","Segoe UI",sans-serif;letter-spacing:.06em;text-align:left;
+  white-space:pre-line}
+#polaroid-tip{margin-top:10px;font-size:10px;color:#a89880;text-align:center;letter-spacing:.14em}
+</style>
+</head>
+<body>
+<div id="env-glow"></div>
+<div id="sun-glare"></div>
+<div id="title">2003 水族馆<small>AQUARIUM · 2003</small></div>
+<div id="pixel-stage">
+  <div id="ui-layer">
+    <div id="hint-line">把 手 指 贴 在 玻 璃 上 试 试</div>
+    <div id="status-line"></div>
+  </div>
+  <div id="interact-layer"></div>
+</div>
+<div id="flash"></div>
+<div id="polaroid-overlay">
+  <div id="polaroid-card">
+    <img id="polaroid-img" alt="2003 水族馆 · 宝丽来">
+    <div id="polaroid-caption"></div>
+    <div id="polaroid-tip">长 按 相 片 可 以 保 存 · 点 空 白 处 关 闭</div>
+  </div>
+</div>
+<script>
+/* ================= 常量与几何权威 ================= */
+const PALETTE = {
+  name: 'Aero Aqua 16 + Coral Reef/Sunlit Meadow accents',
+  role: '玻璃水族箱',
+  water: ['#9fdcf2', '#58c8e8', '#28a8d0', '#1880b0', '#0e5a88'],
+  glass: ['#ffffff', '#e8f8ff'],
+  plant: ['#3f8f52', '#5cb56e', '#a8d8a0', '#c8e8c0'],
+  gravel: ['#fce0d0', '#f8c0b0', '#e8f8ff', '#d0f0ff', '#f8f0c8']
+};
+const CW = 480, CH = 640;        // 3:4——社媒信息流原生比例
+/* 缸体几何：唯一定义点，轮廓/裁剪/高光全部从这里派生 */
+const TX0 = 78, TX1 = 402, TY0 = 100, TYB = 568;
+const TOP_R = 10, BOT_R = 44, WALL = 7;
+const WSURF = 148;                 // 水面线
+const GRAVEL_TOP = 528;            // 砂床顶
+/* 鱼的活动水域（远离玻璃壁的安全内边界） */
+const FX0 = 104, FX1 = 376, FY0 = 184, FY1 = 496;
+
+/* ================= 状态 ================= */
+/* 拍摄/演示参数：?demo=reunion 模拟久别重逢，?days=N 覆盖天数（供 30s 视频展示全部功能） */
+const QUERY = (typeof location !== 'undefined' && location.search) ? new URLSearchParams(location.search) : new URLSearchParams('');
+const DEMO_REUNION = QUERY.get('demo') === 'reunion';
+const DEMO_DAYS = parseInt(QUERY.get('days') || '', 10);
+/* ?shot=1：跳过淡入与入场游动（截图/视频取景用，不影响正常体验） */
+const SHOT_MODE = QUERY.get('shot') === '1';
+/* ?demo=polaroid：2s 后自动拍一张宝丽来（调试截图用） */
+const DEMO_POLAROID = QUERY.get('demo') === 'polaroid';
+let fishes = [], plants = [], gravelPebbles = [], bubbles = [], beams = [], dapples = [];
+let ripples = [], burstBubbles = [], foods = [], pops = [];
+let touching = false, touchX = 0, touchY = 0, touchDownAt = 0, touchMoved = 0;
+let lastTapT = -9999, lastTapX = 0, lastTapY = 0;
+let bootT = 0, lastSec = 0;
+let saveData = null, daysAlive = 1, awayMs = 0, greeterIdx = -1;
+let reunionPhase = 'none', reunionIdx = -1;   // none | wait | released
+let polaroidActive = false, polaroidPending = false;
+let hintShown = false, interacted = false;
+
+/* ================= 音频 ================= */
+let audioCtx = null, masterGain = null;
+const activeAudio = { sources: [], timers: [] };
+
+function pbEnsureAudio() {
+  if (audioCtx) { if (audioCtx.state === 'suspended') audioCtx.resume(); return; }
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    masterGain.gain.linearRampToValueAtTime(0.85, audioCtx.currentTime + 1.6);
+    masterGain.connect(audioCtx.destination);
+    pbStartAmbient();
+    pbScheduleBlip(2200);
+  } catch (e) { audioCtx = null; }
+}
+function pbTrack(node, gain) { activeAudio.sources.push({ node, gain }); }
+function pbStartAmbient() {
+  const now = audioCtx.currentTime;
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 320;
+  const humGain = audioCtx.createGain(); humGain.gain.value = 0.05;
+  lp.connect(humGain); humGain.connect(masterGain);
+  [86, 87.7].forEach(function (f) {
+    const o = audioCtx.createOscillator();
+    o.type = 'sine'; o.frequency.value = f;
+    o.connect(lp); o.start(now);
+    pbTrack(o, humGain);
+  });
+  /* 慢呼吸 LFO，让水声有起伏 */
+  const lfo = audioCtx.createOscillator(); lfo.frequency.value = 0.09;
+  const lfoG = audioCtx.createGain(); lfoG.gain.value = 0.02;
+  lfo.connect(lfoG); lfoG.connect(humGain.gain); lfo.start(now);
+  pbTrack(lfo, lfoG);
+}
+function pbScheduleBlip(delay) {
+  const id = setTimeout(function () {
+    pbBubbleBlip(0.4 + Math.random() * 0.5);
+    pbScheduleBlip(2600 + Math.random() * 3800);
+  }, delay);
+  activeAudio.timers.push(id);
+}
+function pbBubbleBlip(vol) {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(380 + Math.random() * 160, now);
+  o.frequency.exponentialRampToValueAtTime(880, now + 0.09);
+  g.gain.setValueAtTime(0.055 * vol, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  o.connect(g); g.connect(masterGain);
+  o.start(now); o.stop(now + 0.13);
+}
+function pbNibbleBlip() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(660, now);
+  o.frequency.exponentialRampToValueAtTime(1150, now + 0.05);
+  g.gain.setValueAtTime(0.05, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+  o.connect(g); g.connect(masterGain);
+  o.start(now); o.stop(now + 0.09);
+}
+/* 敲玻璃：高频瞬态 + 玻璃腔体共鸣（双层） */
+function pbGlassKnock() {
+  if (!audioCtx) return;
+  const now = audioCtx.currentTime;
+  const co = audioCtx.createOscillator(), cg = audioCtx.createGain();
+  co.type = 'triangle';
+  co.frequency.setValueAtTime(1650, now);
+  co.frequency.exponentialRampToValueAtTime(320, now + 0.012);
+  cg.gain.setValueAtTime(0.30, now);
+  cg.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+  co.connect(cg); cg.connect(masterGain);
+  co.start(now); co.stop(now + 0.025);
+  const bo = audioCtx.createOscillator(), bg = audioCtx.createGain();
+  bo.type = 'sine';
+  bo.frequency.setValueAtTime(330, now);
+  bo.frequency.exponentialRampToValueAtTime(238, now + 0.09);
+  bg.gain.setValueAtTime(0.35, now);
+  bg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+  const lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass'; lp.frequency.value = 1700;
+  bo.connect(lp); lp.connect(bg); bg.connect(masterGain);
+  bo.start(now); bo.stop(now + 0.18);
+}
+function pbStopAllAudio() {
+  activeAudio.timers.forEach(function (id) { clearTimeout(id); clearInterval(id); });
+  activeAudio.timers = [];
+  if (audioCtx) {
+    activeAudio.sources.forEach(function (item) {
+      try {
+        if (item.gain) {
+          item.gain.gain.cancelScheduledValues(audioCtx.currentTime);
+          item.gain.gain.setValueAtTime(item.gain.gain.value, audioCtx.currentTime);
+          item.gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.05);
+        }
+        if (item.node && item.node.stop) item.node.stop(audioCtx.currentTime + 0.06);
+      } catch (e) {}
+      setTimeout(function () {
+        try { if (item.node) item.node.disconnect(); } catch (e) {}
+        try { if (item.gain) item.gain.disconnect(); } catch (e) {}
+      }, 90);
+    });
+  }
+  activeAudio.sources = [];
+}
+
+/* ================= 工具：p5/Node 双环境安全 ================= */
+/* p5 全局 noise 在脚本解析期尚不存在，且 Node QA 环境没有 p5——延迟解析 + 确定性兜底 */
+function pbNoise(x, y) {
+  if (typeof noise === 'function') return noise(x, y);
+  const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+/* ================= 持久化：鱼记得你 ================= */
+const SAVE_KEY = 'aquarium2003';
+function pbLoadSave() {
+  let d = null;
+  try { if (typeof localStorage !== 'undefined') d = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) {}
+  const now = Date.now();
+  if (!d || !d.firstVisit) {
+    d = { firstVisit: now, lastVisit: now, visits: 0, bonds: {} };
+  }
+  awayMs = now - (d.lastVisit || now);
+  daysAlive = Math.max(1, Math.floor((now - d.firstVisit) / 86400000) + 1);
+  if (DEMO_REUNION) awayMs = Math.max(awayMs, 30 * 3600 * 1000);
+  if (DEMO_DAYS > 0) daysAlive = DEMO_DAYS;
+  d.visits = (d.visits || 0) + 1;
+  d.lastVisit = now;
+  saveData = d;
+  pbPersist();
+}
+function pbPersist() {
+  if (!saveData || typeof localStorage === 'undefined') return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); } catch (e) {}
+}
+function pbBond(name, amt) {
+  if (!saveData) return;
+  saveData.bonds[name] = (saveData.bonds[name] || 0) + amt;
+}
+/* 行为统计：宝丽来文案由真实数据生成，不写死 */
+function pbStat(name, key) {
+  if (!saveData) return;
+  saveData.stats = saveData.stats || {};
+  const s = saveData.stats[name] = saveData.stats[name] || { eats: 0, nibbles: 0, startles: 0 };
+  s[key] = (s[key] || 0) + 1;
+}
+
+/* ================= 鱼缸几何：单一权威 ================= */
+/* roundRect 兜底：老浏览器退化为普通矩形 */
+function pbRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  if (ctx.roundRect) { ctx.roundRect(x, y, w, h, r); }
+  else { ctx.rect(x, y, w, h); }
+}
+function defineTankPath(ctx, inset) {
+  const x0 = TX0 + inset, x1 = TX1 - inset;
+  const y0 = TY0 + inset, yb = TYB - inset;
+  const tr = Math.max(3, TOP_R - inset), br = Math.max(8, BOT_R - inset);
+  ctx.beginPath();
+  ctx.moveTo(x0 + tr, y0);
+  ctx.lineTo(x1 - tr, y0);
+  ctx.bezierCurveTo(x1 - tr * 0.4, y0, x1, y0 + tr * 0.4, x1, y0 + tr);
+  ctx.lineTo(x1, yb - br);
+  ctx.bezierCurveTo(x1, yb - br * 0.22, x1 - br * 0.22, yb, x1 - br, yb);
+  ctx.lineTo(x0 + br, yb);
+  ctx.bezierCurveTo(x0 + br * 0.22, yb, x0, yb - br * 0.22, x0, yb - br);
+  ctx.lineTo(x0, y0 + tr);
+  ctx.bezierCurveTo(x0, y0 + tr * 0.4, x0 + tr * 0.4, y0, x0 + tr, y0);
+  ctx.closePath();
+}
+function withTankClip(ctx, inset, drawInside) {
+  ctx.save();
+  defineTankPath(ctx, inset);
+  ctx.clip();
+  drawInside();
+  ctx.restore();
+}
+
+/* ================= 实体生成（setup 阶段预生成） ================= */
+const FISH_DEFS = [
+  { name: '阿橘', main: '#f8a860', belly: '#fcd8a8', fin: '#e08840', bold: 0.95, size: 1.4 },
+  { name: '小蓝', main: '#40b8e0', belly: '#d0f0ff', fin: '#2090b0', bold: 0.70, size: 1.25 },
+  { name: '金金', main: '#e8d870', belly: '#f8f0c8', fin: '#c8b048', bold: 0.85, size: 1.18 },
+  { name: '粉粉', main: '#f0a0a0', belly: '#fce0d0', fin: '#d07878', bold: 0.35, size: 1.1 },
+  { name: '斑斑', main: '#fff0e8', belly: '#ffffff', fin: '#f8c0b0', stripe: '#f0a0a0', bold: 0.60, size: 1.3 }
+];
+function pbInitWorld() {
+  /* 砂床卵石 */
+  gravelPebbles = [];
+  for (let i = 0; i < 72; i++) {
+    gravelPebbles.push({
+      x: TX0 + 14 + Math.random() * (TX1 - TX0 - 28),
+      y: GRAVEL_TOP + 4 + Math.random() * (TYB - 16 - GRAVEL_TOP),
+      w: 4 + Math.floor(Math.random() * 3) * 2,
+      h: 4 + Math.floor(Math.random() * 2) * 2,
+      c: PALETTE.gravel[Math.floor(Math.random() * PALETTE.gravel.length)]
+    });
+  }
+  /* 水草：预生成节段，draw 只做 sin 摆动 */
+  plants = [];
+  const plantXs = [118, 168, 336, 366, 208];
+  for (let i = 0; i < plantXs.length; i++) {
+    const segs = [];
+    const h = 100 + Math.random() * 110;
+    const n = Math.floor(h / 10);
+    for (let s = 0; s < n; s++) {
+      segs.push({
+        w: Math.max(3, 9 - s * 0.55 + Math.random() * 2),
+        c: PALETTE.plant[Math.min(PALETTE.plant.length - 1, Math.floor(s / n * PALETTE.plant.length))]
+      });
+    }
+    plants.push({ x: plantXs[i], baseY: GRAVEL_TOP + 10, segs: segs, phase: Math.random() * 6.28, speed: 0.5 + Math.random() * 0.5 });
+  }
+  /* 气泡柱（气石）：循环参数预生成，draw 内取模，无 random */
+  bubbles = [];
+  for (let i = 0; i < 11; i++) {
+    bubbles.push({
+      phase: Math.random(), speed: 0.055 + Math.random() * 0.05,
+      xoff: (Math.random() - 0.5) * 14, size: 2 + Math.floor(Math.random() * 3),
+      wob: 0.6 + Math.random() * 1.2
+    });
+  }
+  /* 焦散光束 */
+  beams = [];
+  for (let i = 0; i < 3; i++) {
+    beams.push({ x: 130 + i * 92 + Math.random() * 30, w: 34 + Math.random() * 26, tilt: 0.10 + Math.random() * 0.08, phase: Math.random() * 6.28, speed: 0.22 + Math.random() * 0.2 });
+  }
+  /* 砂床光斑 */
+  dapples = [];
+  for (let i = 0; i < 4; i++) {
+    dapples.push({ x: 120 + Math.random() * 240, y: GRAVEL_TOP + 10 + Math.random() * 26, r: 14 + Math.random() * 16, phase: Math.random() * 6.28 });
+  }
+  /* 鱼：独立状态对象（名字/性格/记忆） */
+  fishes = [];
+  let maxBond = -1;
+  for (let i = 0; i < FISH_DEFS.length; i++) {
+    const def = FISH_DEFS[i];
+    const bond = ((saveData && saveData.bonds) || {})[def.name] || 0;
+    if (bond > maxBond) { maxBond = bond; }
+    fishes.push({
+      def: def, name: def.name, bond: bond,
+      x: 0, y: 0, vx: 0, vy: 0, dir: 1,
+      state: 'enter', enterDelay: 1.0 + i * 0.55,
+      homeX: 150 + Math.random() * 180, homeY: 200 + Math.random() * 240,
+      phase: Math.random() * 6.28, wag: 4.5 + Math.random() * 2,
+      reaction: 0, fleeTimer: 0, chaseTimer: 0,
+      energy: 0, plantIdx: i % plantXs.length,
+      z: 0.35 + Math.random() * 0.55, blinkT: 2 + i * 0.7, food: null
+    });
+    /* 从缸外游入 */
+    fishes[i].x = (i % 2 === 0) ? -60 : CW + 60;
+    fishes[i].y = 190 + i * 58;
+    fishes[i].dir = (i % 2 === 0) ? 1 : -1;
+  }
+  /* 羁绊最深的鱼负责迎接你回来 */
+  if (awayMs > 6 * 3600 * 1000 && maxBond > 0) {
+    for (let i = 0; i < fishes.length; i++) {
+      if (fishes[i].bond === maxBond) { greeterIdx = i; break; }
+    }
+  }
+  /* 重逢演出（离开 >24h 或拍摄模式）：只有它一个在画面中央等你，其他鱼藏进水草 */
+  reunionIdx = -1; reunionPhase = 'none';
+  if ((awayMs > 24 * 3600 * 1000 || DEMO_REUNION) && (maxBond > 0 || DEMO_REUNION)) {
+    let gi = 0, gb = -1;
+    for (let i = 0; i < fishes.length; i++) {
+      if (fishes[i].bond > gb) { gb = fishes[i].bond; gi = i; }
+    }
+    reunionIdx = gi; greeterIdx = -1; reunionPhase = 'wait';
+    for (let i = 0; i < fishes.length; i++) {
+      if (i === gi) {
+        fishes[i].state = 'wait';
+        fishes[i].x = 240; fishes[i].y = 340; fishes[i].dir = 1; fishes[i].z = 1;
+      } else {
+        fishes[i].state = 'hidden';
+        const pl = plants[i % plants.length];
+        fishes[i].x = pl.x; fishes[i].y = GRAVEL_TOP - 24;
+      }
+    }
+  }
+  foods = [];
+  pops = [];
+  /* 取景模式：直接在缸内各就各位 */
+  if (SHOT_MODE) {
+    bootT = 99;
+    for (let i = 0; i < fishes.length; i++) {
+      const f = fishes[i];
+      if (f.state === 'enter') {
+        f.state = 'wander';
+        f.x = 140 + i * 52; f.y = 210 + (i % 3) * 90;
+      }
+    }
+  }
+  burstBubbles = [];
+  for (let i = 0; i < 8; i++) burstBubbles.push({ active: false, x: 0, y: 0, vy: 0, life: 0, size: 3 });
+  ripples = [];
+}
+
+/* ================= 交互 ================= */
+function stagePoint(evt) {
+  const r = document.getElementById('pixel-stage').getBoundingClientRect();
+  return { x: (evt.clientX - r.left) * CW / r.width, y: (evt.clientY - r.top) * CH / r.height };
+}
+function pbPointerDown(evt) {
+  evt.preventDefault();
+  pbEnsureAudio();
+  const p = stagePoint(evt);
+  /* 重逢演出：第一次触碰，它开心地游起来，其他鱼才从水草里钻出来 */
+  if (reunionPhase === 'wait') {
+    reunionPhase = 'released';
+    const nowS = millis() / 1000;
+    for (let i = 0; i < fishes.length; i++) {
+      const f = fishes[i];
+      if (i === reunionIdx) {
+        f.state = 'wander'; f.energy = 1; f.reaction = 1;
+        f.vx = 3.2; f.vy = -1.4;
+        pbBond(f.name, 1);
+      } else if (f.state === 'hidden') {
+        f.state = 'enter';
+        f.enterDelay = nowS + 0.7 + i * 0.55;
+        f.homeX = 130 + Math.random() * 220; f.homeY = 190 + Math.random() * 260;
+      }
+    }
+    ripples.push({ x: p.x, y: p.y, r: 10, life: 1.2 });
+    return;
+  }
+  touching = true; touchX = p.x; touchY = p.y;
+  touchDownAt = millis(); touchMoved = 0;
+  interacted = true;
+  ripples.push({ x: p.x, y: p.y, r: 6, life: 1 });
+}
+function pbPointerMove(evt) {
+  if (!touching) return;
+  evt.preventDefault();
+  const p = stagePoint(evt);
+  touchMoved += Math.abs(p.x - touchX) + Math.abs(p.y - touchY);
+  touchX = p.x; touchY = p.y;
+}
+function pbPointerUp(evt) {
+  if (!touching) return;
+  const held = millis() - touchDownAt;
+  const p = stagePoint(evt);
+  touching = false;
+  if (held < 260 && touchMoved < 26) {
+    const nowT = millis();
+    const isDouble = (nowT - lastTapT < 340) && dist(p.x, p.y, lastTapX, lastTapY) < 48;
+    if (isDouble && p.y > WSURF + 12) {
+      /* 双击水面以下 = 投喂 */
+      pbFeed(p.x, p.y);
+      lastTapT = -9999;
+    } else {
+      /* 轻敲 = 敲玻璃：近处鱼受惊逃窜 + 触觉（仅 Android 支持 vibrate） */
+      pbGlassKnock();
+      if (typeof navigator !== 'undefined' && navigator.vibrate) { try { navigator.vibrate([15, 30, 15]); } catch (e) {} }
+      ripples.push({ x: p.x, y: p.y, r: 10, life: 1.4 });
+      pbStartleAt(p.x, p.y);
+      lastTapT = nowT; lastTapX = p.x; lastTapY = p.y;
+    }
+  }
+}
+/* 双击投喂：发光饲料缓慢下沉，全缸抢食 */
+function pbFeed(px, py) {
+  for (let i = 0; i < 5; i++) {
+    foods.push({
+      x: px + (i - 2) * 9 + (Math.random() - 0.5) * 5,
+      y: Math.max(py, WSURF + 16) + (Math.random() - 0.5) * 6,
+      vy: 0, phase: Math.random() * 6.28,
+      landed: false, eaten: false, life: 1
+    });
+  }
+  ripples.push({ x: px, y: py, r: 8, life: 1.1 });
+}
+/* ================= 宝丽来相纸 ================= */
+/* 长按 3 秒触发：快门闪光 → 2003 怀旧滤镜 → 由真实行为数据生成文案 */
+function pbTakePolaroid() {
+  polaroidActive = true;
+  touching = false;
+  const fl = document.getElementById('flash');
+  fl.classList.add('on');
+  setTimeout(function () { fl.classList.remove('on'); }, 90);
+  if (typeof navigator !== 'undefined' && navigator.vibrate) { try { navigator.vibrate(30); } catch (e) {} }
+  const url = pbBuildPolaroid();
+  const ov = document.getElementById('polaroid-overlay');
+  document.getElementById('polaroid-img').src = url;
+  document.getElementById('polaroid-caption').textContent = pbPolaroidText();
+  setTimeout(function () { ov.classList.add('on'); }, 420);
+  ov.onclick = function (e) {
+    if (e.target === ov || e.target.id === 'polaroid-tip') {
+      ov.classList.remove('on');
+      setTimeout(function () { polaroidActive = false; }, 500);
+    }
+  };
+}
+/* 相纸画面：当前画布 → 360px 快照 → 怀旧调色 + 颗粒 + 日期印章 */
+function pbBuildPolaroid() {
+  const src = document.querySelector('#pixel-stage canvas');
+  const W = 360, H = 452;
+  const pc = document.createElement('canvas');
+  pc.width = W; pc.height = H;
+  const cx = pc.getContext('2d');
+  /* 取缸体为中心的方形区域 */
+  const sw = 560, sh = 560, sx = (CW - sw) / 2, sy = 70;
+  cx.imageSmoothingEnabled = false;
+  cx.drawImage(src, sx, sy, sw, sh, 0, 0, W, W);
+  /* 2003 滤镜：暖调 + 轻褪 + 洋红偏色（老 CCD 的味道） */
+  const img = cx.getImageData(0, 0, W, W);
+  const dd = img.data;
+  for (let i = 0; i < dd.length; i += 4) {
+    let r = dd[i], g = dd[i + 1], b = dd[i + 2];
+    const lum = r * 0.3 + g * 0.59 + b * 0.11;
+    r = r * 0.92 + lum * 0.08 + 14;   // 轻微去饱和 + 暖
+    g = g * 0.90 + lum * 0.10 + 6;
+    b = b * 0.86 + lum * 0.14;
+    /* 颗粒（静态一次成型，非逐帧） */
+    const n = ((i * 2654435761) >>> 0) % 97 / 97 - 0.5;
+    r += n * 16; g += n * 16; b += n * 16;
+    dd[i] = r > 255 ? 255 : r; dd[i + 1] = g > 255 ? 255 : g; dd[i + 2] = b > 255 ? 255 : b;
+  }
+  cx.putImageData(img, 0, 0);
+  /* 底部白边上盖日期印章 */
+  cx.fillStyle = '#fdfcf7';
+  cx.fillRect(0, W, W, H - W);
+  const dt2 = new Date();
+  cx.fillStyle = '#8a7a68';
+  cx.font = '15px "Courier New", monospace';
+  cx.textAlign = 'right';
+  cx.fillText(dt2.getFullYear() + '.' + (dt2.getMonth() + 1) + '.' + dt2.getDate() + '  AQUA-2003', W - 16, W + 56);
+  cx.fillStyle = 'rgba(180,60,60,.5)';
+  cx.font = 'italic 13px "Courier New", monospace';
+  cx.textAlign = 'left';
+  cx.fillText('No.' + String(saveData && saveData.visits || 1).padStart(3, '0'), 16, W + 56);
+  return pc.toDataURL('image/png');
+}
+/* 文案：由 bonds / stats 真实数据推导，二刷不会穿帮 */
+function pbPolaroidText() {
+  const dt2 = new Date();
+  const lines = [];
+  lines.push('你在 ' + dt2.getFullYear() + ' 年 ' + (dt2.getMonth() + 1) + ' 月 ' + dt2.getDate() + ' 日');
+  lines.push('重新启动了这座水族馆。');
+  if (saveData) {
+    /* 找到羁绊最深的鱼 */
+    let bestName = '', bestBond = -1;
+    for (let i = 0; i < fishes.length; i++) {
+      const b = saveData.bonds[fishes[i].name] || 0;
+      if (b > bestBond) { bestBond = b; bestName = fishes[i].name; }
+    }
+    if (bestName && daysAlive > 1) {
+      lines.push('这是' + bestName + '陪你的第 ' + daysAlive + ' 天。');
+      const st = (saveData.stats && saveData.stats[bestName]) || { eats: 0, nibbles: 0, startles: 0 };
+      const traits = [];
+      if (st.eats >= 3) traits.push('它有点贪吃');
+      if (st.nibbles >= 5) traits.push('喜欢啄你的手指');
+      if (st.startles >= 2) traits.push('听到敲玻璃还是会躲到水草后面');
+      if (traits.length > 0) {
+        lines.push(traits.join('，') + '。');
+      } else if (bestBond > 0.5) {
+        lines.push('你一靠近，它就游过来了。');
+      }
+    } else {
+      lines.push('它们还不太认识你，');
+      lines.push('但已经在往这边看了。');
+    }
+  }
+  lines.push('原来过去 21 年，它们一直都在。');
+  return lines.join('\n');
+}
+/* 敲玻璃惊扰：近处鱼受惊逃窜 + 气泡迸发（生产与 QA 共用同一实现） */
+function pbStartleAt(px, py) {
+  for (let i = 0; i < fishes.length; i++) {
+    const f = fishes[i];
+    const d = dist(f.x, f.y, px, py);
+    if (d < 150 && f.state !== 'enter' && f.state !== 'hidden' && f.state !== 'wait') {
+      f.state = 'flee';
+      f.fleeTimer = 36 + Math.floor(Math.abs(f.x - px) % 30);
+      const a = Math.atan2(f.y - py, f.x - px);
+      f.vx = Math.cos(a) * 6.5; f.vy = Math.sin(a) * 6.5;
+      pbStat(f.name, 'startles');
+    }
+  }
+  for (let i = 0; i < 3; i++) pbSpawnBurst(px + (i - 1) * 7, py + (i % 2) * 5);
+}
+function pbSpawnBurst(x, y) {
+  for (let i = 0; i < burstBubbles.length; i++) {
+    const b = burstBubbles[i];
+    if (!b.active) {
+      b.active = true; b.x = x; b.y = y;
+      b.vy = 1.6 + (i % 3) * 0.5; b.life = 1; b.size = 2 + (i % 3);
+      return;
+    }
+  }
+}
+
+/* ================= 鱼的 FSM ================= */
+function pbUpdateFish(f, idx, dt, t) {
+  /* 重逢演出：未出场 / 等待中的鱼 */
+  if (f.state === 'hidden') { return; }
+  if (f.state === 'wait') {
+    f.x += (240 - f.x) * 0.04 * dt;
+    f.y += (336 + Math.sin(t * 1.3) * 8 - f.y) * 0.06 * dt;
+    if (f.blinkT === undefined) f.blinkT = 2.5;
+    f.blinkT -= dt / 60;
+    if (f.blinkT < -0.14) f.blinkT = 1.8 + (idx % 3) * 0.9;
+    f.energy = 0.4 + 0.2 * Math.sin(t * 1.3);
+    return;
+  }
+  if (f.state === 'enter') {
+    if (t > f.enterDelay) {
+      const a = Math.atan2(f.homeY - f.y, f.homeX - f.x);
+      f.vx += cos(a) * 0.09 * dt; f.vy += sin(a) * 0.09 * dt;
+      if (dist(f.x, f.y, f.homeX, f.homeY) < 30) { f.state = 'wander'; }
+    }
+  } else if (f.state === 'greet') {
+    const a = Math.atan2(300 - f.y, 240 - f.x);
+    f.vx += cos(a) * 0.10 * dt; f.vy += sin(a) * 0.10 * dt;
+    if (dist(f.x, f.y, 240, 300) < 40) {
+      f.reaction = 1; f.energy = Math.min(1, f.energy + 0.05 * dt);
+      f.chaseTimer += dt;
+      if (f.chaseTimer > 140) { f.state = 'wander'; f.chaseTimer = 0; }
+    }
+  } else if (f.state === 'flee') {
+    f.fleeTimer -= dt;
+    f.vx *= Math.pow(0.94, dt); f.vy *= Math.pow(0.94, dt);
+    if (f.fleeTimer <= 0) f.state = 'wander';
+  } else if (f.state === 'feed') {
+    /* 抢食：胆大的冲得快，胆小的只敢捡附近的 */
+    const fo = f.food;
+    if (!fo || fo.eaten || fo.life <= 0) { f.state = 'wander'; f.food = null; }
+    else {
+      const a = Math.atan2(fo.y - f.y, fo.x - f.x);
+      const acc = 0.07 + f.def.bold * 0.09;
+      f.vx += Math.cos(a) * acc * dt; f.vy += Math.sin(a) * acc * dt;
+      if (dist(f.x, f.y, fo.x, fo.y) < 15) {
+        fo.eaten = true; f.state = 'wander'; f.food = null;
+        f.reaction = 1; f.energy = 1;
+        f.z = Math.min(1, f.z + 0.25);
+        pbNibbleBlip(); pbBond(f.name, 0.3); pbStat(f.name, 'eats');
+      }
+    }
+  } else {
+    /* wander：少量实体级 noise 平滑探索 */
+    f.vx += (pbNoise(f.x * 0.012, t * 0.24 + idx * 37) - 0.5) * 0.085 * dt;
+    f.vy += (pbNoise(f.y * 0.012, t * 0.2 + idx * 91 + 100) - 0.5) * 0.06 * dt;
+    /* 害羞的鱼喜欢待在自己的水草附近 */
+    if (f.def.bold < 0.5 && plants[f.plantIdx]) {
+      const pl = plants[f.plantIdx];
+      f.vx += Math.sign(pl.x + 10 - f.x) * 0.008 * dt;
+    }
+    /* Z 轴缓慢漂移：水族箱深度 */
+    f.z += (pbNoise(idx * 7.3 + 2, t * 0.05) - 0.5) * 0.006 * dt;
+    f.z = constrain(f.z, 0.25, 1);
+    /* 饲料出现：胆大的全缸追，胆小的只捡 110px 以内 */
+    if (f.state === 'wander' && foods.length > 0) {
+      let best = null, bd = 1e9;
+      for (let fi = 0; fi < foods.length; fi++) {
+        const fo = foods[fi];
+        if (fo.eaten || fo.life <= 0) continue;
+        const d = dist(f.x, f.y, fo.x, fo.y);
+        if (d < bd) { bd = d; best = fo; }
+      }
+      if (best && (f.def.bold >= 0.5 || bd < 110)) { f.state = 'feed'; f.food = best; }
+    }
+    /* 指尖聚拢：触摸产生局部扰动场，近处鱼来啄，远处保持平静 */
+    if (touching && f.state === 'wander') {
+      const d = dist(f.x, f.y, touchX, touchY);
+      const sense = 200 + f.def.bold * 90;
+      if (d < sense) { f.state = 'chase'; f.chaseTimer = 0; }
+    }
+  }
+  if (f.state === 'chase') {
+    f.chaseTimer += dt;
+    if (!touching || f.chaseTimer > 320) {
+      f.state = 'wander';
+    } else {
+      /* 贴近玻璃：游向指尖时游到最前层 */
+      f.z += (1 - f.z) * 0.02 * dt;
+      /* 目标点：指尖往水里收回一点，隔着玻璃啄 */
+      const gx = constrain(touchX, FX0, FX1);
+      const gy = constrain(touchY + 16 + (1 - f.def.bold) * 46, FY0, FY1);
+      const a = Math.atan2(gy - f.y, gx - f.x);
+      const acc = 0.07 + f.def.bold * 0.07;
+      f.vx += cos(a) * acc * dt; f.vy += sin(a) * acc * dt;
+      const d = dist(f.x, f.y, gx, gy);
+      if (d < 26 + (1 - f.def.bold) * 30) {
+        /* 啄食余韵 */
+        if (f.reaction <= 0) { pbNibbleBlip(); pbStat(f.name, 'nibbles'); }
+        f.reaction = 1;
+        f.energy = Math.min(1, f.energy + 0.04 * dt);
+        pbBond(f.name, 0.004 * dt);
+        f.vx *= Math.pow(0.9, dt); f.vy *= Math.pow(0.9, dt);
+      }
+    }
+  }
+  /* 能量与反应衰减 */
+  f.energy *= Math.pow(0.985, dt);
+  if (f.reaction > 0) f.reaction = Math.max(0, f.reaction - 0.02 * dt);
+
+  /* 软边界：靠近水域边缘时向内转向，永不贴玻璃 */
+  const m = 18;
+  if (f.x < FX0 + m) f.vx += 0.05 * dt;
+  if (f.x > FX1 - m) f.vx -= 0.05 * dt;
+  if (f.y < FY0 + m) f.vy += 0.05 * dt;
+  if (f.y > FY1 - m) f.vy -= 0.05 * dt;
+
+  /* 速度钳制（远处小且慢，近处大且快） */
+  let limit = 1.15;
+  if (f.state === 'flee') limit = 6.5;
+  else if (f.state === 'chase') limit = 2.6;
+  else if (f.state === 'feed') limit = 1.7 + f.def.bold * 1.2;
+  else if (f.state === 'enter' || f.state === 'greet') limit = 2.2;
+  limit *= (0.8 + 0.35 * f.z);
+  const spd = Math.sqrt(f.vx * f.vx + f.vy * f.vy);
+  if (spd > limit) { f.vx = f.vx / spd * limit; f.vy = f.vy / spd * limit; }
+  if (spd > 0.15) f.dir = f.vx >= 0 ? 1 : -1;
+  f.x += f.vx * dt; f.y += f.vy * dt;
+  if (f.state !== 'enter') {
+    f.x = constrain(f.x, FX0 + 8, FX1 - 8);
+    f.y = constrain(f.y, FY0 + 2, FY1 - 2);
+  }
+}
+
+/* ================= 像素鱼绘制 ================= */
+/* 正面帧：重逢演出专用——它正面看着屏幕外的你，会眨眼 */
+function pbDrawFrontFish(f, t, x0, y0, s) {
+  const u = 2;
+  push();
+  translate(x0, y0);
+  scale(s, s);
+  noStroke();
+  const rows = [
+    { y: -3, x0: -2, x1: 2 },
+    { y: -2, x0: -3, x1: 3 },
+    { y: -1, x0: -4, x1: 4 },
+    { y: 0,  x0: -4, x1: 4 },
+    { y: 1,  x0: -3, x1: 3 },
+    { y: 2,  x0: -2, x1: 2 }
+  ];
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    for (let gx = row.x0; gx <= row.x1; gx++) {
+      fill(row.y >= 1 ? f.def.belly : f.def.main);
+      rect(gx * u, row.y * u, u, u);
+    }
+  }
+  /* 侧鳍（轻微划水） */
+  const finW = Math.round(Math.sin(t * 2.2) * 1);
+  fill(f.def.fin);
+  rect(-5 * u, (-1 + finW) * u, u, u * 2);
+  rect(4 * u, (-1 - finW) * u, u, u * 2);
+  /* 双眼（眨眼：blinkT < 0 时闭眼） */
+  const blink = f.blinkT < 0;
+  fill('#ffffff');
+  rect(-3 * u, -2 * u, u, u); rect(2 * u, -2 * u, u, u);
+  fill('#083040');
+  if (!blink) {
+    rect(-3 * u + 1, -2 * u + 1, u - 1, u - 1);
+    rect(2 * u + 1, -2 * u + 1, u - 1, u - 1);
+  } else {
+    rect(-3 * u, -2 * u, u, 1); rect(2 * u, -2 * u, u, 1);
+  }
+  /* 嘴 */
+  fill('#083040');
+  rect(-1, 0, 2, u);
+  pop();
+}
+function pbDrawPixelFish(f, t) {
+  const u = 2;                          // 像素单元 2px
+  const s = f.def.size * (0.75 + 0.45 * f.z);   // Z 轴：近大远小
+  const x0 = Math.round(f.x / u) * u, y0 = Math.round(f.y / u) * u;
+  if (f.state === 'wait') { pbDrawFrontFish(f, t, x0, y0, s); return; }
+  const wagA = Math.sin(t * f.wag + f.phase) * (1.6 + f.energy * 2.2);
+  push();
+  translate(x0, y0);
+  scale(f.dir * s, s);
+  noStroke();
+  /* 身体行（网格坐标，头朝 +x） */
+  const rows = [
+    { y: -2, x0: -3, x1: 3 },
+    { y: -1, x0: -4, x1: 4 },
+    { y: 0,  x0: -5, x1: 4 },
+    { y: 1,  x0: -4, x1: 4 },
+    { y: 2,  x0: -3, x1: 3 }
+  ];
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    for (let gx = row.x0; gx <= row.x1; gx++) {
+      let c = f.def.main;
+      if (row.y >= 1) c = f.def.belly;                    // 肚皮
+      if (row.y === -2) c = f.def.fin;                    // 背脊深
+      if (f.def.stripe && gx === -1) c = f.def.stripe;    // 斑斑的条纹
+      fill(c);
+      rect(gx * u, row.y * u, u, u);
+    }
+  }
+  /* 尾巴（摆动） */
+  fill(f.def.fin);
+  const tw = Math.round(wagA / u);
+  rect((-6) * u, (-1 + tw) * u, u, u * 3);
+  rect((-7) * u, (0 + tw) * u, u, u * 2);
+  /* 背鳍 */
+  fill(f.def.fin);
+  rect(0, -3 * u, u * 2, u);
+  /* 眼睛：白底 + 深色瞳 */
+  fill('#ffffff'); rect(3 * u, -1 * u, u, u);
+  fill('#083040'); rect(3 * u + 1, -1 * u + 1, u - 1, u - 1);
+  /* 啄食张嘴 */
+  if (f.reaction > 0.2) {
+    fill('#083040');
+    rect(5 * u, 0, u, u);
+  }
+  pop();
+  /* 远景压暗：Z 小的鱼罩一层径向水色，产生深度（无硬边） */
+  if (f.z < 0.55) {
+    const ctx2 = drawingContext;
+    const da = (0.55 - f.z) * 0.55;
+    const dr = 30 * s;
+    ctx2.save();
+    const dg = ctx2.createRadialGradient(x0, y0, dr * 0.2, x0, y0, dr);
+    dg.addColorStop(0, 'rgba(14,90,136,' + da.toFixed(3) + ')');
+    dg.addColorStop(1, 'rgba(14,90,136,0)');
+    ctx2.fillStyle = dg;
+    ctx2.fillRect(x0 - dr, y0 - dr, dr * 2, dr * 2);
+    ctx2.restore();
+  }
+  /* 名字标签：靠近指尖啄食时浮现 */
+  if (f.energy > 0.25) {
+    push();
+    textAlign(CENTER, CENTER);
+    textSize(11);
+    fill(255, 255, 255, Math.min(255, f.energy * 300));
+    text(f.name, x0, y0 - 22 * s);
+    pop();
+  }
+}
+
+/* ================= 场景绘制（三榻饼管线） ================= */
+function pbDrawTankBack(ctx) {
+  /* Pass1：缸后体块 */
+  ctx.save();
+  defineTankPath(ctx, 0);
+  const g = ctx.createRadialGradient(240, 300, 60, 240, 340, 380);
+  g.addColorStop(0, 'rgba(88,200,232,.4)');
+  g.addColorStop(0.6, 'rgba(40,168,208,.3)');
+  g.addColorStop(1, 'rgba(14,90,136,.28)');
+  ctx.fillStyle = g;
+  ctx.fill();
+  ctx.restore();
+}
+function pbDrawWaterAndWorld(ctx, t) {
+  /* Pass2：clip 内的水体与世界 */
+  withTankClip(ctx, WALL, function () {
+    /* 水体渐变（整数对齐的 rect 色带，避免 noSmooth 下分数坐标留缝） */
+    const w = TX1 - TX0, h = TYB - WSURF;
+    const steps = 40;
+    for (let i = 0; i < steps; i++) {
+      const k = i / (steps - 1);
+      const ci = k * (PALETTE.water.length - 1);
+      const c0 = color(PALETTE.water[Math.floor(ci)]);
+      const c1 = color(PALETTE.water[Math.min(PALETTE.water.length - 1, Math.ceil(ci))]);
+      const c = lerpColor(c0, c1, ci % 1);
+      const y0 = Math.round(WSURF + i * h / steps);
+      const y1 = Math.round(WSURF + (i + 1) * h / steps);
+      fill(red(c), green(c), blue(c), 255);
+      noStroke();
+      rect(TX0 - 12, y0, w + 24, Math.max(1, y1 - y0));
+    }
+    /* 焦散光束 */
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < beams.length; i++) {
+      const b = beams[i];
+      const a = 0.05 + 0.045 * Math.sin(t * b.speed + b.phase);
+      ctx.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.moveTo(b.x, WSURF);
+      ctx.lineTo(b.x + b.w, WSURF);
+      ctx.lineTo(b.x + b.w + b.tilt * 400, WSURF + 400);
+      ctx.lineTo(b.x + b.tilt * 400, WSURF + 400);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+    /* 水面线（双频正弦） */
+    for (let x = TX0; x <= TX1; x += 4) {
+      const yy = WSURF + Math.sin(x * 0.05 + t * 1.4) * 2 + Math.sin(x * 0.013 - t * 0.7) * 1.6;
+      fill(255, 255, 255, 150);
+      rect(x, yy, 4, 2);
+    }
+    /* 弯月面高光呼吸 */
+    for (let x = TX0 + 28; x < TX1 - 28; x += 6) {
+      const ha = 50 + 45 * Math.sin(t * 1.1 + x * 0.02);
+      fill(255, 255, 255, ha);
+      rect(x, WSURF - 4 + Math.sin(x * 0.05 + t * 1.4) * 2, 6, 1.5);
+    }
+    /* 缸壁内侧色散：水体作为透镜的边缘色边 */
+    for (let y = WSURF + 14; y < TYB - 60; y += 8) {
+      const wob = Math.sin(y * 0.028 + t * 0.7) * 2;
+      fill(255, 190, 170, 20); rect(TX0 + WALL + 6 + wob + 2, y, 2, 8);
+      fill(140, 220, 255, 28); rect(TX0 + WALL + 4 + wob, y, 2, 8);
+      fill(255, 190, 170, 20); rect(TX1 - WALL - 8 + wob - 2, y, 2, 8);
+      fill(140, 220, 255, 28); rect(TX1 - WALL - 6 + wob, y, 2, 8);
+    }
+    /* 砂床光斑 */
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < dapples.length; i++) {
+      const d = dapples[i];
+      const a = 0.10 + 0.08 * Math.sin(t * 0.6 + d.phase);
+      const rg = ctx.createRadialGradient(d.x, d.y, 1, d.x, d.y, d.r);
+      rg.addColorStop(0, 'rgba(255,250,220,' + a.toFixed(3) + ')');
+      rg.addColorStop(1, 'rgba(255,250,220,0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(d.x - d.r, d.y - d.r, d.r * 2, d.r * 2);
+    }
+    ctx.restore();
+    /* 砂床 */
+    for (let i = 0; i < gravelPebbles.length; i++) {
+      const p = gravelPebbles[i];
+      fill(p.c);
+      rect(Math.round(p.x / 2) * 2, Math.round(p.y / 2) * 2, p.w, p.h);
+    }
+    /* 气石 */
+    fill('#207080');
+    rect(116, GRAVEL_TOP + 26, 16, 8);
+    fill('#3090b0');
+    rect(118, GRAVEL_TOP + 24, 12, 3);
+    /* 远处的鱼：画在水草之后，被草叶遮挡，产生纵深 */
+    for (let i = 0; i < fishes.length; i++) {
+      const f = fishes[i];
+      if (f.state !== 'hidden' && f.state !== 'wait' && f.z < 0.45) pbDrawPixelFish(f, t);
+    }
+    /* 水草（sin 摆动） */
+    for (let i = 0; i < plants.length; i++) {
+      const pl = plants[i];
+      let px = pl.x, py = pl.baseY;
+      for (let s = 0; s < pl.segs.length; s++) {
+        const sway = Math.sin(t * pl.speed + pl.phase + s * 0.32) * (s * 0.55);
+        px += Math.round(sway * 0.22);
+        py -= 9;
+        fill(pl.segs[s].c);
+        rect(Math.round(px / 2) * 2, Math.round(py / 2) * 2, pl.segs[s].w, 10);
+      }
+    }
+    /* 鱼食颗粒：发光微粒缓缓下沉 */
+    for (let i = 0; i < foods.length; i++) {
+      const fd = foods[i];
+      if (fd.eaten) continue;
+      const fx = Math.round(fd.x / 2) * 2, fy = Math.round(fd.y / 2) * 2;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      const fg = ctx.createRadialGradient(fx, fy, 0.5, fx, fy, 9);
+      fg.addColorStop(0, 'rgba(255,240,180,' + (0.55 * fd.life).toFixed(3) + ')');
+      fg.addColorStop(1, 'rgba(255,240,180,0)');
+      ctx.fillStyle = fg;
+      ctx.fillRect(fx - 9, fy - 9, 18, 18);
+      ctx.restore();
+      fill('#ffd97a');
+      rect(fx - 1, fy - 1, 3, 3);
+      fill('#fff3c8');
+      rect(fx - 1, fy - 1, 1.5, 1.5);
+    }
+    /* 气泡柱：取模循环，无 random；顶部高光 + 到达水面破裂 */
+    const colH = GRAVEL_TOP + 20 - WSURF;
+    for (let i = 0; i < bubbles.length; i++) {
+      const b = bubbles[i];
+      let prog = (t * b.speed + b.phase) % 1;
+      if (b.lastProg !== undefined && prog < b.lastProg - 0.5) {
+        pops.push({ x: 124 + b.xoff, y: WSURF + 4, r: b.size + 1, life: 1 });
+      }
+      b.lastProg = prog;
+      const by = GRAVEL_TOP + 20 - prog * colH;
+      const bx = 124 + b.xoff + Math.sin(t * b.wob + b.phase * 9) * 3;
+      const grow = 1 + prog * 1.2;
+      const sz = b.size * grow;
+      const ix = Math.round(bx / 2) * 2, iy = Math.round(by / 2) * 2;
+      /* 泡体：边缘亮、中心透 */
+      fill(190, 232, 250, 170 - prog * 80);
+      rect(ix, iy, sz, sz);
+      fill(232, 248, 255, 210 - prog * 110);
+      rect(ix, iy, sz, 1.5);
+      rect(ix, iy, 1.5, sz);
+      /* 物理高光：光源在左上 */
+      fill(255, 255, 255, 235 - prog * 120);
+      rect(ix + 1, iy + 1, 1.5, 1.5);
+    }
+    /* 水面破裂动画：扩散的椭圆环 */
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < pops.length; i++) {
+      const pp = pops[i];
+      const rr = pp.r + (1 - pp.life) * 10;
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.6 * pp.life).toFixed(3) + ')';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(pp.x, pp.y, rr, rr * 0.45, 0, 0, 6.2832);
+      ctx.stroke();
+    }
+    ctx.restore();
+    /* 敲击气泡 */
+    for (let i = 0; i < burstBubbles.length; i++) {
+      const b = burstBubbles[i];
+      if (!b.active) continue;
+      fill(240, 250, 255, b.life * 220);
+      rect(Math.round(b.x / 2) * 2, Math.round(b.y / 2) * 2, b.size, b.size);
+    }
+    /* 近处的鱼 + 等待中的鱼：画在水草之前 */
+    for (let i = 0; i < fishes.length; i++) {
+      const f = fishes[i];
+      if (f.state !== 'hidden' && (f.z >= 0.45 || f.state === 'wait')) pbDrawPixelFish(f, t);
+    }
+    /* 指尖涟漪 */
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < ripples.length; i++) {
+      const r = ripples[i];
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.5 * r.life).toFixed(3) + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.r, 0, 6.2832);
+      ctx.stroke();
+    }
+    ctx.restore();
+  });
+}
+function pbDrawGlassFront(ctx, t) {
+  /* Pass3：前景玻璃（菲涅尔描边 + 曲面高光 + 水面弯月 + 玻璃唇边/底足） */
+  ctx.save();
+  /* 菲涅尔边缘：外冷内亮双层描边 */
+  defineTankPath(ctx, 0);
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(198,245,255,.55)';
+  ctx.stroke();
+  defineTankPath(ctx, 2.5);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,.9)';
+  ctx.stroke();
+  /* 缸壁内侧反光：水体映在玻璃内表面的一道亮边 */
+  defineTankPath(ctx, WALL + 2);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,.28)';
+  ctx.stroke();
+  /* 曲面条带高光（screen，跟随缸壁曲面） */
+  ctx.globalCompositeOperation = 'screen';
+  const rim = ctx.createLinearGradient(TX0 + 30, TY0 + 40, TX1 - 20, TYB - 60);
+  rim.addColorStop(0, 'rgba(255,255,255,.6)');
+  rim.addColorStop(0.3, 'rgba(160,230,255,.08)');
+  rim.addColorStop(0.75, 'rgba(255,255,255,.4)');
+  rim.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.strokeStyle = rim;
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(TX1 - 24, TY0 + 30);
+  ctx.bezierCurveTo(TX1 - 14, 240, TX1 - 14, 420, TX1 - 38, TYB - 56);
+  ctx.stroke();
+  /* 左侧窄高光 */
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(255,255,255,.42)';
+  ctx.beginPath();
+  ctx.moveTo(TX0 + 15, TY0 + 56);
+  ctx.bezierCurveTo(TX0 + 8, 250, TX0 + 9, 430, TX0 + 28, TYB - 84);
+  ctx.stroke();
+  /* 左下角环境反光大斑：通透感来源 */
+  const env = ctx.createRadialGradient(TX0 + 52, TYB - 120, 4, TX0 + 52, TYB - 120, 90);
+  env.addColorStop(0, 'rgba(255,255,255,.20)');
+  env.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = env;
+  ctx.fillRect(TX0 - 40, TYB - 220, 200, 220);
+  ctx.globalCompositeOperation = 'source-over';
+  /* 水面弯月线（玻璃交界处的亮线） */
+  ctx.strokeStyle = 'rgba(255,255,255,.55)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(TX0 + WALL + 2, WSURF - 2);
+  ctx.lineTo(TX1 - WALL - 2, WSURF - 2);
+  ctx.stroke();
+  ctx.restore();
+  /* 缸口玻璃唇边：两层细环 + 顶面高光，取代粗重蓝条 */
+  ctx.save();
+  defineTankPath(ctx, -4);
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(168,220,245,.5)';
+  ctx.stroke();
+  defineTankPath(ctx, -4);
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(255,255,255,.95)';
+  ctx.stroke();
+  /* 顶口椭圆亮沿 */
+  ctx.strokeStyle = 'rgba(255,255,255,.85)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(TX0 + 6, TY0 - 4);
+  ctx.lineTo(TX1 - 6, TY0 - 4);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(120,190,225,.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(TX0 + 4, TY0 + 4);
+  ctx.lineTo(TX1 - 4, TY0 + 4);
+  ctx.stroke();
+  ctx.restore();
+  /* 底足：一圈纤细玻璃沿 + 柔软接触影 */
+  ctx.save();
+  ctx.fillStyle = 'rgba(20,70,110,.16)';
+  ctx.beginPath();
+  ctx.ellipse(240, TYB + 14, 168, 10, 0, 0, 6.2832);
+  ctx.fill();
+  defineTankPath(ctx, -2);
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(150,205,235,.4)';
+  ctx.stroke();
+  defineTankPath(ctx, -2);
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = 'rgba(255,255,255,.8)';
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ================= p5 生命周期 ================= */
+function setup() {
+  const cvs = createCanvas(CW, CH);
+  cvs.parent('pixel-stage');
+  noSmooth();
+  pixelDensity(1);
+  drawingContext.imageSmoothingEnabled = false;
+  sizeStage();
+  pbLoadSave();
+  pbInitWorld();
+  const layer = document.getElementById('interact-layer');
+  layer.addEventListener('pointerdown', pbPointerDown);
+  layer.addEventListener('pointermove', pbPointerMove);
+  layer.addEventListener('pointerup', pbPointerUp);
+  layer.addEventListener('pointercancel', pbPointerUp);
+  layer.addEventListener('pointerleave', pbPointerUp);
+  /* 状态行 */
+  const sl = document.getElementById('status-line');
+  if (reunionPhase === 'wait' && reunionIdx >= 0) {
+    const awayD = Math.max(1, Math.floor(awayMs / 86400000));
+    sl.textContent = '你离开了 ' + awayD + ' 天，' + fishes[reunionIdx].name + ' 一直在等你回来';
+    setTimeout(function () { sl.style.opacity = 1; }, 1600);
+  } else if (greeterIdx >= 0) {
+    const awayH = Math.floor(awayMs / 3600000);
+    sl.textContent = '你离开了 ' + (awayH >= 24 ? Math.floor(awayH / 24) + ' 天' : awayH + ' 小时') + '，' + fishes[greeterIdx].name + ' 一直贴着玻璃等你';
+  } else if (saveData.visits > 1) {
+    sl.textContent = '第 ' + daysAlive + ' 天 · 它们都记得你';
+  } else {
+    sl.textContent = '2003 年的那个下午，它们还在';
+  }
+  setTimeout(function () { sl.style.opacity = 1; }, 2600);
+  setTimeout(function () { document.getElementById('hint-line').style.opacity = 1; }, 4200);
+  setTimeout(function () {
+    document.getElementById('hint-line').style.opacity = 0;
+  }, 14000);
+  setInterval(pbPersist, 8000);
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { pbPersist(); pbStopAllAudio(); }
+  });
+  window.addEventListener('pagehide', function () { pbPersist(); pbStopAllAudio(); });
+}
+function sizeStage() {
+  const s = document.getElementById('pixel-stage');
+  const scale = Math.min(windowWidth / CW, windowHeight / CH);
+  s.style.width = Math.floor(CW * scale) + 'px';
+  s.style.height = Math.floor(CH * scale) + 'px';
+}
+function windowResized() { sizeStage(); }
+
+function draw() {
+  const dt = Math.min(deltaTime, 50) / 16.667;
+  const t = millis() / 1000;
+  bootT += dt / 60;
+  clear();
+
+  /* 更新 */
+  for (let i = 0; i < fishes.length; i++) {
+    if (i === greeterIdx && fishes[i].state === 'wander' && t > 2.2 && t < 20) {
+      fishes[i].state = 'greet';
+    }
+    pbUpdateFish(fishes[i], i, dt, t);
+  }
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    ripples[i].r += 1.6 * dt;
+    ripples[i].life *= Math.pow(0.94, dt);
+    if (ripples[i].life < 0.04) ripples.splice(i, 1);
+  }
+  for (let i = 0; i < burstBubbles.length; i++) {
+    const b = burstBubbles[i];
+    if (!b.active) continue;
+    b.y -= b.vy * dt;
+    b.life -= 0.012 * dt;
+    if (b.life <= 0 || b.y < WSURF + 6) b.active = false;
+  }
+  /* 鱼食物理：重力下沉 + 左右摇摆，落到砂床后逐渐失去光泽 */
+  for (let i = foods.length - 1; i >= 0; i--) {
+    const fd = foods[i];
+    if (fd.eaten) { foods.splice(i, 1); continue; }
+    if (!fd.landed) {
+      fd.vy = Math.min(0.55, fd.vy + 0.012 * dt);
+      fd.x += Math.sin(t * 2.4 + fd.phase) * 0.35 * dt;
+      fd.y += fd.vy * dt;
+      if (fd.y >= GRAVEL_TOP - 6) { fd.y = GRAVEL_TOP - 6; fd.landed = true; }
+    } else {
+      fd.life -= 0.0009 * dt;
+      if (fd.life <= 0.05) foods.splice(i, 1);
+    }
+  }
+  for (let i = pops.length - 1; i >= 0; i--) {
+    pops[i].life -= 0.03 * dt;
+    if (pops[i].life <= 0) pops.splice(i, 1);
+  }
+  /* 长按 3 秒拍立得：只置标志位——此刻画布刚被 clear()，必须等本帧绘制完再拍 */
+  if (touching && !polaroidActive && reunionPhase !== 'wait' && millis() - touchDownAt > 3000 && touchMoved < 46) {
+    polaroidPending = true;
+  }
+  /* 持续触摸的涟漪 */
+  if (touching && frameCount % 22 === 0) {
+    ripples.push({ x: touchX, y: touchY, r: 5, life: 0.8 });
+  }
+
+  /* 揭示节奏：水体淡入 */
+  const fade = Math.min(1, bootT / 1.4);
+  const ctx = drawingContext;
+  ctx.save();
+  ctx.globalAlpha = 0.25 + 0.75 * fade;
+  pbDrawTankBack(ctx);
+  pbDrawWaterAndWorld(ctx, t);
+  pbDrawGlassFront(ctx, t);
+  ctx.restore();
+
+  /* 触摸点微光（玻璃上的指痕） */
+  if (touching) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const fg = ctx.createRadialGradient(touchX, touchY, 2, touchX, touchY, 44);
+    fg.addColorStop(0, 'rgba(255,255,255,.34)');
+    fg.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = fg;
+    ctx.fillRect(touchX - 44, touchY - 44, 88, 88);
+    ctx.restore();
+  }
+
+  /* 重逢演出：全缸压暗，只留一束聚光给等你的那条鱼 */
+  if (reunionPhase === 'wait' && fishes[reunionIdx]) {
+    ctx.save();
+    const rg = ctx.createRadialGradient(240, 336, 40, 240, 336, 300);
+    rg.addColorStop(0, 'rgba(6,24,40,0)');
+    rg.addColorStop(0.55, 'rgba(6,24,40,.42)');
+    rg.addColorStop(1, 'rgba(6,24,40,.72)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(0, 0, CW, CH);
+    ctx.restore();
+  }
+
+  /* 拍照：场景绘制完成后抓取画布（demo=polaroid 供调试自动触发一次） */
+  if (DEMO_POLAROID && !polaroidActive && t > 2) polaroidPending = true;
+  if (polaroidPending) { polaroidPending = false; pbTakePolaroid(); }
+}
+</script>
+<script type="application/pixel-bloom-qa">
+/* 薄 QA 契约：只复用生产函数（pbInitWorld / pbUpdateFish / pbStartleAt），不复制物理 */
+globalThis.__PIXEL_BLOOM_QA__ = (function () {
+  let qaT = 0, qaTapped = false, qaFed = false;
+  /* 与 defineTankPath 同几何参数的保守解析包含判断（Node 无 Path2D） */
+  function inTank(x, y) {
+    const x0 = TX0 + WALL + 2, x1 = TX1 - WALL - 2;
+    const y0 = TY0 + WALL + 2, yb = TYB - WALL - 2;
+    if (x < x0 || x > x1 || y < y0 || y > yb) return false;
+    const cr = BOT_R - WALL;
+    const cornerY = yb - cr;
+    if (y > cornerY) {
+      const k = (y - cornerY) / cr;
+      const insetX = cr * k * 0.8;
+      if (x < x0 + insetX || x > x1 - insetX) return false;
+    }
+    return true;
+  }
+  return {
+    horizonSeconds: 16,
+    dt: 1 / 60,
+    requiredStates: ['enter', 'wander', 'chase', 'flee', 'feed'],
+    reset() {
+      qaT = 0; qaTapped = false; qaFed = false;
+      touching = false;
+      foods = []; pops = [];
+      reunionPhase = 'none'; reunionIdx = -1;
+      polaroidActive = false;
+      if (!saveData) saveData = { firstVisit: 0, lastVisit: 0, visits: 0, bonds: {} };
+      greeterIdx = -1;
+      pbInitWorld();
+      reunionPhase = 'none'; reunionIdx = -1;
+      for (let i = 0; i < fishes.length; i++) {
+        if (fishes[i].state === 'wait' || fishes[i].state === 'hidden') {
+          fishes[i].state = 'wander';
+          fishes[i].x = 140 + i * 48; fishes[i].y = 250 + (i % 3) * 80;
+        }
+      }
+    },
+    begin() {},
+    step(dt) {
+      qaT += dt;
+      /* 1.5s-7s 模拟指尖贴玻璃（触发 chase）；9s 模拟敲玻璃（触发 flee）；11s 模拟双击投喂（触发 feed） */
+      if (qaT >= 1.5 && qaT <= 7) { touching = true; touchX = 240; touchY = 330; }
+      else { touching = false; }
+      if (qaT >= 9 && !qaTapped) { qaTapped = true; pbStartleAt(240, 330); }
+      if (qaT >= 11 && !qaFed) { qaFed = true; pbFeed(240, 330); }
+      const dtf = dt * 60;
+      for (let i = 0; i < fishes.length; i++) pbUpdateFish(fishes[i], i, dtf, qaT);
+      /* 鱼食物理（与 draw() 同逻辑） */
+      for (let i = foods.length - 1; i >= 0; i--) {
+        const fd = foods[i];
+        if (fd.eaten) { foods.splice(i, 1); continue; }
+        if (!fd.landed) {
+          fd.vy = Math.min(0.55, fd.vy + 0.012 * dtf);
+          fd.x += Math.sin(qaT * 2.4 + fd.phase) * 0.35 * dtf;
+          fd.y += fd.vy * dtf;
+          if (fd.y >= GRAVEL_TOP - 6) { fd.y = GRAVEL_TOP - 6; fd.landed = true; }
+        } else {
+          fd.life -= 0.0009 * dtf;
+          if (fd.life <= 0.05) foods.splice(i, 1);
+        }
+      }
+    },
+    state() {
+      const priority = ['flee', 'feed', 'chase', 'greet', 'wait', 'wander', 'enter'];
+      for (let p = 0; p < priority.length; p++) {
+        for (let i = 0; i < fishes.length; i++) {
+          if (fishes[i].state === priority[p]) return priority[p];
+        }
+      }
+      return 'wander';
+    },
+    entities() {
+      /* enter/hidden 状态的鱼在 clip 之外或草中（不可见），不列入边界断言；
+         包围盒按精灵真实外沿：尾 14u·头 12u·背鳍 6u·腹 4u（u=s 缩放），
+         能量高时名字标签再向上延伸约 22u */
+      const out = [];
+      for (let i = 0; i < fishes.length; i++) {
+        const f = fishes[i];
+        if (f.state === 'enter' || f.state === 'hidden') continue;
+        const s = f.def.size * (0.75 + 0.45 * f.z);
+        const hw = Math.ceil(14 * s);
+        const ht = Math.ceil((f.energy > 0.25 ? 28 : 7) * s);
+        const hb = Math.ceil(6 * s);
+        out.push({
+          id: 'fish-' + f.name,
+          points: [
+            [f.x - hw, f.y - ht], [f.x + hw, f.y - ht],
+            [f.x - hw, f.y + hb], [f.x + hw, f.y + hb]
+          ]
+        });
+      }
+      return out;
+    },
+    contains(x, y) { return inTank(x, y); },
+    counts() {
+      return [{ name: 'fishes', expected: FISH_DEFS.length, actual: fishes.length }];
+    }
+  };
+})();
+</script>
+</body>
+</html>
