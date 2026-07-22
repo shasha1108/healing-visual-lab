@@ -167,6 +167,48 @@
   },
   "works": [
     {
+      "slug": "aquarium-2003",
+      "title_en": "Aquarium 2003",
+      "title_zh": "2003 水族馆",
+      "tagline": "你小时候盯过的那个屏保活了——缸里的鱼记得你",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API",
+        "localStorage"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 1,
+      "healing_domain": "meditation",
+      "keywords": [
+        "pixel art aquarium",
+        "canvas 2d",
+        "p5.js",
+        "web audio api",
+        "touch interaction",
+        "fish flocking",
+        "localstorage persistence",
+        "healing visualization"
+      ],
+      "use_cases": [
+        "p5.js pixel art aquarium",
+        "canvas fish simulation",
+        "localStorage memory persistence",
+        "web audio underwater ambience",
+        "healing H5 screensaver",
+        "touch flocking interaction"
+      ],
+      "files": [
+        "aquarium-2003.html",
+        "aquarium-2003.md",
+        "aquarium-2003_1.gif"
+      ],
+      "date": "2026-07-22"
+    },
+    {
       "slug": "tree-remembers-wind",
       "title_en": "The Tree That Remembers Wind",
       "title_zh": "记得风的树",
@@ -1034,48 +1076,6 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
-    },
-    {
-      "slug": "aquarium-2003",
-      "title_en": "Aquarium 2003",
-      "title_zh": "2003 水族馆",
-      "tagline": "你小时候盯过的那个屏保活了——缸里的鱼记得你",
-      "tech": [
-        "p5.js",
-        "Canvas 2D",
-        "Web Audio API",
-        "localStorage"
-      ],
-      "render": "Canvas2D (p5.js)",
-      "has_audio": true,
-      "has_touch": true,
-      "particle_count": "N/A",
-      "dependencies": 1,
-      "healing_domain": "meditation",
-      "keywords": [
-        "pixel art aquarium",
-        "canvas 2d",
-        "p5.js",
-        "web audio api",
-        "touch interaction",
-        "fish flocking",
-        "localstorage persistence",
-        "healing visualization"
-      ],
-      "use_cases": [
-        "p5.js pixel art aquarium",
-        "canvas fish simulation",
-        "localStorage memory persistence",
-        "web audio underwater ambience",
-        "healing H5 screensaver",
-        "touch flocking interaction"
-      ],
-      "files": [
-        "aquarium-2003.html",
-        "aquarium-2003.md",
-        "aquarium-2003_1.gif"
-      ],
-      "date": "2026-07-22"
     }
   ]
 }
