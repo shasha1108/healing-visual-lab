@@ -1,0 +1,1289 @@
+<!doctype html>
+<!--
+  Title: First Light · 第一束光 · First Light
+  Concept: 第一束光 — 触摸玻璃，让温度抵达一颗沉睡的像素种子
+  Summary: 掌心玻璃育光舱，长按唤醒黑色像素种子，光须丛生，松手后留下温度年轮
+  Tech: p5.js, Canvas 2D, Web Audio API, localStorage
+  Keywords: p5.js, canvas 2d, web audio api, touch interaction, localstorage persistence
+  Features: Palm-held glass growth chamber: long-press warms a dormant black pixel seed into light tendrils; releasing the touch etches a temperature memory ring. p5.js Canvas2D with Bayer dithering, aero16 palette, Web Audio chimes, localStorage persistence.
+  Render: Canvas2D (p5.js)
+  Audio: yes
+  Touch: yes
+  Particles: N/A
+  Standalone: yes, single HTML file, 1 CDN dependencies
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="description" content="一颗黑色像素种子，在你的温度里长出第一束光。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="第一束光 · First Light">
+<meta property="og:description" content="一颗黑色像素种子，在你的温度里长出第一束光。">
+<meta property="og:locale" content="zh_CN">
+<title>第一束光 · First Light</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    width:100%;height:100%;overflow:hidden;touch-action:none;
+    background:
+      radial-gradient(circle at 50% 34%,rgba(109,201,255,.50) 0%,rgba(9,55,74,.42) 32%,rgba(4,12,20,.92) 74%),
+      linear-gradient(155deg,#1f5a7d 0%,#0e3850 55%,#071520 100%);
+    font-family:"Segoe UI","PingFang SC",sans-serif;
+    user-select:none;-webkit-user-select:none;
+  }
+  #pixel-stage{
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    overflow:hidden;border-radius:32px;
+  }
+  #pixel-stage canvas{
+    display:block;position:absolute;inset:0;
+    width:100%!important;height:100%!important;
+    image-rendering:pixelated;pointer-events:none;z-index:3;
+  }
+  #pixel-stage::after{
+    content:'';position:absolute;inset:0;z-index:5;pointer-events:none;
+    background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22256%22%20height%3D%22256%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.8%22%20numOctaves%3D%224%22%20stitchTiles%3D%22stitch%22%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20filter%3D%22url%28%23n%29%22%2F%3E%3C%2Fsvg%3E");
+    background-size:256px 256px;
+    opacity:0.045;
+    mix-blend-mode:overlay;
+  }
+  #interact-layer{
+    position:absolute;inset:0;z-index:10;cursor:pointer;
+    touch-action:none;
+  }
+  #interact-layer:active{cursor:grabbing}
+  #audio-hint {
+    position:absolute; top: 10%; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,0.4); font-size: 12px; letter-spacing: 2px;
+    pointer-events: none; transition: opacity 2s; z-index: 20;
+  }
+</style>
+</head>
+<body>
+<div id="audio-hint">轻触开启声音 · 长按玻璃传递温度</div>
+<div id="pixel-stage"><div id="interact-layer"></div></div>
+<script>
+'use strict';
+
+const BASE_W=640,BASE_H=960,PX=4;
+const PALETTE={
+  name:'aero16 (TokoSauce)',
+  source:'assets/palettes.json:reference',
+  personality:'冰白、海蓝、嫩绿与暖阳组成的 Frutiger Aero 全场景色板',
+  colors:['#f9fcff','#b7e8e8','#7fffee','#6dc9ff','#576ae5','#32c982','#98ea96','#ccffa3','#091e26','#48627c','#b3c4d6','#fff6d1','#ffed96','#ffb566','#9b2e8e','#5a1b91']
+};
+const CHAMBER={cx:320,top:112,shoulder:205,left:142,right:498,base:778,foot:814};
+const BAYER4=[0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+let interactLayer;
+let motes=[];
+let ripples=[];
+let ferns=[];
+let roots=[];
+let fireflies=[];
+let glowSpores=[];
+let heatMotes=[];
+let memoryCount=0;
+let memoryTints=[];
+let ascendLevel=0;
+let touchHue=0;
+let bloomSeed;
+let heatPoint={x:320,y:515,active:false,strength:0,hold:0,committed:false,pointerId:null};
+let sceneTime=0;
+let lastInteractionAt=0;
+let climaxFlash=0;
+let heatMoteClock=0;
+let rainDrops=[];
+let rainBoost=0;
+let rainClock=0;
+let soilSpores=[];
+
+// === 治愈系音频引擎 (Web Audio API) ===
+let audioCtx, masterGain, filter;
+let drones = [];
+let audioInitialized = false;
+
+function initAudio() {
+  if (audioInitialized) return;
+  audioInitialized = true;
+  document.getElementById('audio-hint').style.opacity = '0'; // 隐藏提示
+
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContext();
+    
+    // 主音量与混响空间感
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.18;
+
+    // 动态滤波器（控制声音的"明暗"）
+    filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 260; // 初始声音很沉闷
+    filter.Q.value = 0.8;
+
+    masterGain.connect(filter);
+    filter.connect(audioCtx.destination);
+    
+    // 生成持续的治愈低频环境音 (Ambient Drone)
+    const baseFreqs = [130.81, 196.00, 261.63]; // C3, G3, C4
+    baseFreqs.forEach((f, i) => {
+      let osc = audioCtx.createOscillator();
+      osc.type = i === 0 ? 'triangle' : 'sine';
+      osc.frequency.value = f;
+      let amp = audioCtx.createGain();
+      amp.gain.value = 0;
+      osc.connect(amp);
+      amp.connect(masterGain);
+      osc.start();
+      drones.push({osc, amp, offset: i * 2.5});
+    });
+
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+  } catch(e) { console.log("浏览器不支持WebAudio"); }
+}
+
+function updateAudio(time) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const warmth=Math.max(bloomSeed.energy,rainBoost*0.6);
+
+  // 1. Drone breathes with the seed's warmth and rain boost
+  drones.forEach(d => {
+    const vol = 0.06 + warmth*0.14 + 0.05 * Math.sin(t * 0.4 + d.offset);
+    d.amp.gain.setTargetAtTime(vol, t, 0.5);
+  });
+
+  // 2. Filter opens gently as the seed wakes or rain falls, closes again in rest
+  const targetFreq = 280 + warmth*700;
+  filter.frequency.setTargetAtTime(targetFreq, t, 1.2);
+}
+
+// 播放清脆的单音（交互反馈）
+function playChime(freq, vol=0.1, type='sine') {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const env = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  env.gain.setValueAtTime(0, t);
+  env.gain.linearRampToValueAtTime(vol, t + 0.1);
+  env.gain.exponentialRampToValueAtTime(0.001, t + 3.0);
+  osc.connect(env);
+  env.connect(masterGain);
+  osc.start(t);
+  osc.stop(t + 3.0);
+}
+
+// 高潮：破茧瞬间的和弦拨奏
+function playClimaxChord() {
+  const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5 (治愈系大七和弦)
+  notes.forEach((f, i) => {
+    setTimeout(() => playChime(f, 0.2, 'sine'), i * 180);
+  });
+}
+// ===================================
+
+function setup(){
+  const canvas=createCanvas(BASE_W,BASE_H);
+  canvas.parent('pixel-stage');
+  noSmooth();
+  pixelDensity(1);
+  drawingContext.imageSmoothingEnabled=false;
+  frameRate(60);
+  initScene();
+  sizeStage();
+  bindInteraction();
+}
+
+function initScene(){
+  memoryCount=loadMemoryCount();
+  const hasMemory=memoryCount>0||ascendLevel>0;
+  bloomSeed={x:320,y:651,state:'rest',energy:0,targetEnergy:0,bloom:hasMemory?0.22:0.08,bloomTarget:hasMemory?0.22:0.08,afterglow:0,lean:0};
+  motes=[];
+  for(let i=0;i<32;i++){
+    motes.push({x:178+hash01(i*13+2)*284,y:240+hash01(i*19+5)*355,phase:hash01(i*31+7)*TWO_PI,drift:5+hash01(i*41+11)*12,size:i%5===0?4:2,alpha:28+hash01(i*17+3)*65});
+  }
+  initFerns();
+  initRoots();
+  initFireflies();
+  initGlowSpores();
+  initSoilSpores();
+}
+
+function initFerns(){
+  // Five tall moon-moss fronds reaching upward in their own directions
+  ferns=[
+    {baseAngle:-HALF_PI-.42,curve:-.12,length:360,phase:0,segLen:10,growth:0,target:0},
+    {baseAngle:-HALF_PI-.18,curve:.10,length:380,phase:1.1,segLen:10,growth:0,target:0},
+    {baseAngle:-HALF_PI+.04,curve:-.08,length:340,phase:2.3,segLen:10,growth:0,target:0},
+    {baseAngle:-HALF_PI+.26,curve:.12,length:310,phase:3.5,segLen:10,growth:0,target:0},
+    {baseAngle:-HALF_PI+.48,curve:-.10,length:280,phase:4.7,segLen:10,growth:0,target:0}
+  ];
+}
+
+function initRoots(){
+  // Warm capillary roots spreading from the seed into the soil
+  roots=[];
+  const strands=[
+    {angle:HALF_PI+.22,length:112,curve:-.18},
+    {angle:HALF_PI-.32,length:96,curve:.24},
+    {angle:HALF_PI+.58,length:82,curve:-.28},
+    {angle:HALF_PI-.68,length:68,curve:.36}
+  ];
+  for(let s=0;s<strands.length;s++){
+    const strand=strands[s];
+    const segLen=8;
+    const segs=[];
+    let x=bloomSeed.x,y=bloomSeed.y;
+    const total=Math.floor(strand.length/segLen);
+    for(let i=0;i<total;i++){
+      const t=i/total;
+      const a=strand.angle+strand.curve*t+(hash01(i*7+s*13)-.5)*.22;
+      x+=Math.cos(a)*segLen;
+      y+=Math.sin(a)*segLen;
+      segs.push({x,y,a});
+      // occasional branches
+      if(i>2 && i%3===0 && hash01(i*17+s*31)<.55){
+        const branchLen=Math.floor((total-i)*.55);
+        const ba=a+(hash01(i*23+s*11)<.5?.78:-.78);
+        let bx=x,by=y;
+        const bsegs=[];
+        for(let j=0;j<branchLen;j++){
+          const baa=ba+(hash01(j*5+i*11+s*7)-.5)*.42;
+          bx+=Math.cos(baa)*segLen*.7;
+          by+=Math.sin(baa)*segLen*.7;
+          bsegs.push({x:bx,y:by,a:baa});
+        }
+        segs[segs.length-1].branch=bsegs;
+      }
+    }
+    roots.push({segs,growth:0,target:0,phase:s*2.1});
+  }
+}
+
+function initFireflies(){
+  fireflies=[];
+  for(let i=0;i<18;i++){
+    fireflies.push({
+      x:160+hash01(i*13+2)*320,
+      y:520+hash01(i*19+5)*240,
+      phase:hash01(i*31+7)*TWO_PI,
+      drift:8+hash01(i*41+11)*18,
+      speed:2+hash01(i*23+3)*5,
+      size:hash01(i*17+9)>.6?4:2,
+      warm:hash01(i*53+11)>.5,
+      blink:0.8+hash01(i*47+13)*1.4
+    });
+  }
+}
+
+function initGlowSpores(){
+  glowSpores=[];
+  for(let i=0;i<5;i++){
+    glowSpores.push({
+      x:200+hash01(i*13+2)*240,
+      y:660+hash01(i*19+5)*40,
+      phase:hash01(i*31+7)*TWO_PI,
+      blink:0.6+hash01(i*47+13)*1.1,
+      drift:6+hash01(i*53+11)*10
+    });
+  }
+}
+
+function updateGlowSpores(dt){
+  for(const g of glowSpores){
+    g.x+=Math.sin(sceneTime*0.25+g.phase)*g.drift*dt*0.15;
+    g.y+=Math.cos(sceneTime*0.18+g.phase*0.7)*2*dt*0.15;
+  }
+}
+
+function soilSurfaceY(x){
+  const dist=Math.abs(x-320);
+  const mound=Math.max(0,18-dist*0.3);
+  return 686+Math.sin(x*.071)*7+Math.sin(x*.019+1.8)*5-mound;
+}
+
+function initSoilSpores(){
+  soilSpores=[];
+  for(let i=0;i<6;i++){
+    const x=180+hash01(i*11+3)*280;
+    soilSpores.push({
+      x:x,
+      y:soilSurfaceY(x)+2+hash01(i*23+5)*6,
+      phase:hash01(i*37+7)*TWO_PI,
+      speed:3+hash01(i*19+2)*5,
+      size:hash01(i*13+1)>.5?4:2,
+      bright:0.35+hash01(i*41+9)*0.35
+    });
+  }
+}
+
+function updateSoilSpores(dt){
+  const rainWake=1+rainBoost*1.6;
+  for(const s of soilSpores){
+    s.x+=s.speed*rainWake*dt*0.15*(Math.sin(s.phase)>0?1:-1);
+    if(s.x<170) s.x=470;
+    if(s.x>470) s.x=170;
+    s.y=soilSurfaceY(s.x)+2+hash01(s.phase+sceneTime*0.1)*6;
+    s.phase+=dt*0.4;
+  }
+}
+
+function drawSoilSpores(ctx){
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+  for(const s of soilSpores){
+    const x=Math.round(s.x/PX)*PX;
+    const y=Math.round(s.y/PX)*PX;
+    const pulse=0.5+0.5*Math.sin(sceneTime*1.2+s.phase);
+    const alpha=s.bright*(0.45+pulse*0.55)*(0.7+rainBoost*0.6);
+    const r=s.size===4?5:3;
+    drawSoftDot(ctx,x,y,r+3,alpha*0.5,'rgba(255,237,150,0.5)');
+    drawSoftDot(ctx,x,y,r,alpha,'rgba(255,246,209,0.95)');
+  }
+  ctx.restore();
+}
+
+function bindInteraction(){
+  interactLayer=document.getElementById('interact-layer');
+  interactLayer.addEventListener('pointerdown',onPointerDown);
+  interactLayer.addEventListener('pointermove',onPointerMove);
+  interactLayer.addEventListener('pointerup',onPointerUp);
+  interactLayer.addEventListener('pointercancel',onPointerUp);
+}
+
+function sizeStage(){
+  const scale=Math.min((windowWidth*0.96)/BASE_W,(windowHeight*0.96)/BASE_H);
+  const stage=document.getElementById('pixel-stage');
+  stage.style.width=Math.floor(BASE_W*scale)+'px';
+  stage.style.height=Math.floor(BASE_H*scale)+'px';
+}
+
+function windowResized(){sizeStage();}
+
+function stagePoint(event){
+  const rect=interactLayer.getBoundingClientRect();
+  return {x:(event.clientX-rect.left)*BASE_W/rect.width,y:(event.clientY-rect.top)*BASE_H/rect.height};
+}
+
+function pointInChamber(x,y){
+  const ctx=drawingContext;
+  ctx.save();defineChamberPath(ctx);const inside=ctx.isPointInPath(x,y);ctx.restore();
+  return inside;
+}
+
+function onPointerDown(event){
+  initAudio(); // 初始化音频
+  const p=stagePoint(event);
+  if(!pointInChamber(p.x,p.y))return;
+  event.preventDefault();
+  interactLayer.setPointerCapture(event.pointerId);
+  beginWarmth(p.x,p.y,event.pointerId);
+  spawnCyanRain(p.x);
+  playChime(392.00, 0.05); // 触摸发出的轻柔反馈
+}
+
+function onPointerMove(event){
+  if(!heatPoint.active||event.pointerId!==heatPoint.pointerId)return;
+  const p=stagePoint(event);
+  if(pointInChamber(p.x,p.y)){ heatPoint.x=p.x;heatPoint.y=p.y; }
+}
+
+function onPointerUp(event){
+  if(!heatPoint.active||event.pointerId!==heatPoint.pointerId)return;
+  event.preventDefault();
+  releaseWarmth();
+  playChime(261.63, 0.03); // 松开发出的收尾声
+}
+
+function beginWarmth(x,y,pointerId=null){
+  heatPoint.x=x;heatPoint.y=y;heatPoint.active=true;heatPoint.hold=0;heatPoint.committed=false;heatPoint.pointerId=pointerId;
+  touchHue=hash01(x*17+y*31+sceneTime*7);
+  bloomSeed.state='warming';bloomSeed.targetEnergy=1;
+  ripples.push({x,y,age:0,life:1});
+  lastInteractionAt=sceneTime;
+}
+
+function releaseWarmth(){
+  if(heatPoint.hold>=1.35&&!heatPoint.committed){
+    climaxFlash=1.0;
+    commitMemoryRing();
+    playClimaxChord(); // 触发高潮音乐
+  }
+  heatPoint.active=false;heatPoint.pointerId=null;
+  bloomSeed.targetEnergy=0;bloomSeed.afterglow=3.8;bloomSeed.state='afterglow';
+  lastInteractionAt=sceneTime;
+}
+
+function commitMemoryRing(){
+  heatPoint.committed=true;
+  if(memoryCount>=5){
+    // Ascension: rings collapse into the seed, seed core color permanently shifts
+    memoryCount=0;
+    memoryTints=[];
+    ascendLevel=Math.min(7,ascendLevel+1);
+    bloomSeed.afterglow=6.0;
+    climaxFlash=1.35;
+    try{
+      localStorage.setItem('pixelBloom.firstLight.rings','0');
+      localStorage.setItem('pixelBloom.firstLight.tints','');
+      localStorage.setItem('pixelBloom.firstLight.ascend',String(ascendLevel));
+    }catch(error){}
+  }else{
+    memoryCount=memoryCount+1;
+    memoryTints.push(constrain(touchHue,0,1));
+    try{
+      localStorage.setItem('pixelBloom.firstLight.rings',String(memoryCount));
+      localStorage.setItem('pixelBloom.firstLight.tints',memoryTints.join(','));
+    }catch(error){}
+  }
+}
+
+function loadMemoryCount(){
+  try{
+    const value=Number(localStorage.getItem('pixelBloom.firstLight.rings')||0);
+    const count=Number.isFinite(value)?constrain(Math.floor(value),0,5):0;
+    const tintStr=localStorage.getItem('pixelBloom.firstLight.tints')||'';
+    memoryTints=tintStr.split(',').filter(s=>s!=='').map(Number).filter(n=>Number.isFinite(n)).map(n=>constrain(n,0,1));
+    while(memoryTints.length<count) memoryTints.push(hash01(memoryTints.length*13+7)*0.5);
+    memoryTints.length=count;
+    const asc=Number(localStorage.getItem('pixelBloom.firstLight.ascend')||0);
+    ascendLevel=Number.isFinite(asc)?constrain(Math.floor(asc),0,7):0;
+    return count;
+  }catch(error){
+    memoryTints=[];
+    ascendLevel=0;
+    return 0;
+  }
+}
+
+function spawnCyanRain(centerX){
+  const count=18;
+  for(let i=0;i<count;i++){
+    const n1=hash01(rainClock++ + i*3.7);
+    const n2=hash01(rainClock++ + i*5.1);
+    const x=centerX+(n1-0.5)*180;
+    const y=130+n2*90;
+    if(!pointInChamber(x,y)) continue;
+    rainDrops.push({
+      x:Math.round(x/PX)*PX,
+      y:Math.round(y/PX)*PX,
+      vy:160+hash01(rainClock++ + i)*120,
+      len:8+Math.floor(hash01(rainClock++ + i*2)*3)*4,
+      alpha:0.55+hash01(rainClock++ + i*4)*0.35
+    });
+  }
+}
+
+function updateRain(dt){
+  for(const d of rainDrops){
+    d.y+=d.vy*dt;
+    // Hit soil surface
+    if(d.y>=686){
+      d.y=686;
+      rainBoost=Math.min(1,rainBoost+0.07);
+      d.dead=true;
+    }
+  }
+  rainDrops=rainDrops.filter(d=>!d.dead);
+  rainBoost=Math.max(0,rainBoost-dt/1.8);
+}
+
+function drawRain(ctx){
+  if(rainDrops.length===0)return;
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+  for(const d of rainDrops){
+    const fade=1-Math.max(0,(d.y-600)/120);
+    ctx.fillStyle=moteColor(d.alpha*fade,72);
+    ctx.fillRect(d.x,d.y,PX,d.len);
+    ctx.fillStyle=moteColor(d.alpha*fade*0.7,88);
+    ctx.fillRect(d.x+1,d.y+1,PX-2,PX);
+  }
+  ctx.restore();
+}
+
+function hash01(value){
+  const n=Math.sin(value*91.173+17.31)*43758.5453;
+  return n-Math.floor(n);
+}
+
+function hexToRgba(hex,alpha){
+  const r=parseInt(hex.slice(1,3),16);
+  const g=parseInt(hex.slice(3,5),16);
+  const b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function moteColor(alpha,light=70){
+  const hue=160+touchHue*120; // cyan (160) -> amber (280)
+  return `hsla(${hue},100%,${light}%,${alpha})`;
+}
+
+function ascendColor(alpha,light=70){
+  const hue=50+ascendLevel*70; // warm yellow -> green -> cyan -> blue -> purple
+  return `hsla(${hue%360},100%,${light}%,${alpha})`;
+}
+
+function drawSoftDot(ctx,x,y,r,alpha,colorStr){
+  const g=ctx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0,colorStr);
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g;
+  ctx.fillRect(Math.round(x-r),Math.round(y-r),Math.round(r*2),Math.round(r*2));
+}
+
+function expApproach(current,target,speed,dt){
+  return current+(target-current)*(1-Math.exp(-speed*dt));
+}
+
+function updateScene(dt){
+  sceneTime+=dt;
+  updateAudio(sceneTime); // 更新音频状态
+
+  if(heatPoint.active){
+    heatPoint.hold+=dt;
+    heatPoint.strength=expApproach(heatPoint.strength,1,8.5,dt);
+    bloomSeed.targetEnergy=1;
+    bloomSeed.bloomTarget=constrain(0.08+(heatPoint.hold-0.28)/(2.05-0.28)*0.92,0.08,1);
+    if(heatPoint.hold<0.55)bloomSeed.state='warming';
+    else if(heatPoint.hold<1.35)bloomSeed.state='rooting';
+    else bloomSeed.state='bloom';
+    
+    if(heatPoint.hold>=1.35&&!heatPoint.committed){
+      climaxFlash=1.0;
+      commitMemoryRing();
+      playClimaxChord(); // 触发破茧和弦
+    }
+  }else{
+    heatPoint.strength=expApproach(heatPoint.strength,0,2.1,dt);
+    bloomSeed.targetEnergy=0;
+    bloomSeed.bloomTarget=memoryCount>0?0.22:0.08;
+    if(bloomSeed.afterglow>0) bloomSeed.afterglow=Math.max(0,bloomSeed.afterglow-dt);
+    else if(bloomSeed.energy<0.035) bloomSeed.state='rest';
+  }
+
+  climaxFlash = Math.max(0, climaxFlash - dt * 1.5);
+  bloomSeed.energy=expApproach(bloomSeed.energy,bloomSeed.targetEnergy,heatPoint.active?4.8:1.35,dt);
+  bloomSeed.bloom=expApproach(bloomSeed.bloom,bloomSeed.bloomTarget,heatPoint.active?2.5:0.7,dt);
+  const lightX=320+Math.sin(sceneTime*0.19)*78;
+  bloomSeed.lean=expApproach(bloomSeed.lean,constrain((lightX-bloomSeed.x)/170,-0.36,0.36),0.6,dt);
+
+  for(const f of ferns){
+    // Once the seed has collected a memory (or ascended), the moon-moss keeps its height;
+    // only the light breathes up and down, never shrinking back.
+    const permanentGrowth=(memoryCount>0||ascendLevel>0)?1:0;
+    f.target=Math.max(bloomSeed.energy,permanentGrowth);
+    f.growth=expApproach(f.growth,f.target,heatPoint.active?4.5:1.0,dt);
+  }
+
+  for(const r of roots){
+    // Capillary roots grow with warmth and stay in the soil once memory is formed
+    const permanentGrowth=(memoryCount>0||ascendLevel>0)?1:0;
+    r.target=Math.max(bloomSeed.energy,permanentGrowth);
+    r.growth=expApproach(r.growth,r.target,heatPoint.active?4.2:0.9,dt);
+  }
+
+  // Fireflies drift upward and blink, pushed gently by climax energy
+  for(const ff of fireflies){
+    ff.y-=ff.speed*dt*0.35;
+    ff.x+=Math.sin(sceneTime*0.7+ff.phase)*ff.drift*0.015;
+    const fdx=ff.x-bloomSeed.x,fdy=ff.y-bloomSeed.y;
+    const fdist=Math.sqrt(fdx*fdx+fdy*fdy)||1;
+    const fRepel=climaxFlash*Math.max(0,1-fdist/220);
+    ff.x+=(fdx/fdist)*fRepel*90*dt;
+    ff.y+=(fdy/fdist)*fRepel*90*dt;
+    if(ff.y<280) ff.y=760+hash01(sceneTime+ff.phase)*40;
+  }
+
+  // Soft yellow glow spores drift and pulse near the soil
+  updateGlowSpores(dt);
+  updateSoilSpores(dt);
+  updateRain(dt);
+
+  for(const ripple of ripples){
+    ripple.age+=dt; ripple.life=Math.max(0,1-ripple.age/2.4);
+  }
+  ripples=ripples.filter(ripple=>ripple.life>0);
+
+  // Heat motes: glowing dust drifting from touch point toward the seed
+  if(heatPoint.active && heatPoint.strength>.1){
+    heatMoteClock++;
+    const n=hash01(heatMoteClock*7.3+sceneTime);
+    if(n>.35){
+      heatMotes.push({
+        t:0,
+        speed:.5+n*.7,
+        size:n>.75?4:2,
+        phase:hash01(heatMoteClock*3.1)*TWO_PI,
+        warm:n>.5
+      });
+    }
+  }
+  for(const m of heatMotes){
+    m.t+=m.speed*dt;
+    m.speed+=2.2*dt;
+  }
+  heatMotes=heatMotes.filter(m=>m.t<1.02);
+}
+
+function draw(){
+  const dt=Math.min(deltaTime*0.001,0.05);
+  updateScene(dt);
+  const ctx=drawingContext;
+  ctx.imageSmoothingEnabled=false;
+  drawBackdrop(ctx);
+  drawContactShadow(ctx);
+  drawChamberBack(ctx);
+  withChamberClip(ctx,()=>drawInterior(ctx));
+  drawBase(ctx);
+  drawGlassSurface(ctx);
+  drawIdentity(ctx);
+}
+
+function defineChamberPath(ctx){
+  const c=CHAMBER;
+  ctx.beginPath();
+  ctx.moveTo(c.cx,c.top);
+  ctx.bezierCurveTo(222,c.top,166,166,c.left,c.shoulder+70);
+  ctx.bezierCurveTo(126,390,128,625,170,c.base-32);
+  ctx.bezierCurveTo(206,c.base+14,434,c.base+14,470,c.base-32);
+  ctx.bezierCurveTo(512,625,514,390,c.right,c.shoulder+70);
+  ctx.bezierCurveTo(474,166,418,c.top,c.cx,c.top);
+  ctx.closePath();
+}
+
+function withChamberClip(ctx,drawInside){
+  ctx.save();defineChamberPath(ctx);ctx.clip();drawInside();ctx.restore();
+}
+
+function drawBackdrop(ctx){
+  const flashBoost=climaxFlash;
+  const bg=ctx.createRadialGradient(320,365,40,320,440,520);
+  bg.addColorStop(0,flashBoost>0?'#236080':'#1e5a78');
+  bg.addColorStop(.42,'#0d3347'); bg.addColorStop(1,'#040a11');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,BASE_W,BASE_H);
+
+  const haloR=300+flashBoost*180;
+  const halo=ctx.createRadialGradient(320,410,20,320,410,haloR);
+  halo.addColorStop(0,`rgba(109,201,255,${0.30+heatPoint.strength*0.16+flashBoost*0.40})`);
+  halo.addColorStop(.52,`rgba(87,106,229,${0.14+flashBoost*0.26})`);
+  halo.addColorStop(1,'rgba(9,30,38,0)');
+  ctx.fillStyle=halo;
+  const pad=flashBoost*120;
+  ctx.fillRect(40-pad,100-pad,560+pad*2,660+pad*2);
+}
+
+function drawContactShadow(ctx){
+  ctx.save();
+  const shadow=ctx.createRadialGradient(320,825,18,320,825,205);
+  shadow.addColorStop(0,'rgba(0,0,0,.58)'); shadow.addColorStop(1,'rgba(4,15,24,0)');
+  ctx.scale(1,.24); ctx.fillStyle=shadow;
+  ctx.beginPath();ctx.arc(320,825/.24,205,0,TWO_PI);ctx.fill();
+  ctx.restore();
+}
+
+function drawChamberBack(ctx){
+  ctx.save();
+  defineChamberPath(ctx);
+  // Glass volume: brighter transparent center, tinted edges
+  const glass=ctx.createRadialGradient(256,300,40,330,460,430);
+  glass.addColorStop(0,'rgba(249,252,255,.16)');
+  glass.addColorStop(.22,'rgba(177,230,245,.20)');
+  glass.addColorStop(.55,'rgba(109,201,255,.18)');
+  glass.addColorStop(.88,'rgba(87,106,229,.24)');
+  glass.addColorStop(1,'rgba(9,30,38,.48)');
+  ctx.fillStyle=glass;ctx.fill();
+  // Inner rim shadow for wall thickness
+  defineChamberPath(ctx);
+  ctx.strokeStyle='rgba(9,30,38,.14)';ctx.lineWidth=6;ctx.stroke();
+  ctx.restore();
+}
+
+function drawInterior(ctx){
+  const inside=ctx.createLinearGradient(0,125,0,780);
+  inside.addColorStop(0,'rgba(22,65,85,.46)'); inside.addColorStop(1,'rgba(6,32,34,.78)');
+  ctx.fillStyle=inside;ctx.fillRect(110,100,420,700);
+
+  drawMotes(ctx); drawSoil(ctx); drawSoilSpores(ctx); drawMemoryRings(ctx); drawRoots(ctx);
+  drawRain(ctx); drawFireflies(ctx); drawGlowSpores(ctx); drawHeatPath(ctx); drawFerns(ctx); drawSeed(ctx);
+  drawGlassRipples(ctx); drawClimaxFlash(ctx);
+}
+
+function drawMotes(ctx){
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  for(const mote of motes){
+    const dx=mote.x-bloomSeed.x;
+    const dy=mote.y-bloomSeed.y;
+    const dist=Math.sqrt(dx*dx+dy*dy)||1;
+    const repel=climaxFlash*Math.max(0,1-dist/220);
+    const pushX=(dx/dist)*repel*110;
+    const pushY=(dy/dist)*repel*110;
+
+    const x=Math.round((mote.x+Math.sin(sceneTime*.32+mote.phase)*mote.drift+pushX)/2)*2;
+    const y=Math.round((mote.y+Math.cos(sceneTime*.23+mote.phase)*5+pushY)/2)*2;
+    const shimmer=.56+.44*Math.sin(sceneTime*.8+mote.phase);
+    const alpha=Math.min(.95,(mote.alpha*shimmer)/180*(1+repel*3.0));
+    ctx.fillStyle=`rgba(200,240,255,${alpha})`;
+    ctx.fillRect(x,y,mote.size,mote.size);
+  }
+  ctx.restore();
+}
+
+// 优化：增加了土包的隆起，让种子有“被安放”的环境
+function drawSoil(ctx){
+  ctx.fillStyle='#091e26';
+  ctx.beginPath(); ctx.moveTo(128,686);
+  for(let x=128;x<=512;x+=8){
+    // 种子下方增加一个弧形土包隆起
+    const dist = Math.abs(x - 320);
+    const mound = Math.max(0, 18 - dist * 0.3);
+    const y=686+Math.sin(x*.071)*7+Math.sin(x*.019+1.8)*5 - mound;
+    ctx.lineTo(x,Math.round(y/4)*4);
+  }
+  ctx.lineTo(512,810);ctx.lineTo(128,810);ctx.closePath();ctx.fill();
+
+  for(let y=706;y<785;y+=8){
+    for(let x=164;x<480;x+=8){
+      if(((x*3+y*5)>>3)%16>BAYER4[((x/8)&3)+(((y/8)&3)<<2)]){
+        ctx.fillStyle=y<744?'rgba(72,98,124,.35)':'rgba(16,80,70,.38)';
+        ctx.fillRect(x,y,4,4);
+      }
+    }
+  }
+}
+
+function drawMemoryRings(ctx){
+  if(memoryCount<=0)return;
+
+  // Slow idle breathing: period ~6.5s, barely perceptible, only when the seed sleeps
+  const breath=.90+.10*Math.sin(sceneTime*.97+2.1);
+  const activeMult=bloomSeed.state==='rest'?breath:1;
+
+  for(let ring=0;ring<memoryCount;ring++){
+    const depth=ring/Math.max(1,memoryCount-1);
+    const cx=bloomSeed.x;
+    const cy=694+ring*16;
+    const rx=28+ring*14;
+    const ry=8+ring*5;
+
+    // Memory tint personalizes each ring's metallic vein family
+    const tint=memoryTints[ring]??(ring%2*0.5);
+    const baseR=Math.round(183+tint*(255-183));
+    const baseG=Math.round(232+tint*(237-232));
+    const baseB=Math.round(232+tint*(150-232));
+
+    for(let step=0;step<=32;step++){
+      const t=step/32;
+      const angle=radians(198+t*(342-198));
+
+      // Base elliptical arc buried beneath the soil surface
+      let x=cx+Math.cos(angle)*rx;
+      let y=cy+Math.sin(angle)*ry;
+
+      // Organic mineral wobble makes each vein a distinct sediment band
+      const wobble=Math.sin(t*7.3+ring*1.7)*5+Math.cos(t*4.1-ring)*3;
+      x+=Math.cos(angle+1.2)*wobble;
+      y+=Math.sin(angle+1.2)*wobble*.5;
+
+      const sx=Math.round(x/PX)*PX;
+      const sy=Math.round(y/PX)*PX;
+
+      // Stronger in the middle of the arc, dissolving at both ends
+      const edgeFade=Math.sin(t*PI);
+
+      // Bayer dither blends the vein into surrounding soil
+      const bx=(sx/PX)&3;
+      const by=(sy/PX)&3;
+      const threshold=BAYER4[bx+(by<<2)]/16;
+
+      // Subtle shimmer travels along the mineral band
+      const shimmer=.7+.3*Math.sin(sceneTime*1.1+ring*.8+step*.35);
+      const depthFade=1-depth*.55;
+      const alpha=(.16+.06*shimmer)*edgeFade*depthFade*activeMult;
+
+      if(alpha<threshold*.40)continue;
+      ctx.fillStyle=`rgba(${baseR},${baseG},${baseB},${alpha})`;
+      ctx.fillRect(sx,sy,4,2);
+
+      // Metallic glint embedded in the mineral vein
+      if(alpha>0.14 && shimmer>0.85 && edgeFade>0.40){
+        ctx.fillStyle=`rgba(249,252,255,${alpha*0.45})`;
+        ctx.fillRect(sx+1,sy+1,2,2);
+      }
+    }
+  }
+}
+
+function drawRoots(ctx){
+  if(roots.length===0)return;
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+
+  const glow=0.25+bloomSeed.energy*0.82+Math.min(memoryCount*0.07,0.28);
+
+  for(const r of roots){
+    const visible=Math.max(0,Math.floor(r.segs.length*r.growth));
+    for(let i=0;i<visible;i++){
+      const seg=r.segs[i];
+      const sx=Math.round(seg.x/PX)*PX;
+      const sy=Math.round(seg.y/PX)*PX;
+      const shimmer=0.55+0.45*Math.sin(sceneTime*1.4+r.phase+i*0.5);
+      const alpha=(0.34+shimmer*0.30)*glow;
+
+      // Warm capillary body
+      ctx.fillStyle=`rgba(255,181,102,${alpha*0.65})`;
+      ctx.fillRect(sx-2,sy-2,5,5);
+      ctx.fillStyle=`rgba(255,237,150,${alpha})`;
+      ctx.fillRect(sx,sy,3,3);
+
+      // Tiny branches spreading like soil capillaries
+      if(seg.branch){
+        const bVisible=Math.max(0,Math.floor(seg.branch.length*Math.min(1,r.growth*1.35)));
+        for(let j=0;j<bVisible;j++){
+          const b=seg.branch[j];
+          const bx=Math.round(b.x/PX)*PX;
+          const by=Math.round(b.y/PX)*PX;
+          const ba=(0.24+shimmer*0.18)*glow;
+          ctx.fillStyle=`rgba(255,181,102,${ba*0.55})`;
+          ctx.fillRect(bx-1,by-1,4,4);
+          ctx.fillStyle=`rgba(255,237,150,${ba})`;
+          ctx.fillRect(bx,by,2,2);
+        }
+      }
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawFireflies(ctx){
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+  for(const ff of fireflies){
+    const x=Math.round(ff.x/PX)*PX;
+    const y=Math.round(ff.y/PX)*PX;
+    const blink=0.35+0.65*Math.sin(sceneTime*ff.blink+ff.phase);
+    const alpha=blink*(0.45+heatPoint.strength*0.25);
+    if(ff.warm){
+      drawSoftDot(ctx,x,y,7,alpha*0.55,'rgba(255,237,150,0.55)');
+      drawSoftDot(ctx,x,y,2.5,alpha,'rgba(255,246,209,0.95)');
+    }else{
+      drawSoftDot(ctx,x,y,7,alpha*0.55,'rgba(127,255,238,0.55)');
+      drawSoftDot(ctx,x,y,2.5,alpha,'rgba(183,232,232,0.95)');
+    }
+  }
+  ctx.restore();
+}
+
+function drawGlowSpores(ctx){
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+  for(const g of glowSpores){
+    const x=Math.round(g.x/PX)*PX;
+    const y=Math.round(g.y/PX)*PX;
+    const pulse=0.25+0.75*(0.5+0.5*Math.sin(sceneTime*g.blink+g.phase));
+    const alpha=pulse*(0.55+heatPoint.strength*0.25);
+    // Warm amber-cyan halo
+    drawSoftDot(ctx,x,y,10,alpha*0.45,'rgba(255,237,150,0.45)');
+    drawSoftDot(ctx,x,y,5,alpha*0.85,'rgba(255,246,209,0.85)');
+    drawSoftDot(ctx,x,y,2.5,alpha,'rgba(255,255,230,0.95)');
+  }
+  ctx.restore();
+}
+
+function drawHeatPath(ctx){
+  if(heatMotes.length===0)return;
+
+  const endX=bloomSeed.x;
+  const endY=bloomSeed.y;
+
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+
+  for(const m of heatMotes){
+    const dx=endX-heatPoint.x,dy=endY-heatPoint.y;
+    const cp1x=heatPoint.x+dx*.3+Math.sin(m.phase)*22;
+    const cp1y=heatPoint.y+dy*.3-24;
+    const cp2x=heatPoint.x+dx*.7+Math.cos(m.phase)*12;
+    const cp2y=heatPoint.y+dy*.7-32;
+
+    // Draw a short light tail behind each mote
+    for(let step=0;step<3;step++){
+      const t=constrain(m.t-step*0.045,0,1);
+      const inv=1-t;
+      const b0=inv*inv*inv,b1=3*inv*inv*t,b2=3*inv*t*t,b3=t*t*t;
+      const x=b0*heatPoint.x+b1*cp1x+b2*cp2x+b3*endX;
+      const y=b0*heatPoint.y+b1*cp1y+b2*cp2y+b3*endY;
+      const sx=Math.round(x/PX)*PX;
+      const sy=Math.round(y/PX)*PX;
+      const tailFade=1-step*0.32;
+      const alpha=(1-t)*(.70+.40*Math.sin(sceneTime*4+m.phase))*tailFade;
+      const size=m.size-step;
+      if(size<1||alpha<=0.02)continue;
+
+      ctx.fillStyle=moteColor(alpha,65);
+      ctx.fillRect(sx,sy,size,size);
+    }
+
+    // Bright head
+    const t=constrain(m.t,0,1);
+    const inv=1-t;
+    const b0=inv*inv*inv,b1=3*inv*inv*t,b2=3*inv*t*t,b3=t*t*t;
+    const x=b0*heatPoint.x+b1*cp1x+b2*cp2x+b3*endX;
+    const y=b0*heatPoint.y+b1*cp1y+b2*cp2y+b3*endY;
+    const sx=Math.round(x/PX)*PX;
+    const sy=Math.round(y/PX)*PX;
+    const headAlpha=(1-t)*(.9+.2*Math.sin(sceneTime*5+m.phase));
+    const hx=Math.round(x/PX)*PX;
+    const hy=Math.round(y/PX)*PX;
+    drawSoftDot(ctx,hx,hy,m.size+3,headAlpha*0.55,moteColor(headAlpha*0.55,75));
+    drawSoftDot(ctx,hx,hy,2.5,headAlpha,moteColor(headAlpha,92));
+
+    // Spark burst on arrival
+    if(t>=.92){
+      const spark=(1-t)*5;
+      drawSoftDot(ctx,hx,hy,8,spark*0.8,moteColor(spark,92));
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawFerns(ctx){
+  for(const f of ferns) drawFern(ctx,f);
+}
+
+function drawFern(ctx,f){
+  const growth=f.growth;
+  if(growth<0.02)return;
+
+  const totalSegs=Math.max(1,Math.floor(f.length/f.segLen));
+  const visible=Math.max(1,Math.ceil(totalSegs*growth));
+  const reach=f.length*growth;
+  const segReach=reach/totalSegs;
+
+  // Overall brightness: live energy + remembered light, never dark again once grown
+  const baseGlow=0.36+bloomSeed.energy*0.82+Math.min(memoryCount*0.08,0.28)+rainBoost*0.35;
+  const sway=Math.sin(sceneTime*0.55+f.phase)*0.03*growth;
+
+  ctx.save();
+  ctx.globalCompositeOperation='lighter';
+
+  for(let i=0;i<visible;i++){
+    const t=i/Math.max(1,totalSegs-1);
+    const angle=f.baseAngle+f.curve*t+sway*t;
+    const r=(i+0.5)*segReach;
+
+    const x=bloomSeed.x+Math.cos(angle)*r;
+    const y=bloomSeed.y+Math.sin(angle)*r;
+    const sx=Math.round(x/PX)*PX;
+    const sy=Math.round(y/PX)*PX;
+
+    const shimmer=0.55+0.45*Math.sin(sceneTime*1.1+f.phase+i*0.35);
+    const segAlpha=(0.45+shimmer*0.40)*baseGlow;
+
+    // Thin pixel stem: cyan-green with a bright core
+    ctx.fillStyle=`rgba(40,200,140,${segAlpha*0.55})`;
+    ctx.fillRect(sx-1,sy-1,5,5);
+    ctx.fillStyle=`rgba(100,255,200,${segAlpha})`;
+    ctx.fillRect(sx,sy,3,3);
+    ctx.fillStyle=`rgba(190,255,235,${segAlpha*0.70})`;
+    ctx.fillRect(sx+1,sy+1,2,2);
+
+    // Fern-like leaflets: paired fronds with a tapering gradient
+    if(i>2 && i%5===0){
+      const frondLen=Math.min(30,(i*0.7+6)*growth);
+      const leafColors=['#0cc463','#3df2a0','#7fffc4','#c6ffe6'];
+      for(const side of [-1,1]){
+        const fa=angle+side*0.82+Math.sin(sceneTime*0.65+f.phase+i*0.2)*0.04;
+        for(let j=1;j<=4;j++){
+          const ratio=j/4;
+          const fl=ratio*frondLen;
+          const fx=x+Math.cos(fa)*fl;
+          const fy=y+Math.sin(fa)*fl;
+          const fsx=Math.round(fx/PX)*PX;
+          const fsy=Math.round(fy/PX)*PX;
+          const leafAlpha=(0.55+shimmer*0.35)*(1-ratio*0.35)*baseGlow;
+          const size=j===1?5:(j===2?4:3);
+          ctx.fillStyle=`rgba(16,170,88,${leafAlpha*0.55})`;
+          ctx.fillRect(fsx-Math.floor(size/2),fsy-Math.floor(size/2),size,size);
+          ctx.fillStyle=hexToRgba(leafColors[Math.min(j-1,3)],leafAlpha);
+          ctx.fillRect(fsx,fsy,3,3);
+        }
+      }
+    }
+  }
+
+  // Crown of silver spores at the tip
+  const tipT=(visible-0.5)/totalSegs;
+  const tipAngle=f.baseAngle+f.curve*tipT+sway*tipT;
+  const tipR=reach;
+  const tx=Math.round((bloomSeed.x+Math.cos(tipAngle)*tipR)/PX)*PX;
+  const ty=Math.round((bloomSeed.y+Math.sin(tipAngle)*tipR)/PX)*PX;
+  ctx.fillStyle=`rgba(127,255,238,${0.16*baseGlow})`;
+  ctx.fillRect(tx-12,ty-12,25,25);
+  ctx.fillStyle=`rgba(183,232,232,${0.28*baseGlow})`;
+  ctx.fillRect(tx-7,ty-7,15,15);
+  ctx.fillStyle=`rgba(249,252,255,${0.42*baseGlow})`;
+  ctx.fillRect(tx-2,ty-2,5,5);
+
+  ctx.restore();
+}
+
+// ====== 黑色像素种子：Firefly Seed Jar 式层叠晶体，沉睡时被温度唤醒 ======
+function drawSeed(ctx){
+  const energy=bloomSeed.energy;
+  const pulse=.55+.45*Math.sin(sceneTime*1.35);
+  const bob=Math.sin(sceneTime*.55)*.8;
+  const x=Math.round(bloomSeed.x/PX)*PX;
+  const y=Math.round((bloomSeed.y+bob)/PX)*PX;
+  const tilt=bloomSeed.lean*.1+Math.sin(sceneTime*.2)*.03+(((memoryCount>0||ascendLevel>0)&&bloomSeed.state==='rest')?Math.sin(sceneTime*.8)*.02:0);
+
+  // Soft radial wake — memories leave a faint ember even at rest
+  const glowEnergy=Math.max(energy,Math.max(memoryCount*.05,ascendLevel*.08));
+  if(glowEnergy>.05){
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+    const glow=ctx.createRadialGradient(x,y,4,x,y,72);
+    glow.addColorStop(0,ascendColor(glowEnergy*.58,70));
+    glow.addColorStop(1,'rgba(255,237,150,0)');
+    ctx.fillStyle=glow;ctx.fillRect(x-72,y-72,144,144);
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(tilt);
+
+  // Contact shadow beneath the seed
+  ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='rgba(5,14,20,.72)';
+  ctx.fillRect(-8,12,16,6);
+
+  // Outer shell — near-black
+  ctx.fillStyle='#050e14';
+  ctx.fillRect(-12,-8,24,22);
+  ctx.fillRect(-10,-14,20,10);
+  ctx.fillRect(-6,-18,12,8);
+  ctx.fillRect(-10,14,20,6);
+
+  // Inner body — deep teal-black, brightens slightly as it wakes
+  ctx.fillStyle=`rgba(12,34,42,${.85+.15*energy})`;
+  ctx.fillRect(-10,-8,20,18);
+  ctx.fillRect(-8,-12,16,10);
+  ctx.fillRect(-4,-16,8,8);
+
+  // Core sheen
+  ctx.fillStyle=`rgba(28,62,74,${.7+.3*energy})`;
+  ctx.fillRect(-6,-6,12,12);
+  ctx.fillRect(-4,-10,8,8);
+
+  // Warm highlights: dormant = faint, waking = amber; ascended seeds shift toward aurora hues
+  ctx.fillStyle=ascendColor(.22+.62*energy,72);
+  ctx.fillRect(-4,-4,3,3);
+  ctx.fillStyle=ascendColor(.12*pulse+.32*energy,72);
+  ctx.fillRect(-8,-8,4,4);
+
+  // Hilum scar
+  ctx.fillStyle='rgba(3,7,10,.9)';
+  ctx.fillRect(6,-2,4,6);
+
+  // Crack: jagged light escaping as bloom rises
+  const crack=constrain((bloomSeed.bloom-.16)*1.7,0,1);
+  if(crack>0){
+    ctx.globalCompositeOperation='lighter';
+    ctx.fillStyle=ascendColor(.35+crack*.65,75);
+    ctx.fillRect(-3,-10,6,12);
+    ctx.fillRect(2,-2,6,10);
+    ctx.fillRect(-8,6,10,4);
+    ctx.fillStyle=ascendColor(.45+crack*.55,85);
+    ctx.fillRect(-2,-8,4,8);
+    ctx.fillRect(2,0,3,6);
+  }
+
+  ctx.restore();
+}
+
+function drawGlassRipples(ctx){
+  for(const ripple of ripples){
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    ctx.strokeStyle=`rgba(255,246,209,${ripple.life*.45})`; ctx.lineWidth=3; ctx.beginPath();ctx.arc(ripple.x,ripple.y,12+ripple.age*60,0,TWO_PI);ctx.stroke();
+    ctx.strokeStyle=`rgba(255,181,102,${ripple.life*.28})`; ctx.lineWidth=2; ctx.beginPath();ctx.arc(ripple.x,ripple.y,6+ripple.age*38,0,TWO_PI);ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawClimaxFlash(ctx){
+  if(climaxFlash<=0) return;
+  ctx.save(); ctx.globalCompositeOperation='screen';
+
+  // Expanding light wash
+  const flash=ctx.createRadialGradient(bloomSeed.x,bloomSeed.y,10,bloomSeed.x,bloomSeed.y,380);
+  flash.addColorStop(0,`rgba(255,255,255,${climaxFlash*0.9})`); flash.addColorStop(0.5,`rgba(204,255,163,${climaxFlash*0.42})`); flash.addColorStop(1,`rgba(127,255,238,0)`);
+  ctx.fillStyle=flash; ctx.fillRect(0,0,BASE_W,BASE_H);
+
+  // Shockwave ring pushed outward from the seed
+  const waveR=12+climaxFlash*300;
+  ctx.strokeStyle=`rgba(255,255,255,${climaxFlash*0.55})`;ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(bloomSeed.x,bloomSeed.y,waveR,0,TWO_PI);ctx.stroke();
+  ctx.strokeStyle=`rgba(204,255,163,${climaxFlash*0.28})`;ctx.lineWidth=5;
+  ctx.beginPath();ctx.arc(bloomSeed.x,bloomSeed.y,waveR*0.86,0,TWO_PI);ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawBase(ctx){
+  const c=CHAMBER; ctx.save();
+  const baseY=c.base, footY=c.foot;
+
+  // Glass base that grows out of the chamber bottom curve
+  const grad=ctx.createLinearGradient(0,baseY-30,0,footY+20);
+  grad.addColorStop(0,'rgba(200,222,240,.42)');
+  grad.addColorStop(.16,'rgba(90,124,154,.52)');
+  grad.addColorStop(.52,'rgba(32,68,86,.62)');
+  grad.addColorStop(1,'rgba(9,30,38,.82)');
+  ctx.fillStyle=grad;
+  ctx.beginPath();
+  ctx.moveTo(170,baseY-32);
+  ctx.bezierCurveTo(206,baseY+14,434,baseY+14,470,baseY-32);
+  ctx.lineTo(466,footY+18);
+  ctx.bezierCurveTo(420,footY+38,220,footY+38,174,footY+18);
+  ctx.closePath();
+  ctx.fill();
+
+  // Rim light where base meets the glass body
+  ctx.strokeStyle='rgba(249,252,255,.55)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(172,baseY-28);ctx.bezierCurveTo(208,baseY+10,432,baseY+10,468,baseY-28);ctx.stroke();
+  ctx.strokeStyle='rgba(109,201,255,.28)';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(176,baseY-22);ctx.bezierCurveTo(212,baseY+6,428,baseY+6,464,baseY-22);ctx.stroke();
+
+  // Soft contact shadow under the foot
+  const shadow=ctx.createRadialGradient(320,footY+24,10,320,footY+24,130);
+  shadow.addColorStop(0,'rgba(0,0,0,.55)');shadow.addColorStop(1,'rgba(4,15,24,0)');
+  ctx.scale(1,.28);ctx.fillStyle=shadow;
+  ctx.beginPath();ctx.arc(320,(footY+24)/.28,130,0,TWO_PI);ctx.fill();
+  ctx.restore();
+}
+
+function drawGlassSurface(ctx){
+  ctx.save();
+
+  // Fresnel edge: one deep inner shadow, one cool mid-tone, one bright rim
+  defineChamberPath(ctx);
+  ctx.strokeStyle='rgba(9,30,38,.16)';ctx.lineWidth=5;ctx.stroke();
+  defineChamberPath(ctx);
+  ctx.strokeStyle='rgba(109,201,255,.36)';ctx.lineWidth=2;ctx.stroke();
+  defineChamberPath(ctx);
+  ctx.strokeStyle='rgba(249,252,255,1)';ctx.lineWidth=1;ctx.stroke();
+
+  // Specular highlights clipped to the glass surface
+  ctx.save();
+  defineChamberPath(ctx);
+  ctx.clip();
+  ctx.globalCompositeOperation='lighter';
+
+  const main=ctx.createLinearGradient(140,0,300,0);
+  main.addColorStop(0,'rgba(177,230,245,0)');
+  main.addColorStop(.45,'rgba(109,201,255,.28)');
+  main.addColorStop(.62,'rgba(249,252,255,.62)');
+  main.addColorStop(.72,'rgba(127,255,238,.22)');
+  main.addColorStop(1,'rgba(177,230,245,0)');
+  ctx.strokeStyle=main;ctx.lineWidth=7;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(224,174);ctx.bezierCurveTo(170,280,166,540,205,690);ctx.stroke();
+
+  ctx.strokeStyle='rgba(249,252,255,.32)';
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(230,190);ctx.bezierCurveTo(184,300,182,520,215,670);ctx.stroke();
+
+  ctx.strokeStyle='rgba(109,201,255,.20)';
+  ctx.lineWidth=5;
+  ctx.beginPath();ctx.moveTo(438,226);ctx.bezierCurveTo(482,374,476,548,448,654);ctx.stroke();
+
+  // Subtle caustic shimmer near the bottom glass
+  ctx.globalCompositeOperation='screen';
+  const causticAlpha=0.10+heatPoint.strength*0.10;
+  ctx.fillStyle=`rgba(127,255,238,${causticAlpha})`;
+  for(let i=0;i<10;i++){
+    const cx=244+i*20;
+    const cy=612+Math.sin(sceneTime*1.3+i*1.7)*16;
+    const sx=Math.round(cx/PX)*PX;
+    const sy=Math.round(cy/PX)*PX;
+    ctx.fillRect(sx,sy,4,4);
+  }
+
+  ctx.restore(); // end clip
+
+  // Top opening rim glow — clipped so it never spills outside the glass
+  ctx.save();
+  defineChamberPath(ctx);
+  ctx.clip();
+  ctx.globalCompositeOperation='lighter';
+  const crown=ctx.createRadialGradient(320,132,2,320,158,96);
+  crown.addColorStop(0,'rgba(249,252,255,.62)');
+  crown.addColorStop(.38,'rgba(127,255,238,.22)');
+  crown.addColorStop(1,'rgba(127,255,238,0)');
+  ctx.fillStyle=crown;ctx.fillRect(214,88,212,172);
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function drawIdentity(ctx){
+  ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(249,252,255,.92)'; ctx.font='600 15px "Segoe UI","PingFang SC",sans-serif';
+  ctx.fillText('FIRST LIGHT',320,883);
+  ctx.fillStyle='rgba(183,232,232,.78)'; ctx.font='13px "Segoe UI","PingFang SC",sans-serif';
+  ctx.fillText('一颗黑色像素种子，在你的温度里长出第一束光。',320,912);
+  ctx.restore();
+}
+</script>
+<script type="application/pixel-bloom-qa">
+let firstLightQAElapsed=0;
+globalThis.__PIXEL_BLOOM_QA__={
+  horizonSeconds:7,
+  dt:0.05,
+  requiredStates:['rest','warming','rooting','bloom','afterglow'],
+  terminalStates:['rest'],
+  reset(){
+    sceneTime=0;
+    memoryCount=0;
+    memoryTints=[];
+    ascendLevel=0;
+    ripples=[];
+    heatMotes=[];
+    ferns=[];
+    roots=[];
+    fireflies=[];
+    glowSpores=[];
+    soilSpores=[];
+    rainDrops=[];
+    rainBoost=0;
+    heatMoteClock=0;
+    heatPoint={x:320,y:515,active:false,strength:0,hold:0,committed:false,pointerId:null};
+    bloomSeed={x:320,y:651,state:'rest',energy:0,targetEnergy:0,bloom:0.08,bloomTarget:0.08,afterglow:0,lean:0};
+    firstLightQAElapsed=0;
+  },
+  begin(){beginWarmth(320,515,'qa');},
+  step(dt){
+    firstLightQAElapsed+=dt;
+    if(firstLightQAElapsed>=2.2&&heatPoint.active)releaseWarmth();
+    updateScene(dt);
+  },
+  state(){return bloomSeed.state;},
+  entities(){
+    return [
+      {id:'seed-body',points:[[bloomSeed.x-14,bloomSeed.y-18],[bloomSeed.x+14,bloomSeed.y-18],[bloomSeed.x-14,bloomSeed.y+20],[bloomSeed.x+14,bloomSeed.y+20]]}
+    ];
+  },
+  contains(x,y){return Number.isFinite(x)&&Number.isFinite(y)&&x>=180&&x<=460&&y>=138&&y<=756;},
+  counts(){return [{name:'primary-seed',expected:1,actual:bloomSeed?1:0}];}
+};
+</script>
+</body>
+</html>

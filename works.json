@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 31,
+  "total": 32,
   "updated": "2026-07-22",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -19,6 +19,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "first-light",
       "aquarium-2003",
       "tree-remembers-wind",
       "migratory-bird-lighthouse",
@@ -56,6 +57,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "first-light",
       "aquarium-2003",
       "tree-remembers-wind",
       "migratory-bird-lighthouse",
@@ -115,6 +117,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "first-light",
       "aquarium-2003",
       "tree-remembers-wind",
       "migratory-bird-lighthouse",
@@ -144,6 +147,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "first-light",
       "aquarium-2003",
       "tree-remembers-wind",
       "overwork",
@@ -1076,6 +1080,44 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
+    },
+    {
+      "slug": "first-light",
+      "title_en": "First Light",
+      "title_zh": "第一束光 · First Light",
+      "tagline": "一颗黑色像素种子，在你的温度里长出第一束光。",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API",
+        "localStorage"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 1,
+      "healing_domain": "meditation",
+      "keywords": [
+        "p5.js",
+        "canvas 2d",
+        "web audio api",
+        "touch interaction",
+        "localstorage persistence"
+      ],
+      "use_cases": [
+        "p5.js",
+        "canvas 2d",
+        "web audio api",
+        "touch interaction",
+        "localstorage persistence"
+      ],
+      "files": [
+        "first-light.html",
+        "first-light.md",
+        "first-light_1.gif"
+      ],
+      "date": "2026-07-22"
     }
   ]
 }
