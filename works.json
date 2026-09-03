@@ -2,12 +2,13 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 52,
-  "updated": "2026-10-21",
+  "total": 53,
+  "updated": "2026-10-27",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
       "weather-on-the-line",
+      "hammer-off",
       "tang-sancai-fire",
       "ink-in-forms",
       "golden-ripples",
@@ -67,6 +68,7 @@
     ],
     "webgl_glsl": [
       "weather-on-the-line",
+      "hammer-off",
       "tang-sancai-fire",
       "ink-in-forms",
       "golden-ripples",
@@ -92,6 +94,7 @@
       "egret-sunrise",
       "duskfirefly-bottle",
       "streetlamp-slow-rain",
+      "hammer-off",
       "tang-sancai-fire",
       "glow-boat-bottle",
       "magpie-bridge-heist",
@@ -130,6 +133,7 @@
     ],
     "particle_system": [
       "weather-on-the-line",
+      "hammer-off",
       "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "overwork",
@@ -169,6 +173,7 @@
       "egret-sunrise",
       "duskfirefly-bottle",
       "streetlamp-slow-rain",
+      "hammer-off",
       "tang-sancai-fire",
       "cloud-laundry-pool",
       "ink-in-forms",
@@ -508,6 +513,44 @@
         "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/streetlamp-slow-rain/v-b29665ccaa4b/streetlamp-slow-rain_1.gif"
       ],
       "date": "2026-09-04"
+    },
+    {
+      "slug": "hammer-off",
+      "title_en": "Hammer Off",
+      "title_zh": "今天先砸到这儿",
+      "tagline": "在一条虚构的下班城市街道上游走，把还没放下的噪声交给一把会回应的锤子。",
+      "tech": [
+        "Three.js",
+        "WebGL",
+        "Web Audio API",
+        "CSS"
+      ],
+      "render": "WebGL (Three.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "140 instanced debris",
+      "dependencies": 1,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "three.js",
+        "webgl",
+        "web audio api",
+        "low poly city",
+        "block character",
+        "hammer game",
+        "touch interaction"
+      ],
+      "use_cases": [
+        "emotional release",
+        "low poly city",
+        "touch interaction",
+        "web audio api"
+      ],
+      "files": [
+        "hammer-off.html"
+      ],
+      "preview_assets": [],
+      "date": "2026-09-03"
     },
     {
       "slug": "tang-sancai-fire",
