@@ -1,0 +1,1469 @@
+<!doctype html>
+<!--
+  Title: Risen By Your Hand · 今天，由你升起
+  Concept: 用户捞起一条晨光鱼喂给白鹭，白鹭牵动滑轮、把太阳从海中吊起，再轻轻甩嘴庆祝。
+  Source note: the user-provided image has unknown author/licence; this work independently redraws
+  the general egret / scaffold / pulley / sunrise relationship and embeds no source pixels or watermark.
+  Tech: p5.js, Canvas 2D, Web Audio API
+  Keywords: p5.js, canvas 2d, web audio api, touch interaction
+  Features: A 1080x1440 poster canvas quantised to a fixed 4px pixel grid and a six-colour letterpress palette; a ten-state FSM drives fish drag, pulley rotation, water break and the egret's beak-shake celebration. Web Audio synthesises catch, feed, pulley-step and settle tones after the first user gesture.
+  Render: Canvas2D (p5.js)
+  Audio: yes
+  Touch: yes
+  Particles: N/A
+  Standalone: yes, single HTML file, 1 CDN dependencies
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#F2E3BF">
+<title>今天，由你升起</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>window.p5||document.write('<script src="https://cdn.bootcdn.net/ajax/libs/p5.js/1.9.0/p5.min.js"><\/script>');</script>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#F2E3BF;color:#062B5B;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+  body{position:fixed;inset:0;touch-action:none;-webkit-touch-callout:none}
+  #canvas-container{position:absolute;inset:0;overflow:hidden;z-index:0}
+  canvas{display:block;position:absolute;inset:0;z-index:0;image-rendering:pixelated;image-rendering:crisp-edges}
+  #interact-layer{position:absolute;inset:0;z-index:2;touch-action:none;outline:none;cursor:grab}
+  #interact-layer.dragging{cursor:grabbing}
+  #interact-layer:focus-visible::after{content:"";position:absolute;left:var(--fish-left,65%);top:var(--fish-top,86%);width:46px;height:46px;transform:translate(-50%,-50%);border:2px dashed rgba(217,161,28,.78);border-radius:50%;animation:focusPulse 1.6s ease-in-out infinite;pointer-events:none}
+  #hint{position:absolute;left:50%;top:90%;z-index:3;transform:translate(-50%,-50%);padding:.45rem .75rem;color:#F7EDD1;background:rgba(6,43,91,.74);font-size:clamp(12px,2.8vw,15px);font-weight:500;letter-spacing:.05em;white-space:nowrap;border-radius:999px;opacity:0;transition:opacity .7s ease;pointer-events:none;text-shadow:0 1px 0 rgba(0,0,0,.16)}
+  #hint.visible{opacity:.9}
+  #mute{position:absolute;z-index:3;width:36px;height:36px;padding:0;border:0;border-radius:50%;appearance:none;-webkit-appearance:none;background:none;color:#062B5B;opacity:.72;cursor:pointer;transition:opacity .2s ease,transform .2s ease;-webkit-tap-highlight-color:transparent}
+  #mute:hover,#mute:focus-visible{opacity:1;transform:scale(1.04);outline:2px solid rgba(6,43,91,.28);outline-offset:2px}
+  #mute svg{width:19px;height:19px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  #status{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  @keyframes focusPulse{0%,100%{opacity:.45;transform:translate(-50%,-50%) scale(.9)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}}
+  @media(prefers-reduced-motion:reduce){#hint,#mute{transition:none}#interact-layer:focus-visible::after{animation:none}}
+</style>
+</head>
+<body>
+  <div id="canvas-container" aria-hidden="true"></div>
+  <div id="interact-layer" role="button" tabindex="0" aria-label="拖动海中的任意一条金色胖鱼到白鹭嘴边，帮助白鹭升起太阳"></div>
+  <div id="hint" aria-hidden="true">拖一条小鱼给白鹭，让太阳升起来</div>
+  <button id="mute" type="button" aria-label="关闭声音" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4z"/><path class="sound-wave" d="M16 9.2c1.5 1.5 1.5 4.1 0 5.6M18.5 6.8c2.9 2.9 2.9 7.5 0 10.4"/></svg>
+  </button>
+  <div id="status" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+const WORLD_W = 1080;
+const WORLD_H = 1440;
+const HORIZON_Y = 1094;
+const PIXEL = 4;
+const SUN = { x: 734, idleY: 965, finalY: 713, radius: 216 };
+const BEAK = { x: 720, y: 378, radius: 96 };
+const PULLEY = { x: 690, y: 426, radius: 42 };
+const FISH_HOMES = Object.freeze([
+  { x: 616, y: 1244, scale: .86, phase: .35 },
+  { x: 742, y: 1302, scale: 1, phase: 1.42 },
+  { x: 842, y: 1218, scale: .8, phase: 2.55 }
+]);
+const QUERY = (typeof location !== 'undefined' && location.search)
+  ? new URLSearchParams(location.search) : new URLSearchParams('');
+const DEMO_SCENE = QUERY.get('demo');
+const SHOT_MODE = QUERY.get('shot') === '1';
+const REDUCED_MOTION = typeof matchMedia !== 'undefined'
+  ? matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+
+const PALETTE = Object.freeze({
+  name: 'Custom Six-colour Letterpress Dawn',
+  role: 'warm paper / indigo structure / vermilion sun / brass interaction',
+  paper: '#F2E3BF',
+  paperFiber: '#D9C99F',
+  indigo: '#062B5B',
+  midBlue: '#174A78',
+  vermilion: '#EF2B1C',
+  brass: '#D9A11C',
+  warmWhite: '#F7EDD1'
+});
+
+const MODES = Object.freeze({
+  BOOT: 'BOOT',
+  PREDAWN_IDLE: 'PREDAWN_IDLE',
+  FISH_HOOKED: 'FISH_HOOKED',
+  DRAGGING_FISH: 'DRAGGING_FISH',
+  FISH_RETURN: 'FISH_RETURN',
+  FEEDING: 'FEEDING',
+  LIFTING_SUN: 'LIFTING_SUN',
+  SUNRISE_SETTLING: 'SUNRISE_SETTLING',
+  BIRD_CELEBRATION: 'BIRD_CELEBRATION',
+  SUNRISE_IDLE: 'SUNRISE_IDLE'
+});
+
+let poster = { scale: 1, x: 0, y: 0, w: WORLD_W, h: WORLD_H };
+let paperLayer = null;
+let scaffoldLayer = null;
+let reflectionBars = [];
+let waterMarks = [];
+let world;
+let fish;
+let fishSchool = [];
+let bird;
+let pulley;
+let rope;
+let sun;
+let reflection;
+let ripples = [];
+let droplets = [];
+let energyMotes = [];
+let activePointerId = null;
+let pointerWorld = { x: FISH_HOMES[1].x, y: FISH_HOMES[1].y };
+let pointerStartWorld = { x: FISH_HOMES[1].x, y: FISH_HOMES[1].y };
+let hintTimer = 0;
+let lastDrawSeconds = 0;
+
+const ui = typeof document !== 'undefined' ? {
+  interact: document.getElementById('interact-layer'),
+  hint: document.getElementById('hint'),
+  mute: document.getElementById('mute'),
+  status: document.getElementById('status')
+} : { interact: null, hint: null, mute: null, status: null };
+
+const activeAudio = { sources: [], timers: [] };
+let audioCtx = null;
+let masterGain = null;
+let isMuted = false;
+
+function clamp01(value) { return Math.max(0, Math.min(1, value)); }
+function smoothstep(value) { const t = clamp01(value); return t * t * (3 - 2 * t); }
+function easeOutCubic(value) { const t = clamp01(value); return 1 - Math.pow(1 - t, 3); }
+function easeInOutCubic(value) {
+  const t = clamp01(value);
+  return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+function hash01(seed) {
+  const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453123;
+  return value - Math.floor(value);
+}
+function colorAlpha(hex, alpha) {
+  const value = hex.replace('#', '');
+  const number = parseInt(value, 16);
+  return `rgba(${(number >> 16) & 255},${(number >> 8) & 255},${number & 255},${alpha})`;
+}
+
+function createWorldState() {
+  world = {
+    mode: MODES.BOOT,
+    stateTime: 0,
+    totalTime: 0,
+    reveal: SHOT_MODE ? 1 : 0,
+    completed: false,
+    learned: false,
+    liftProgress: 0,
+    settleProgress: 0,
+    sunCleared: false,
+    pullSoundStep: -1,
+    autoFeed: false,
+    autoFeedT: 0,
+    lastMode: null
+  };
+  fishSchool = FISH_HOMES.map((home, index) => ({
+    x: home.x,
+    y: home.y,
+    homeX: home.x,
+    homeY: home.y,
+    scale: home.scale,
+    vx: 0,
+    vy: 0,
+    phase: home.phase,
+    energy: index === 1 ? .35 : .16,
+    targetEnergy: .18,
+    hold: 0,
+    facing: index === 2 ? -1 : 1,
+    state: 'SWIM',
+    visible: true,
+    returnFromX: home.x,
+    returnFromY: home.y
+  }));
+  fish = fishSchool[1];
+  bird = { breath: 0, alert: 0, feed: 0, pull: 0, rest: 0, energy: 0, beakShake: 0 };
+  pulley = { angle: 0, angularVelocity: 0, glint: 0 };
+  rope = { tension: 0.36, sway: 0 };
+  sun = { x: SUN.x, y: SUN.idleY, vy: 0, sway: 0, glow: 0 };
+  reflection = { energy: 0.18, width: 0.35 };
+  ripples = [];
+  droplets = [];
+  energyMotes = [];
+  activePointerId = null;
+  pointerWorld = { x: fish.x, y: fish.y };
+  pointerStartWorld = { x: fish.x, y: fish.y };
+  hintTimer = 0;
+}
+
+function setMode(nextMode) {
+  if (!world || world.mode === nextMode) return;
+  world.lastMode = world.mode;
+  world.mode = nextMode;
+  world.stateTime = 0;
+  if (ui.status) {
+    if (nextMode === MODES.DRAGGING_FISH) ui.status.textContent = '晨光鱼离开了水面';
+    if (nextMode === MODES.LIFTING_SUN) ui.status.textContent = '白鹭正在升起太阳';
+    if (nextMode === MODES.BIRD_CELEBRATION) ui.status.textContent = '白鹭轻轻甩了甩嘴';
+    if (nextMode === MODES.SUNRISE_IDLE) ui.status.textContent = '太阳升起来了';
+  }
+}
+
+function applyInitialState() {
+  if (DEMO_SCENE === 'predawn') {
+    setMode(MODES.PREDAWN_IDLE);
+  } else if (DEMO_SCENE === 'drag') {
+    fish = fishSchool[1];
+    setMode(MODES.DRAGGING_FISH);
+    fish.x = 646;
+    fish.y = 782;
+    fish.energy = 1;
+    fish.targetEnergy = 1;
+    fish.state = 'DRAG';
+    world.learned = true;
+  } else if (DEMO_SCENE === 'peak') {
+    setMode(MODES.LIFTING_SUN);
+    world.stateTime = 1.2;
+    world.learned = true;
+    syncLiftFromTime();
+    // `?shot=1` freezes the clock, so seed the exact water-release instant.
+    world.sunCleared = true;
+    createRipple(sun.x, HORIZON_Y + 12, 1, 42);
+    createRipple(sun.x, HORIZON_Y + 12, .72, 110);
+    createRipple(sun.x, HORIZON_Y + 12, .48, 172);
+    for (let index = 0; index < 9; index += 1) {
+      const angle = Math.PI * (.18 + index / 11 * .64);
+      droplets.push({
+        x: sun.x + Math.cos(angle) * SUN.radius * .9,
+        y: HORIZON_Y - 8 - hash01(index * 5.9) * 34,
+        vx: 0,
+        vy: 0,
+        size: 4 + (index % 3) * 4,
+        alpha: .9
+      });
+    }
+  } else if (DEMO_SCENE === 'celebrate') {
+    world.completed = true;
+    world.liftProgress = 1;
+    world.settleProgress = 1;
+    sun.y = SUN.finalY;
+    reflection.energy = 1;
+    rope.tension = 1;
+    bird.beakShake = 3;
+    bird.rest = .62;
+    fishSchool.forEach(item => { item.visible = false; });
+    setMode(MODES.BIRD_CELEBRATION);
+  } else if (DEMO_SCENE === 'sunrise') {
+    world.completed = true;
+    world.liftProgress = 1;
+    world.settleProgress = 1;
+    sun.y = SUN.finalY;
+    reflection.energy = 1;
+    bird.rest = 1;
+    rope.tension = 1;
+    fishSchool.forEach(item => { item.visible = false; });
+    setMode(MODES.SUNRISE_IDLE);
+  } else {
+    setMode(MODES.BOOT);
+  }
+}
+
+function initStaticData() {
+  reflectionBars = [];
+  for (let index = 0; index < 23; index += 1) {
+    reflectionBars.push({
+      y: HORIZON_Y + 30 + index * 14.5,
+      width: 65 + index * 5 + hash01(index * 8.1) * 94,
+      offset: (hash01(index * 18.7) - .5) * 42,
+      alpha: .32 + hash01(index * 22.3) * .5,
+      speed: .16 + hash01(index * 4.4) * .25
+    });
+  }
+  waterMarks = [];
+  for (let index = 0; index < 110; index += 1) {
+    const depth = hash01(index * 5.91);
+    waterMarks.push({
+      x: hash01(index * 21.7) * WORLD_W,
+      y: HORIZON_Y + 12 + depth * (WORLD_H - HORIZON_Y - 20),
+      width: 18 + hash01(index * 9.14) * (64 + depth * 74),
+      alpha: .12 + hash01(index * 13.11) * .28
+    });
+  }
+}
+
+function buildPaperLayer() {
+  paperLayer = createGraphics(WORLD_W, WORLD_H);
+  paperLayer.pixelDensity(1);
+  paperLayer.background(PALETTE.paper);
+  paperLayer.stroke(PALETTE.paperFiber);
+  for (let index = 0; index < 520; index += 1) {
+    const x = hash01(index * 3.17) * WORLD_W;
+    const y = hash01(index * 8.81) * WORLD_H;
+    const length = 2 + hash01(index * 13.1) * 12;
+    paperLayer.strokeWeight(hash01(index * 7.7) > .92 ? 2 : 1);
+    paperLayer.drawingContext.globalAlpha = .12 + hash01(index * 11.2) * .16;
+    paperLayer.line(x, y, x + length, y + (hash01(index * 4.8) - .5) * 2);
+  }
+  paperLayer.drawingContext.globalAlpha = 1;
+}
+
+function buildScaffoldLayer() {
+  scaffoldLayer = createGraphics(WORLD_W, WORLD_H);
+  scaffoldLayer.pixelDensity(1);
+  scaffoldLayer.noFill();
+  scaffoldLayer.strokeCap(SQUARE);
+  scaffoldLayer.strokeJoin(MITER);
+  drawScaffoldGeometry(scaffoldLayer, 0, false);
+}
+
+function setup() {
+  const canvas = createCanvas(windowWidth, windowHeight);
+  canvas.parent('canvas-container');
+  pixelDensity(1);
+  noSmooth();
+  drawingContext.imageSmoothingEnabled = false;
+  initStaticData();
+  buildPaperLayer();
+  buildScaffoldLayer();
+  createWorldState();
+  applyInitialState();
+  updatePosterGeometry();
+  bindInput();
+  lastDrawSeconds = millis() * .001;
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+  noSmooth();
+  drawingContext.imageSmoothingEnabled = false;
+  updatePosterGeometry();
+}
+
+function updatePosterGeometry() {
+  const scaleValue = Math.min(width / WORLD_W, height / WORLD_H);
+  poster = {
+    scale: scaleValue,
+    w: WORLD_W * scaleValue,
+    h: WORLD_H * scaleValue,
+    x: (width - WORLD_W * scaleValue) * .5,
+    y: (height - WORLD_H * scaleValue) * .5
+  };
+  if (ui.hint && ui.mute && ui.interact) {
+    const hintPoint = worldToScreen(540, 1156);
+    ui.hint.style.left = `${hintPoint.x}px`;
+    ui.hint.style.top = `${hintPoint.y}px`;
+    const mutePoint = worldToScreen(1015, 62);
+    ui.mute.style.left = `${mutePoint.x - 18}px`;
+    ui.mute.style.top = `${mutePoint.y - 18}px`;
+    const fishPoint = worldToScreen(FISH_HOMES[1].x, FISH_HOMES[1].y);
+    ui.interact.style.setProperty('--fish-left', `${fishPoint.x}px`);
+    ui.interact.style.setProperty('--fish-top', `${fishPoint.y}px`);
+  }
+}
+
+function worldToScreen(x, y) {
+  return { x: poster.x + x * poster.scale, y: poster.y + y * poster.scale };
+}
+
+function eventToWorld(event) {
+  const rect = ui.interact.getBoundingClientRect();
+  const screenX = event.clientX - rect.left;
+  const screenY = event.clientY - rect.top;
+  return { x: (screenX - poster.x) / poster.scale, y: (screenY - poster.y) / poster.scale };
+}
+
+function isInsidePoster(point) {
+  return point.x >= 0 && point.x <= WORLD_W && point.y >= 0 && point.y <= WORLD_H;
+}
+
+function findTouchableFish(point) {
+  if (world.mode !== MODES.PREDAWN_IDLE) return null;
+  let nearest = null;
+  let nearestDistance = Infinity;
+  for (const item of fishSchool) {
+    if (!item.visible) continue;
+    const distance = Math.hypot(point.x - item.x, point.y - item.y);
+    if (distance <= 92 && distance < nearestDistance) {
+      nearest = item;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
+}
+
+function bindInput() {
+  if (!ui.interact || ui.interact.dataset.bound === '1') return;
+  ui.interact.dataset.bound = '1';
+  ui.interact.addEventListener('pointerdown', onPointerDown);
+  ui.interact.addEventListener('pointermove', onPointerMove);
+  ui.interact.addEventListener('pointerup', onPointerUp);
+  ui.interact.addEventListener('pointercancel', onPointerCancel);
+  ui.interact.addEventListener('lostpointercapture', onPointerCancel);
+  ui.interact.addEventListener('keydown', onKeyDown);
+  ui.mute.addEventListener('click', toggleMute);
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  addEventListener('pagehide', stopAllAudio);
+}
+
+function onPointerDown(event) {
+  if (activePointerId !== null) return;
+  const point = eventToWorld(event);
+  resumeAudio();
+  if (!isInsidePoster(point)) return;
+  const touchedFish = findTouchableFish(point);
+  if (touchedFish) {
+    event.preventDefault();
+    fish = touchedFish;
+    activePointerId = event.pointerId;
+    pointerWorld = point;
+    pointerStartWorld = { x: point.x, y: point.y };
+    ui.interact.setPointerCapture(event.pointerId);
+    ui.interact.classList.add('dragging');
+    fish.state = 'HOOKED';
+    fish.hold = 0;
+    fish.targetEnergy = 1;
+    fish.vx = 0;
+    fish.vy = 0;
+    createRipple(fish.x, fish.y, .78);
+    bird.alert = 1;
+    setMode(MODES.FISH_HOOKED);
+    playCatchSound();
+  } else if (point.y >= HORIZON_Y) {
+    createRipple(point.x, point.y, .28);
+  }
+}
+
+function onPointerMove(event) {
+  if (event.pointerId !== activePointerId) return;
+  pointerWorld = eventToWorld(event);
+  if (world.mode === MODES.FISH_HOOKED && Math.hypot(pointerWorld.x - pointerStartWorld.x, pointerWorld.y - pointerStartWorld.y) >= 24) {
+    fish.state = 'DRAG';
+    markInteractionLearned();
+    setMode(MODES.DRAGGING_FISH);
+    spawnLiftDrops(fish.x, Math.max(fish.y, HORIZON_Y));
+  }
+}
+
+function onPointerUp(event) {
+  if (event.pointerId !== activePointerId) return;
+  const point = eventToWorld(event);
+  pointerWorld = point;
+  const fishNearBeak = Math.hypot(fish.x - BEAK.x, fish.y - BEAK.y) <= BEAK.radius;
+  const pointerNearBeak = Math.hypot(point.x - BEAK.x, point.y - BEAK.y) <= BEAK.radius;
+  const nearBeak = fishNearBeak || pointerNearBeak;
+  if (world.mode === MODES.DRAGGING_FISH && nearBeak) startFeeding();
+  else beginFishReturn();
+  releasePointer(event.pointerId);
+}
+
+function onPointerCancel(event) {
+  if (activePointerId === null || (event.pointerId !== undefined && event.pointerId !== activePointerId)) return;
+  if ([MODES.FISH_HOOKED, MODES.DRAGGING_FISH].includes(world.mode)) beginFishReturn();
+  releasePointer(activePointerId);
+}
+
+function releasePointer(pointerId) {
+  if (ui.interact && pointerId !== null && ui.interact.hasPointerCapture && ui.interact.hasPointerCapture(pointerId)) {
+    try { ui.interact.releasePointerCapture(pointerId); } catch (_) { /* already released */ }
+  }
+  activePointerId = null;
+  if (ui.interact) ui.interact.classList.remove('dragging');
+}
+
+function onKeyDown(event) {
+  if (!['Enter', ' '].includes(event.key)) return;
+  if (world.mode !== MODES.PREDAWN_IDLE) return;
+  event.preventDefault();
+  resumeAudio();
+  world.autoFeed = true;
+  world.autoFeedT = 0;
+  fish = fishSchool[1];
+  fish.visible = true;
+  fish.state = 'DRAG';
+  fish.targetEnergy = 1;
+  setMode(MODES.DRAGGING_FISH);
+  markInteractionLearned();
+  playCatchSound();
+}
+
+function beginFishReturn() {
+  fish.returnFromX = fish.x;
+  fish.returnFromY = fish.y;
+  fish.vx = 0;
+  fish.vy = 0;
+  fish.state = 'RETURN';
+  setMode(MODES.FISH_RETURN);
+}
+
+function startFeeding(fromQA = false) {
+  world.autoFeed = false;
+  fish.state = 'EATEN';
+  fishSchool.forEach(item => { item.visible = false; });
+  bird.feed = 1;
+  bird.alert = 1;
+  createEnergyPath();
+  markInteractionLearned();
+  setMode(MODES.FEEDING);
+  if (!fromQA) playFeedSound();
+}
+
+function markInteractionLearned() {
+  world.learned = true;
+  if (ui.hint) ui.hint.classList.remove('visible');
+}
+
+function createEnergyPath() {
+  const points = [
+    [BEAK.x - 12, BEAK.y + 4], [606, 300], [566, 274], [522, 304],
+    [470, 362], [405, 420], [520, 420], [618, 423], [PULLEY.x, PULLEY.y]
+  ];
+  energyMotes = points.map((point, index) => ({
+    x: point[0], y: point[1], targetX: point[0], targetY: point[1], delay: index * .055, life: 1
+  }));
+}
+
+function createRipple(x, y, energy = 1, radius = 10) {
+  ripples.push({ x, y, radius, alpha: .78 * energy, speed: 118 + energy * 60, energy });
+  if (ripples.length > 12) ripples.shift();
+}
+
+function spawnWaterBreak() {
+  if (world.sunCleared) return;
+  world.sunCleared = true;
+  for (let index = 0; index < 12; index += 1) {
+    const angle = Math.PI * (.13 + index / 14 * .74);
+    droplets.push({
+      x: sun.x + Math.cos(angle) * SUN.radius * .88,
+      y: HORIZON_Y - 3,
+      vx: (hash01(index * 7.7) - .5) * 42,
+      vy: 24 + hash01(index * 8.4) * 68,
+      size: 4 + Math.floor(hash01(index * 4.2) * 3) * PIXEL,
+      alpha: .92
+    });
+  }
+  createRipple(sun.x, HORIZON_Y + 12, 1, 16);
+  createRipple(sun.x, HORIZON_Y + 12, .72, 48);
+  createRipple(sun.x, HORIZON_Y + 12, .48, 86);
+  playSunClearSound();
+}
+
+function syncLiftFromTime() {
+  const duration = REDUCED_MOTION ? 1.4 : 3.6;
+  const cycleLength = duration / 4;
+  const rawCycle = Math.min(3.9999, Math.max(0, world.stateTime / cycleLength));
+  const step = Math.floor(rawCycle);
+  const within = rawCycle - step;
+  const bite = smoothstep(Math.min(1, within / .74));
+  world.liftProgress = clamp01((step + bite) / 4);
+  bird.pull = REDUCED_MOTION ? .25 : Math.sin(Math.min(1, within / .78) * Math.PI);
+  pulley.angle = world.liftProgress * Math.PI * 8;
+  rope.tension = .5 + world.liftProgress * .5;
+  sun.y = SUN.idleY + (SUN.finalY - SUN.idleY) * world.liftProgress;
+  sun.glow = smoothstep((world.liftProgress - .18) / .82);
+  reflection.energy = .18 + world.liftProgress * .82;
+  reflection.width = .35 + world.liftProgress * .65;
+  if (sun.y + SUN.radius < HORIZON_Y + 3) spawnWaterBreak();
+  if (step > world.pullSoundStep && world.stateTime > .04) {
+    world.pullSoundStep = step;
+    playPullSound(step);
+  }
+}
+
+function updateWorld(dt) {
+  if (!world) return;
+  const safeDt = Math.min(.033, Math.max(0, dt));
+  world.totalTime += safeDt;
+  world.stateTime += safeDt;
+  world.reveal = SHOT_MODE ? 1 : Math.min(1, world.reveal + safeDt / (world.completed ? .8 : .95));
+  bird.breath = Math.sin(world.totalTime * .86) * 2.2;
+  pulley.glint = Math.max(0, Math.sin(world.totalTime * .74 - 1.1));
+
+  updateAmbientFish(safeDt);
+  updateEffects(safeDt);
+
+  if (world.mode === MODES.BOOT && world.stateTime >= .95) setMode(MODES.PREDAWN_IDLE);
+
+  if (world.mode === MODES.PREDAWN_IDLE || world.mode === MODES.SUNRISE_IDLE) {
+    if (world.mode === MODES.PREDAWN_IDLE) hintTimer += safeDt;
+    bird.alert += (0 - bird.alert) * (1 - Math.pow(.92, safeDt * 60));
+    bird.rest += ((world.mode === MODES.SUNRISE_IDLE ? 1 : 0) - bird.rest) * (1 - Math.pow(.95, safeDt * 60));
+    bird.beakShake += (0 - bird.beakShake) * (1 - Math.pow(.82, safeDt * 60));
+    if (world.mode === MODES.SUNRISE_IDLE && !REDUCED_MOTION && !SHOT_MODE) {
+      sun.sway = Math.sin(world.totalTime * Math.PI / 4) * 2;
+      sun.y = SUN.finalY + sun.sway;
+      rope.sway = Math.sin(world.totalTime * .71) * 3.2;
+    } else if (world.mode === MODES.PREDAWN_IDLE) {
+      sun.y = SUN.idleY;
+      rope.sway = Math.sin(world.totalTime * .53) * 1.4;
+    }
+  }
+
+  if (world.mode === MODES.FISH_HOOKED) {
+    fish.hold += safeDt;
+    bird.alert = Math.min(1, bird.alert + safeDt * 4.5);
+    fish.energy += (1 - fish.energy) * (1 - Math.pow(.78, safeDt * 60));
+    fish.x += (pointerWorld.x - fish.x) * (1 - Math.pow(.85, safeDt * 60));
+    fish.y += (pointerWorld.y - fish.y) * (1 - Math.pow(.85, safeDt * 60));
+    if (fish.hold >= .26) {
+      fish.state = 'DRAG';
+      markInteractionLearned();
+      setMode(MODES.DRAGGING_FISH);
+      spawnLiftDrops(fish.x, Math.max(fish.y, HORIZON_Y));
+    }
+  }
+
+  if (world.mode === MODES.DRAGGING_FISH) {
+    bird.alert = 1;
+    if (world.autoFeed) {
+      world.autoFeedT += safeDt / 1.15;
+      const t = smoothstep(world.autoFeedT);
+      const arc = Math.sin(t * Math.PI) * 160;
+      pointerWorld.x = fish.homeX + (BEAK.x - fish.homeX) * t - arc * .42;
+      pointerWorld.y = fish.homeY + (BEAK.y - fish.homeY) * t - arc;
+      if (world.autoFeedT >= 1) startFeeding();
+    }
+    const spring = 34;
+    const damping = Math.pow(.77, safeDt * 60);
+    fish.vx = (fish.vx + (pointerWorld.x - fish.x) * spring * safeDt) * damping;
+    fish.vy = (fish.vy + (pointerWorld.y - fish.y) * spring * safeDt) * damping;
+    fish.x += fish.vx * safeDt * 5.5;
+    fish.y += fish.vy * safeDt * 5.5;
+    fish.energy += (1 - fish.energy) * (1 - Math.pow(.85, safeDt * 60));
+  }
+
+  if (world.mode === MODES.FISH_RETURN) {
+    const t = easeOutCubic(world.stateTime / 1.2);
+    fish.x = worldLerp(fish.returnFromX, fish.homeX, t);
+    fish.y = worldLerp(fish.returnFromY, fish.homeY, t) - Math.sin(t * Math.PI) * 78;
+    fish.energy = 1 - t * .6;
+    if (world.stateTime >= 1.2) {
+      fish.x = fish.homeX;
+      fish.y = fish.homeY;
+      fish.state = 'SWIM';
+      fish.targetEnergy = 0;
+      createRipple(fish.x, fish.y, .62);
+      setMode(MODES.PREDAWN_IDLE);
+    }
+  }
+
+  if (world.mode === MODES.FEEDING) {
+    bird.feed = 1 - smoothstep(world.stateTime / .82) * .35;
+    bird.energy = smoothstep(world.stateTime / .82);
+    if (world.stateTime >= .82) {
+      world.pullSoundStep = -1;
+      setMode(MODES.LIFTING_SUN);
+    }
+  }
+
+  if (world.mode === MODES.LIFTING_SUN) {
+    syncLiftFromTime();
+    const duration = REDUCED_MOTION ? 1.4 : 3.6;
+    if (world.stateTime >= duration) {
+      world.liftProgress = 1;
+      sun.y = SUN.finalY;
+      setMode(MODES.SUNRISE_SETTLING);
+      playSettleSound();
+    }
+  }
+
+  if (world.mode === MODES.SUNRISE_SETTLING) {
+    const duration = REDUCED_MOTION ? .8 : 3.6;
+    world.settleProgress = smoothstep(world.stateTime / duration);
+    const wobble = REDUCED_MOTION ? 0 : Math.sin(world.stateTime * 6.1) * Math.exp(-world.stateTime * 1.15) * 13;
+    sun.y = SUN.finalY + wobble;
+    pulley.angle = Math.PI * 8 + wobble * .012;
+    rope.sway = REDUCED_MOTION ? 0 : Math.sin(world.stateTime * 5.4) * Math.exp(-world.stateTime * 1.2) * 10;
+    bird.pull += (0 - bird.pull) * (1 - Math.pow(.88, safeDt * 60));
+    bird.rest = world.settleProgress;
+    reflection.energy = 1;
+    if (world.stateTime >= duration) {
+      sun.y = SUN.finalY;
+      sun.sway = 0;
+      bird.rest = .28;
+      world.completed = true;
+      fishSchool.forEach(item => { item.visible = false; });
+      setMode(MODES.BIRD_CELEBRATION);
+    }
+  }
+
+  if (world.mode === MODES.BIRD_CELEBRATION) {
+    const duration = REDUCED_MOTION ? .7 : 1.8;
+    const t = SHOT_MODE && DEMO_SCENE === 'celebrate' ? .32 : clamp01(world.stateTime / duration);
+    const envelope = Math.sin(t * Math.PI);
+    bird.beakShake = REDUCED_MOTION ? 0 : Math.sin(t * Math.PI * 8) * envelope * 5;
+    bird.rest = .28 + smoothstep(t) * .72;
+    sun.y = SUN.finalY + (REDUCED_MOTION ? 0 : Math.sin(t * Math.PI * 2) * envelope * 2.5);
+    rope.sway = REDUCED_MOTION ? 0 : Math.sin(t * Math.PI * 3) * envelope * 3.5;
+    reflection.energy = 1 + envelope * .22;
+    if (world.stateTime >= duration) {
+      bird.beakShake = 0;
+      bird.rest = 1;
+      sun.y = SUN.finalY;
+      reflection.energy = 1;
+      setMode(MODES.SUNRISE_IDLE);
+    }
+  }
+}
+
+function worldLerp(a, b, amount) { return a + (b - a) * amount; }
+
+function updateAmbientFish(dt) {
+  if (!fishSchool.length) return;
+  for (const item of fishSchool) {
+    if (!item.visible) continue;
+    if (item === fish && [MODES.FISH_RETURN, MODES.FISH_HOOKED, MODES.DRAGGING_FISH].includes(world.mode)) continue;
+    item.phase += dt;
+    const baseX = item.homeX + Math.sin(item.phase * .72) * 42;
+    const baseY = item.homeY + Math.sin(item.phase * 1.13 + .8) * 14;
+    item.x += (baseX - item.x) * (1 - Math.pow(.96, dt * 60));
+    item.y += (baseY - item.y) * (1 - Math.pow(.96, dt * 60));
+    item.facing = Math.cos(item.phase * .72) >= 0 ? 1 : -1;
+    const flash = Math.max(0, Math.sin(item.phase * Math.PI * 2 / 2.8));
+    item.targetEnergy = flash > .9 ? .9 : .18;
+    item.energy += (item.targetEnergy - item.energy) * (1 - Math.pow(.93, dt * 60));
+  }
+}
+
+function updateEffects(dt) {
+  for (const ripple of ripples) {
+    ripple.radius += ripple.speed * dt;
+    ripple.alpha *= Math.pow(.965, dt * 60);
+  }
+  ripples = ripples.filter(ripple => ripple.alpha > .035 && ripple.radius < 390);
+
+  for (const drop of droplets) {
+    drop.vy += 164 * dt;
+    drop.x += drop.vx * dt;
+    drop.y += drop.vy * dt;
+    drop.alpha *= Math.pow(.985, dt * 60);
+    if (drop.y >= HORIZON_Y + 42 && !drop.landed) {
+      drop.landed = true;
+      createRipple(drop.x, HORIZON_Y + 24, .32);
+    }
+  }
+  droplets = droplets.filter(drop => !drop.landed && drop.alpha > .05 && drop.y < WORLD_H + 20);
+
+  for (const mote of energyMotes) {
+    mote.delay -= dt;
+    if (mote.delay <= 0) mote.life -= dt * .78;
+  }
+  energyMotes = energyMotes.filter(mote => mote.life > 0);
+}
+
+function spawnLiftDrops(x, y) {
+  for (let index = 0; index < 6; index += 1) {
+    droplets.push({
+      x: x + (hash01(index * 3.6 + world.totalTime) - .5) * 46,
+      y,
+      vx: (hash01(index * 8.7) - .5) * 34,
+      vy: 18 + hash01(index * 2.9) * 44,
+      size: 4 + (index % 3) * PIXEL,
+      alpha: .8
+    });
+  }
+}
+
+function draw() {
+  const now = millis() * .001;
+  const dt = SHOT_MODE ? 0 : Math.min(.033, Math.max(0, now - lastDrawSeconds));
+  lastDrawSeconds = now;
+  updateWorld(dt);
+  drawOuterWorld();
+  push();
+  translate(poster.x, poster.y);
+  scale(poster.scale);
+  drawPosterWorld();
+  pop();
+  updateHintVisibility();
+}
+
+function drawOuterWorld() {
+  noStroke();
+  fill(PALETTE.paper);
+  rect(0, 0, width, height);
+  const horizonScreen = poster.y + HORIZON_Y * poster.scale;
+  fill(PALETTE.indigo);
+  rect(0, horizonScreen, width, height - horizonScreen);
+}
+
+function drawPosterWorld() {
+  push();
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.rect(0, 0, WORLD_W, WORLD_H);
+  drawingContext.clip();
+  image(paperLayer, 0, 0);
+  drawDawnGlaze();
+  drawSun();
+  drawOceanBase();
+  drawSubmergedSun();
+  drawScaffoldReflection();
+  drawOceanMarks();
+  drawWaterDawnField();
+  drawSunReflection(false);
+  const beamFlex = bird.pull * 3;
+  if (beamFlex < .2) image(scaffoldLayer, 0, 0);
+  else drawScaffoldGeometry(window, beamFlex, true);
+  drawRigging();
+  drawPulley();
+  drawBiteCordOverlay();
+  drawEgret();
+  drawEnergyMotes();
+  drawFish();
+  drawDroplets();
+  drawSunReflection(true);
+  drawRipples();
+  drawRevealMask();
+  drawingContext.restore();
+  pop();
+}
+
+function dawnAmount() {
+  return clamp01(Math.max(sun.glow || 0, world.liftProgress || 0, world.completed ? 1 : 0));
+}
+
+function drawDawnGlaze() {
+  const amount = dawnAmount();
+  if (amount <= .01) return;
+  noStroke();
+  // Two offset ink fields read as a local paper wash, rather than a digital halo.
+  fill(217, 161, 28, amount * 17);
+  ellipse(sun.x + 18, sun.y - 30, SUN.radius * 4.05, SUN.radius * 2.82);
+  fill(247, 237, 209, amount * 26);
+  ellipse(sun.x - 24, sun.y - 72, SUN.radius * 2.72, SUN.radius * 1.76);
+  fill(217, 161, 28, amount * 13);
+  ellipse(sun.x + 34, sun.y + 86, SUN.radius * 2.42, SUN.radius * 1.12);
+}
+
+function drawSun() {
+  noStroke();
+  fill(PALETTE.vermilion);
+  circle(sun.x, sun.y, SUN.radius * 2);
+}
+
+function drawOceanBase() {
+  const dawn = dawnAmount();
+  noStroke();
+  fill(PALETTE.indigo);
+  rect(0, HORIZON_Y, WORLD_W, WORLD_H - HORIZON_Y);
+  for (let band = 0; band < 7; band += 1) {
+    const depth = band / 6;
+    fill(23, 74, 120, 100 - depth * 62 + dawn * (24 - depth * 18));
+    rect(0, HORIZON_Y + band * 50, WORLD_W, 52);
+  }
+}
+
+function drawSubmergedSun() {
+  const top = Math.max(HORIZON_Y, sun.y - SUN.radius);
+  const bottom = Math.min(WORLD_H, sun.y + SUN.radius);
+  if (bottom <= HORIZON_Y || top >= WORLD_H) return;
+  noStroke();
+  for (let y = top; y <= bottom; y += PIXEL) {
+    const dy = y - sun.y;
+    const half = Math.sqrt(Math.max(0, SUN.radius * SUN.radius - dy * dy));
+    fill(167, 48, 47, 138 + dawnAmount() * 28);
+    rect(sun.x - half, y, half * 2, PIXEL);
+  }
+}
+
+function drawOceanMarks() {
+  noStroke();
+  for (const mark of waterMarks) {
+    fill(23, 74, 120, mark.alpha * 255);
+    rect(mark.x, mark.y, mark.width, 4);
+  }
+  const waveTime = SHOT_MODE ? 0.72 : world.totalTime;
+  const waves = [
+    { y: HORIZON_Y + 26, amp: 2, freq: .052, speed: .74, alpha: 94, size: 4 },
+    { y: HORIZON_Y + 68, amp: 3, freq: .036, speed: .61, alpha: 100, size: 4 },
+    { y: HORIZON_Y + 142, amp: 5, freq: .021, speed: .46, alpha: 108, size: 5 },
+    { y: HORIZON_Y + 246, amp: 8, freq: .014, speed: .34, alpha: 86, size: 6 }
+  ];
+  for (let layerIndex = 0; layerIndex < waves.length; layerIndex += 1) {
+    const wave = waves[layerIndex];
+    fill(layerIndex < 2 ? color(23, 74, 120, wave.alpha) : color(247, 237, 209, wave.alpha * .34));
+    for (let x = 0; x < WORLD_W; x += 10) {
+      const theta = x * wave.freq + waveTime * wave.speed + layerIndex * 1.31;
+      const y = wave.y + Math.sin(theta) * wave.amp;
+      const chop = Math.cos(theta) * wave.amp * .28;
+      const drawX = Math.round((x + chop) / PIXEL) * PIXEL;
+      const drawY = Math.round(y / PIXEL) * PIXEL;
+      rect(drawX, drawY, wave.size * 2, wave.size);
+    }
+  }
+}
+
+function drawWaterDawnField() {
+  const dawn = dawnAmount();
+  if (dawn <= .015) return;
+  noStroke();
+  for (let band = 0; band < 7; band += 1) {
+    const depth = band / 6;
+    const halfWidth = (74 + band * 30) * (.22 + dawn * .78);
+    const y = HORIZON_Y + 18 + band * 42;
+    fill(PALETTE.brass);
+    drawingContext.globalAlpha = dawn * (23 - depth * 11) / 255;
+    rect(sun.x - halfWidth, y, halfWidth * 2, band < 2 ? 8 : 6);
+    fill(PALETTE.warmWhite);
+    drawingContext.globalAlpha = dawn * (13 - depth * 6) / 255;
+    rect(sun.x - halfWidth * .48, y + 3, halfWidth * .96, 3);
+  }
+  drawingContext.globalAlpha = 1;
+}
+
+function drawScaffoldGeometry(target, beamFlex = 0, includeDryBrush = true) {
+  const t = target;
+  t.noFill();
+  t.strokeCap(SQUARE);
+  t.strokeJoin(MITER);
+  t.stroke(PALETTE.indigo);
+  t.strokeWeight(30);
+  t.line(205, 120, 190, 1160);
+  t.strokeWeight(31);
+  t.line(161, 372, 700, 418 + beamFlex);
+  t.strokeWeight(27);
+  t.line(158, 486, 610, 402 + beamFlex * .55);
+  t.strokeWeight(31);
+  t.line(326, 390, 330, 1166);
+  t.strokeWeight(28);
+  t.line(145, 865, 410, 865);
+  t.strokeWeight(24);
+  t.line(66, 1162, 323, 504);
+  t.strokeWeight(19);
+  t.line(303, 1115, 205, 468);
+  if (!includeDryBrush) return;
+  t.stroke(PALETTE.midBlue);
+  t.strokeWeight(5);
+  t.line(198, 143, 192, 845);
+  t.line(176, 379, 668, 418 + beamFlex);
+  t.line(177, 479, 583, 407 + beamFlex * .55);
+  t.line(322, 425, 326, 842);
+  t.line(157, 859, 397, 860);
+  t.line(89, 1125, 304, 550);
+}
+
+function drawScaffoldReflection() {
+  push();
+  drawingContext.save();
+  drawingContext.beginPath();
+  drawingContext.rect(0, HORIZON_Y, WORLD_W, WORLD_H - HORIZON_Y);
+  drawingContext.clip();
+  translate(0, HORIZON_Y * 2);
+  scale(1, -1);
+  tint(23, 74, 120, 102);
+  image(scaffoldLayer, 0, 0);
+  noTint();
+  drawingContext.restore();
+  pop();
+}
+
+function topBeamSurfaceAt(x, beamFlex = 0) {
+  const beamStartX = 161;
+  const beamEndX = 700;
+  const beamStartY = 372;
+  const beamEndY = 418 + beamFlex;
+  const progress = clamp01((x - beamStartX) / (beamEndX - beamStartX));
+  // The beam is 31px wide; feet land on its visible upper edge, not its centre.
+  return beamStartY + (beamEndY - beamStartY) * progress - 19;
+}
+
+function riggingKnotY() {
+  return sun.y - SUN.radius - 28;
+}
+
+function pulleyRopeContact() {
+  // The egret bites the running cord at the wheel's right-hand shoulder.
+  return { x: PULLEY.x + PULLEY.radius * .92, y: PULLEY.y + PULLEY.radius * .7 };
+}
+
+function drawRigging() {
+  const knotY = riggingKnotY();
+  const pose = getBirdPose();
+  const contact = pulleyRopeContact();
+  const pullAmount = clamp01(bird.pull);
+  stroke(PALETTE.indigo);
+  strokeWeight(8);
+  noFill();
+  beginShape();
+  vertex(pose.tipX - 2, pose.tipY - 1);
+  bezierVertex(pose.tipX - 18 - pullAmount * 16, pose.tipY + 8, contact.x + 22, contact.y - 22, contact.x, contact.y);
+  endShape();
+  arc(PULLEY.x, PULLEY.y, PULLEY.radius * 2 - 4, PULLEY.radius * 2 - 4, -.76, 2.12);
+  const sway = rope.sway || 0;
+  beginShape();
+  vertex(PULLEY.x, PULLEY.y + PULLEY.radius);
+  bezierVertex(PULLEY.x + sway * .2, PULLEY.y + 120, PULLEY.x + sway, knotY - 70, PULLEY.x + sway, knotY);
+  endShape();
+  line(PULLEY.x + sway, knotY, sun.x - 96, sun.y - SUN.radius + 22);
+  line(PULLEY.x + sway, knotY, sun.x + 82, sun.y - SUN.radius + 22);
+  stroke(PALETTE.brass);
+  strokeWeight(6);
+  drawingContext.globalAlpha = .72 + rope.tension * .22;
+  beginShape();
+  vertex(pose.tipX - 2, pose.tipY - 1);
+  bezierVertex(pose.tipX - 18 - pullAmount * 16, pose.tipY + 8, contact.x + 22, contact.y - 22, contact.x, contact.y);
+  endShape();
+  drawingContext.globalAlpha = 1;
+  noStroke();
+  fill(PALETTE.indigo);
+  circle(PULLEY.x + sway, knotY, 17);
+  rect(PULLEY.x + sway - 13, knotY - 4, 26, 7);
+  fill(PALETTE.brass);
+  circle(pose.tipX - 3, pose.tipY, 10);
+}
+
+function drawPulley() {
+  push();
+  translate(PULLEY.x, PULLEY.y);
+  rotate(pulley.angle);
+  stroke(PALETTE.indigo);
+  strokeWeight(7);
+  fill(PALETTE.brass);
+  circle(0, 0, PULLEY.radius * 2);
+  fill(PALETTE.paper);
+  strokeWeight(6);
+  circle(0, 0, 54);
+  for (let index = 0; index < 8; index += 1) {
+    const angle = index * Math.PI / 4;
+    line(Math.cos(angle) * 8, Math.sin(angle) * 8, Math.cos(angle) * 27, Math.sin(angle) * 27);
+  }
+  fill(PALETTE.brass);
+  circle(0, 0, 16);
+  pop();
+  if (pulley.glint > .93 || world.mode === MODES.LIFTING_SUN) {
+    const strength = world.mode === MODES.LIFTING_SUN ? .75 : pulley.glint;
+    stroke(PALETTE.warmWhite);
+    strokeWeight(4);
+    line(PULLEY.x + 26, PULLEY.y - 35, PULLEY.x + 42, PULLEY.y - 51);
+    line(PULLEY.x + 34, PULLEY.y - 24, PULLEY.x + 50, PULLEY.y - 27);
+    noStroke();
+    fill(247, 237, 209, 170 * strength);
+    rect(PULLEY.x + 45, PULLEY.y - 48, 8, 8);
+  }
+}
+
+function drawBiteCordOverlay() {
+  const pose = getBirdPose();
+  const contact = pulleyRopeContact();
+  noFill();
+  stroke(PALETTE.indigo);
+  strokeWeight(10);
+  line(pose.tipX - 3, pose.tipY - 1, contact.x, contact.y);
+  stroke(PALETTE.brass);
+  strokeWeight(5);
+  line(pose.tipX - 3, pose.tipY - 1, contact.x, contact.y);
+  noStroke();
+  fill(PALETTE.brass);
+  circle(pose.tipX - 3, pose.tipY - 1, 11);
+}
+
+function getBirdPose() {
+  const alertLift = bird.alert * 8;
+  const pullDip = bird.pull * 14;
+  const restCurl = bird.rest * 7;
+  const breath = bird.breath * (1 - bird.pull * .6);
+  const headX = 632 + bird.pull * 10;
+  const headY = 305 - alertLift + pullDip - restCurl + bird.beakShake;
+  return {
+    alertLift,
+    pullDip,
+    restCurl,
+    breath,
+    headX,
+    headY,
+    tipX: BEAK.x + bird.pull * 22,
+    tipY: BEAK.y + pullDip * .34 - alertLift * .7 - restCurl + bird.beakShake * .35
+  };
+}
+
+function drawEgret() {
+  const pose = getBirdPose();
+  const { alertLift, pullDip, restCurl, breath, headX, headY, tipX, tipY } = pose;
+  const beamFlex = bird.pull * 3;
+  const leftFootY = topBeamSurfaceAt(350, beamFlex);
+  const rightFootY = topBeamSurfaceAt(417, beamFlex);
+  push();
+  stroke(PALETTE.indigo);
+  strokeJoin(ROUND);
+  strokeCap(ROUND);
+  strokeWeight(7);
+  fill(PALETTE.warmWhite);
+  beginShape();
+  vertex(294, 330 + breath);
+  bezierVertex(302, 246, 353, 181 + breath, 422, 178 + breath);
+  bezierVertex(485, 174 + breath, 502, 218 + breath, 479, 260 + breath);
+  bezierVertex(457, 300 + breath, 377, 339 + breath, 294, 330 + breath);
+  endShape(CLOSE);
+  noFill();
+  stroke(PALETTE.midBlue);
+  strokeWeight(5);
+  beginShape();
+  vertex(310, 324 + breath);
+  bezierVertex(359, 278, 411, 225 + breath, 465, 203 + breath);
+  bezierVertex(455, 258, 403, 311 + breath, 338, 329 + breath);
+  endShape();
+  stroke(PALETTE.indigo);
+  fill(PALETTE.warmWhite);
+  beginShape();
+  vertex(304, 329 + breath);
+  vertex(262, 384 + breath);
+  vertex(336, 342 + breath);
+  endShape(CLOSE);
+
+  noFill();
+  strokeWeight(15);
+  beginShape();
+  vertex(464, 247 + breath);
+  bezierVertex(497, 257, 499, 311, 531, 317 - alertLift * .35);
+  bezierVertex(558, 320, 549, 271 - alertLift, 584, 265 - alertLift);
+  bezierVertex(611, 261 - alertLift, 626, 278 + pullDip - restCurl, headX, headY);
+  endShape();
+  fill(PALETTE.warmWhite);
+  strokeWeight(7);
+  ellipse(headX, headY, 62, 50);
+  noStroke();
+  fill(PALETTE.indigo);
+  circle(headX + 10, headY - 6, 9);
+  stroke(PALETTE.indigo);
+  strokeWeight(5);
+  fill(PALETTE.brass);
+  beginShape();
+  vertex(headX + 22, headY + 3);
+  vertex(tipX, tipY);
+  vertex(headX + 14, headY + 18);
+  endShape(CLOSE);
+
+  noFill();
+  stroke(PALETTE.indigo);
+  strokeWeight(9);
+  line(358, 336 + breath, 350, leftFootY);
+  line(405, 326 + breath, 417, rightFootY);
+  strokeWeight(7);
+  line(337, leftFootY, 370, leftFootY);
+  line(402, rightFootY, 436, rightFootY);
+  pop();
+}
+
+function drawFish() {
+  for (const item of fishSchool) drawFishEntity(item);
+}
+
+function drawFishEntity(item) {
+  if (!item.visible) return;
+  const isActive = item === fish && [MODES.FISH_HOOKED, MODES.DRAGGING_FISH, MODES.FISH_RETURN].includes(world.mode);
+  const underwater = item.y > HORIZON_Y;
+  const angle = isActive && world.mode === MODES.DRAGGING_FISH
+    ? Math.atan2(item.vy, item.vx || 1)
+    : Math.sin(item.phase * 1.4) * .07;
+  const tailBeat = Math.sin(world.totalTime * (isActive ? 15 : 5.2) + item.phase) * 5;
+  const scalePulse = item.scale * (1 + item.energy * .07);
+  push();
+  translate(Math.round(item.x / PIXEL) * PIXEL, Math.round(item.y / PIXEL) * PIXEL);
+  if (!underwater && !REDUCED_MOTION) rotate(angle);
+  scale(item.facing * scalePulse, scalePulse);
+  noStroke();
+  if (item.energy > .48) {
+    fill(217, 161, 28, 24 + item.energy * 36);
+    ellipse(0, 0, 104, 78);
+  }
+  stroke(PALETTE.indigo);
+  strokeWeight(4);
+  fill(PALETTE.brass);
+  beginShape();
+  vertex(-28, -2);
+  bezierVertex(-18, -25, 21, -26, 38, -5);
+  bezierVertex(44, 4, 34, 23, 9, 26);
+  bezierVertex(-14, 28, -31, 15, -28, -2);
+  endShape(CLOSE);
+  beginShape();
+  vertex(-27, -3);
+  bezierVertex(-43, -10, -50, -22 + tailBeat, -58, -25 + tailBeat);
+  bezierVertex(-60, -9, -54, -1, -45, 3);
+  bezierVertex(-55, 9, -59, 17 - tailBeat, -55, 26 - tailBeat);
+  bezierVertex(-45, 21, -38, 11, -27, 7);
+  endShape(CLOSE);
+  fill(PALETTE.midBlue);
+  beginShape();
+  vertex(-3, -22);
+  bezierVertex(5, -37, 18, -35, 22, -19);
+  bezierVertex(13, -23, 5, -23, -3, -22);
+  endShape(CLOSE);
+  beginShape();
+  vertex(0, 12);
+  bezierVertex(7, 7, 16, 8, 20, 15);
+  bezierVertex(12, 20, 5, 19, 0, 12);
+  endShape(CLOSE);
+  noStroke();
+  fill(PALETTE.warmWhite);
+  circle(23, -8, 14);
+  fill(PALETTE.indigo);
+  circle(26, -8, 6);
+  stroke(PALETTE.indigo);
+  strokeWeight(3);
+  noFill();
+  arc(35, 5, 11, 8, -.2, 1.2);
+  pop();
+}
+
+function drawEnergyMotes() {
+  noStroke();
+  for (const mote of energyMotes) {
+    if (mote.delay > 0) continue;
+    const alpha = clamp01(mote.life) * 230;
+    fill(217, 161, 28, alpha * .22);
+    circle(mote.x, mote.y, 34);
+    fill(217, 161, 28, alpha);
+    rect(Math.round(mote.x / PIXEL) * PIXEL - 4, Math.round(mote.y / PIXEL) * PIXEL - 4, 8, 8);
+  }
+}
+
+function drawDroplets() {
+  noStroke();
+  for (const drop of droplets) {
+    fill(247, 237, 209, drop.alpha * 230);
+    rect(Math.round(drop.x / PIXEL) * PIXEL, Math.round(drop.y / PIXEL) * PIXEL, drop.size, drop.size);
+  }
+}
+
+function drawSunReflection(frontPass) {
+  const energy = clamp01(reflection.energy);
+  if ((frontPass && energy < .32) || (!frontPass && energy >= .32)) return;
+  noStroke();
+  const time = SHOT_MODE ? .6 : world.totalTime;
+  for (let index = 0; index < reflectionBars.length; index += 1) {
+    const bar = reflectionBars[index];
+    const depth = index / reflectionBars.length;
+    const widthScale = (.42 + depth * .58) * (.52 + reflection.width * .48);
+    const shimmer = Math.sin(time * bar.speed + index * 1.77) * (4 + depth * 9);
+    const barWidth = bar.width * widthScale;
+    const alpha = (28 + energy * 158) * bar.alpha;
+    if (energy > .26) {
+      fill(217, 161, 28, alpha * .3);
+      rect(
+        Math.round((sun.x - barWidth * .62 + bar.offset + shimmer) / PIXEL) * PIXEL,
+        Math.round((bar.y - 2) / PIXEL) * PIXEL,
+        Math.round((barWidth * 1.24) / PIXEL) * PIXEL,
+        index % 4 === 0 ? 8 : 5
+      );
+    }
+    fill(247, 237, 209, alpha);
+    rect(
+      Math.round((sun.x - barWidth * .5 + bar.offset + shimmer) / PIXEL) * PIXEL,
+      Math.round(bar.y / PIXEL) * PIXEL,
+      Math.round(barWidth / PIXEL) * PIXEL,
+      index % 4 === 0 ? 7 : 4
+    );
+  }
+}
+
+function drawRipples() {
+  noFill();
+  for (const ripple of ripples) {
+    const y = Math.max(HORIZON_Y + 8, ripple.y);
+    stroke(PALETTE.brass);
+    strokeWeight(ripple.energy > .7 ? 5 : 3);
+    drawingContext.globalAlpha = ripple.alpha * .58;
+    ellipse(ripple.x, y, ripple.radius * 2.24, ripple.radius * .27);
+    stroke(PALETTE.warmWhite);
+    strokeWeight(ripple.energy > .7 ? 5 : 3);
+    drawingContext.globalAlpha = ripple.alpha;
+    ellipse(ripple.x, y, ripple.radius * 2, ripple.radius * .3);
+    if (ripple.energy > .55) ellipse(ripple.x, y, ripple.radius * 1.38, ripple.radius * .19);
+  }
+  drawingContext.globalAlpha = 1;
+}
+
+function drawRevealMask() {
+  if (world.reveal >= .999) return;
+  noStroke();
+  fill(PALETTE.paper);
+  const topHeight = HORIZON_Y * (1 - world.reveal);
+  rect(0, 0, WORLD_W, topHeight);
+  fill(PALETTE.indigo);
+  const waterReveal = smoothstep((world.reveal - .05) / .95);
+  rect(0, HORIZON_Y + (WORLD_H - HORIZON_Y) * waterReveal, WORLD_W, WORLD_H);
+}
+
+function updateHintVisibility() {
+  if (!ui.hint) return;
+  const canHint = !world.learned && world.mode === MODES.PREDAWN_IDLE && hintTimer >= 1.35 && !SHOT_MODE;
+  ui.hint.classList.toggle('visible', canHint);
+  if (!world.learned && world.mode === MODES.PREDAWN_IDLE && hintTimer >= 1 && hintTimer - deltaTime * .001 < 1) {
+    for (const item of fishSchool) createRipple(item.x, item.y, .34);
+  }
+}
+
+function initAudio() {
+  if (audioCtx || typeof window === 'undefined') return;
+  const Context = window.AudioContext || window.webkitAudioContext;
+  if (!Context) return;
+  audioCtx = new Context();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0;
+  masterGain.connect(audioCtx.destination);
+}
+
+function resumeAudio() {
+  if (isMuted) return;
+  initAudio();
+  if (!audioCtx || !masterGain) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  const now = audioCtx.currentTime;
+  masterGain.gain.cancelScheduledValues(now);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+  masterGain.gain.linearRampToValueAtTime(.22, now + .42);
+}
+
+function trackAudio(node, gain) {
+  const item = { node, gain };
+  activeAudio.sources.push(item);
+  node.onended = () => {
+    try { node.disconnect(); } catch (_) {}
+    try { gain.disconnect(); } catch (_) {}
+    const index = activeAudio.sources.indexOf(item);
+    if (index >= 0) activeAudio.sources.splice(index, 1);
+  };
+}
+
+function tone(frequency, duration, volume, type = 'sine', delay = 0, endFrequency = null) {
+  if (!audioCtx || !masterGain || isMuted) return;
+  const start = audioCtx.currentTime + delay;
+  const oscillator = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  oscillator.type = type;
+  oscillator.frequency.setValueAtTime(frequency, start);
+  if (endFrequency) oscillator.frequency.exponentialRampToValueAtTime(endFrequency, start + duration);
+  gain.gain.setValueAtTime(.0001, start);
+  gain.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), start + Math.min(.035, duration * .2));
+  gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+  oscillator.connect(gain);
+  gain.connect(masterGain);
+  oscillator.start(start);
+  oscillator.stop(start + duration + .03);
+  trackAudio(oscillator, gain);
+}
+
+function noiseBurst(duration, volume, cutoff = 1200) {
+  if (!audioCtx || !masterGain || isMuted) return;
+  const frames = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+  const buffer = audioCtx.createBuffer(1, frames, audioCtx.sampleRate);
+  const channel = buffer.getChannelData(0);
+  for (let index = 0; index < frames; index += 1) channel[index] = hash01(index * 9.73) * 2 - 1;
+  const source = audioCtx.createBufferSource();
+  const filter = audioCtx.createBiquadFilter();
+  const gain = audioCtx.createGain();
+  filter.type = 'lowpass';
+  filter.frequency.value = cutoff;
+  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.0001, audioCtx.currentTime + duration);
+  source.buffer = buffer;
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(masterGain);
+  source.start();
+  source.stop(audioCtx.currentTime + duration + .02);
+  trackAudio(source, gain);
+}
+
+function playCatchSound() { noiseBurst(.13, .035, 940); tone(196, .28, .032, 'triangle'); }
+function playFeedSound() { tone(720, .09, .04, 'triangle'); tone(410, .18, .026, 'sine', .04); }
+function playPullSound(step) { tone(104 + step * 7, .22, .034, 'triangle', 0, 82 + step * 5); noiseBurst(.07, .016, 520); }
+function playSunClearSound() { tone(110, .95, .025, 'sine', 0, 220); noiseBurst(.24, .02, 720); }
+function playSettleSound() { tone(392, .78, .024, 'sine', .08); tone(587, 1.05, .018, 'sine', .34); }
+
+function stopAllAudio() {
+  for (const timer of activeAudio.timers) { clearTimeout(timer); clearInterval(timer); }
+  activeAudio.timers = [];
+  if (audioCtx) {
+    for (const item of activeAudio.sources) {
+      try {
+        if (item.gain) {
+          const now = audioCtx.currentTime;
+          item.gain.gain.cancelScheduledValues(now);
+          item.gain.gain.setValueAtTime(Math.max(.0001, item.gain.gain.value), now);
+          item.gain.gain.exponentialRampToValueAtTime(.0001, now + .05);
+        }
+        if (item.node && item.node.stop) item.node.stop(audioCtx.currentTime + .06);
+      } catch (_) {}
+    }
+  }
+  activeAudio.sources = [];
+}
+
+function toggleMute(event) {
+  event.stopPropagation();
+  isMuted = !isMuted;
+  ui.mute.setAttribute('aria-pressed', String(isMuted));
+  ui.mute.setAttribute('aria-label', isMuted ? '开启声音' : '关闭声音');
+  for (const wave of ui.mute.querySelectorAll('.sound-wave')) wave.style.display = isMuted ? 'none' : '';
+  if (!masterGain || !audioCtx) return;
+  const now = audioCtx.currentTime;
+  masterGain.gain.cancelScheduledValues(now);
+  masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+  masterGain.gain.linearRampToValueAtTime(isMuted ? 0 : .22, now + .16);
+}
+
+function onVisibilityChange() {
+  if (!audioCtx) return;
+  if (document.hidden) audioCtx.suspend().catch(() => {});
+  else if (!isMuted) audioCtx.resume().catch(() => {});
+}
+
+function resetWorldForQA() {
+  createWorldState();
+  world.reveal = 1;
+  world.mode = MODES.PREDAWN_IDLE;
+  world.stateTime = 0;
+  fish = fishSchool[1];
+}
+
+function triggerPrimaryInteractionForQA() {
+  startFeeding(true);
+}
+
+function updateWorldForQA(dt) {
+  updateWorld(dt);
+}
+</script>
+
+<script type="application/pixel-bloom-qa">
+globalThis.__PIXEL_BLOOM_QA__ = {
+  horizonSeconds: 12,
+  dt: 1 / 60,
+  requiredStates: ['PREDAWN_IDLE', 'FEEDING', 'LIFTING_SUN', 'SUNRISE_SETTLING', 'BIRD_CELEBRATION', 'SUNRISE_IDLE'],
+  terminalStates: ['SUNRISE_IDLE'],
+  reset() { resetWorldForQA(); },
+  begin() { triggerPrimaryInteractionForQA(); },
+  step(dt) { updateWorldForQA(dt); },
+  state() { return world.mode; },
+  entities() {
+    const entities = [{
+      id: 'sun',
+      points: [
+        [sun.x - SUN.radius, sun.y], [sun.x + SUN.radius, sun.y],
+        [sun.x, sun.y - SUN.radius], [sun.x, sun.y + SUN.radius]
+      ]
+    }];
+    for (let index = 0; index < fishSchool.length; index += 1) {
+      const item = fishSchool[index];
+      if (!item.visible) continue;
+      const reach = 64 * item.scale * (1 + item.energy * .07);
+      const halfHeight = 40 * item.scale * (1 + item.energy * .07);
+      entities.push({
+        id: `morning-light-fish-${index}`,
+        points: [
+          [item.x - reach, item.y - halfHeight], [item.x + reach, item.y - halfHeight],
+          [item.x - reach, item.y + halfHeight], [item.x + reach, item.y + halfHeight]
+        ]
+      });
+    }
+    return entities;
+  },
+  contains(x, y) { return Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= WORLD_W && y >= 0 && y <= WORLD_H; },
+  counts() { return [{ name: 'three-independent-fish-state-objects', expected: 3, actual: fishSchool.length }]; }
+};
+</script>
+</body>
+</html>
