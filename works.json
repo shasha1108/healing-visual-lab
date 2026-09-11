@@ -232,6 +232,43 @@
   },
   "works": [
     {
+      "slug": "egret-sunrise",
+      "title_en": "Egret Sunrise",
+      "title_zh": "今天，由你升起",
+      "tagline": "拖一条晨光鱼喂给白鹭，它咬住滑轮上的绳，把太阳从海里一寸寸吊起来。",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 1,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "p5.js",
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "use_cases": [
+        "p5.js",
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "files": [
+        "egret-sunrise.html",
+        "egret-sunrise.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/egret-sunrise/v-6e7285fb485e/egret-sunrise_1.gif"
+      ],
+      "date": "2026-09-11"
+    },
+    {
       "slug": "duskfirefly-bottle",
       "title_en": "Duskfirefly Bottle",
       "title_zh": "把未熄的交给夜",
@@ -1753,43 +1790,6 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
-    },
-    {
-      "slug": "egret-sunrise",
-      "title_en": "Egret Sunrise",
-      "title_zh": "今天，由你升起",
-      "tagline": "拖一条晨光鱼喂给白鹭，它咬住滑轮上的绳，把太阳从海里一寸寸吊起来。",
-      "tech": [
-        "p5.js",
-        "Canvas 2D",
-        "Web Audio API"
-      ],
-      "render": "Canvas2D (p5.js)",
-      "has_audio": true,
-      "has_touch": true,
-      "particle_count": "N/A",
-      "dependencies": 1,
-      "healing_domain": "emotional_release",
-      "keywords": [
-        "p5.js",
-        "canvas 2d",
-        "web audio api",
-        "touch interaction"
-      ],
-      "use_cases": [
-        "p5.js",
-        "canvas 2d",
-        "web audio api",
-        "touch interaction"
-      ],
-      "files": [
-        "egret-sunrise.html",
-        "egret-sunrise.md"
-      ],
-      "preview_assets": [
-        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/egret-sunrise/v-6e7285fb485e/egret-sunrise_1.gif"
-      ],
-      "date": "2026-09-11"
     }
   ]
 }
