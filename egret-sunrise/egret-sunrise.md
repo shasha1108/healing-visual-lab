@@ -1,4 +1,4 @@
-# Risen By Your Hand · 今天，由你升起
+# Egret Sunrise · 今天，由你升起
 
 > **Tech Keywords:** p5.js, canvas 2d, web audio api, touch interaction
 
@@ -19,7 +19,7 @@
   WORK_META_END
 -->
 
-![Risen By Your Hand - preview 1](https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/egret-sunrise/v-6e7285fb485e/egret-sunrise_1.gif)
+![Egret Sunrise - preview 1](https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/egret-sunrise/v-6e7285fb485e/egret-sunrise_1.gif)
 
 > 拖一条晨光鱼喂给白鹭，它咬住滑轮上的绳，把太阳从海里一寸寸吊起来。
 
