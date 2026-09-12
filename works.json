@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 48,
-  "updated": "2026-09-11",
+  "total": 49,
+  "updated": "2026-09-12",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -25,6 +25,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "weather-on-the-line",
       "egret-sunrise",
       "duskfirefly-bottle",
       "streetlamp-slow-rain",
@@ -79,6 +80,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "weather-on-the-line",
       "egret-sunrise",
       "duskfirefly-bottle",
       "streetlamp-slow-rain",
@@ -151,6 +153,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "weather-on-the-line",
       "egret-sunrise",
       "duskfirefly-bottle",
       "streetlamp-slow-rain",
@@ -197,6 +200,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "weather-on-the-line",
       "egret-sunrise",
       "duskfirefly-bottle",
       "streetlamp-slow-rain",
@@ -1790,6 +1794,46 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
+    },
+    {
+      "slug": "weather-on-the-line",
+      "title_en": "Weather On The Line",
+      "title_zh": "天气晾在房间里",
+      "tagline": "把天气一件件晾上去，再一件件摘下来。",
+      "tech": [
+        "p5.js",
+        "WebGL",
+        "Canvas 2D",
+        "Web Audio API"
+      ],
+      "render": "WebGL (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "441 cloth nodes",
+      "dependencies": 1,
+      "healing_domain": "meditation",
+      "keywords": [
+        "p5.js",
+        "canvas 2d",
+        "webgl",
+        "web audio api",
+        "touch interaction"
+      ],
+      "use_cases": [
+        "p5.js",
+        "canvas 2d",
+        "webgl",
+        "web audio api",
+        "touch interaction"
+      ],
+      "files": [
+        "weather-on-the-line.html",
+        "weather-on-the-line.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/weather-on-the-line/v-f1627fc67481/weather-on-the-line_1.gif"
+      ],
+      "date": "2026-09-12"
     }
   ]
 }
