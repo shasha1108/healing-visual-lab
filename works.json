@@ -7,6 +7,7 @@
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
+      "weather-on-the-line",
       "tang-sancai-fire",
       "ink-in-forms",
       "golden-ripples",
@@ -62,6 +63,7 @@
       "cosmic-recollection"
     ],
     "webgl_glsl": [
+      "weather-on-the-line",
       "tang-sancai-fire",
       "ink-in-forms",
       "golden-ripples",
@@ -121,6 +123,7 @@
       "cosmic-recollection"
     ],
     "particle_system": [
+      "weather-on-the-line",
       "tree-remembers-wind",
       "migratory-bird-lighthouse",
       "overwork",
@@ -235,6 +238,46 @@
     ]
   },
   "works": [
+    {
+      "slug": "weather-on-the-line",
+      "title_en": "Weather On The Line",
+      "title_zh": "天气晾在房间里",
+      "tagline": "把天气一件件晾上去，再一件件摘下来。",
+      "tech": [
+        "p5.js",
+        "WebGL",
+        "Canvas 2D",
+        "Web Audio API"
+      ],
+      "render": "WebGL (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "441 cloth nodes",
+      "dependencies": 1,
+      "healing_domain": "meditation",
+      "keywords": [
+        "p5.js",
+        "canvas 2d",
+        "webgl",
+        "web audio api",
+        "touch interaction"
+      ],
+      "use_cases": [
+        "p5.js",
+        "canvas 2d",
+        "webgl",
+        "web audio api",
+        "touch interaction"
+      ],
+      "files": [
+        "weather-on-the-line.html",
+        "weather-on-the-line.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/weather-on-the-line/v-f1627fc67481/weather-on-the-line_1.gif"
+      ],
+      "date": "2026-09-12"
+    },
     {
       "slug": "egret-sunrise",
       "title_en": "Egret Sunrise",
@@ -1794,46 +1837,6 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
-    },
-    {
-      "slug": "weather-on-the-line",
-      "title_en": "Weather On The Line",
-      "title_zh": "天气晾在房间里",
-      "tagline": "把天气一件件晾上去，再一件件摘下来。",
-      "tech": [
-        "p5.js",
-        "WebGL",
-        "Canvas 2D",
-        "Web Audio API"
-      ],
-      "render": "WebGL (p5.js)",
-      "has_audio": true,
-      "has_touch": true,
-      "particle_count": "441 cloth nodes",
-      "dependencies": 1,
-      "healing_domain": "meditation",
-      "keywords": [
-        "p5.js",
-        "canvas 2d",
-        "webgl",
-        "web audio api",
-        "touch interaction"
-      ],
-      "use_cases": [
-        "p5.js",
-        "canvas 2d",
-        "webgl",
-        "web audio api",
-        "touch interaction"
-      ],
-      "files": [
-        "weather-on-the-line.html",
-        "weather-on-the-line.md"
-      ],
-      "preview_assets": [
-        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/weather-on-the-line/v-f1627fc67481/weather-on-the-line_1.gif"
-      ],
-      "date": "2026-09-12"
     }
   ]
 }
