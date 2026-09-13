@@ -243,6 +243,40 @@
   },
   "works": [
     {
+      "slug": "dusk-projector",
+      "title_en": "Dusk Projector",
+      "title_zh": "把黄昏倒回去",
+      "tagline": "手摇的放映机对准地平线，顺时针转动摇柄，那一小片天空就一格一格退回黄昏；松开手，它会自己慢慢走回夜里。",
+      "tech": [
+        "Canvas 2D",
+        "Web Audio API"
+      ],
+      "render": "Canvas 2D",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 0,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "use_cases": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "files": [
+        "dusk-projector.html",
+        "dusk-projector.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/dusk-projector/v-c8e1df190ba4/dusk-projector_1.gif"
+      ],
+      "date": "2026-09-13"
+    },
+    {
       "slug": "weather-on-the-line",
       "title_en": "Weather On The Line",
       "title_zh": "天气晾在房间里",
@@ -1841,40 +1875,6 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
-    },
-    {
-      "slug": "dusk-projector",
-      "title_en": "Dusk Projector",
-      "title_zh": "把黄昏倒回去",
-      "tagline": "手摇的放映机对准地平线，顺时针转动摇柄，那一小片天空就一格一格退回黄昏；松开手，它会自己慢慢走回夜里。",
-      "tech": [
-        "Canvas 2D",
-        "Web Audio API"
-      ],
-      "render": "Canvas 2D",
-      "has_audio": true,
-      "has_touch": true,
-      "particle_count": "N/A",
-      "dependencies": 0,
-      "healing_domain": "emotional_release",
-      "keywords": [
-        "canvas 2d",
-        "web audio api",
-        "touch interaction"
-      ],
-      "use_cases": [
-        "canvas 2d",
-        "web audio api",
-        "touch interaction"
-      ],
-      "files": [
-        "dusk-projector.html",
-        "dusk-projector.md"
-      ],
-      "preview_assets": [
-        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/dusk-projector/v-c8e1df190ba4/dusk-projector_1.gif"
-      ],
-      "date": "2026-09-13"
     }
   ]
 }
