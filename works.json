@@ -247,6 +247,40 @@
   },
   "works": [
     {
+      "slug": "parting-the-rain",
+      "title_en": "Parting The Rain",
+      "title_zh": "把雨拉开一道缝",
+      "tagline": "雨是一道幕。捏住它的边往左拉，缝后面是晚霞、电车和十只麻雀。",
+      "tech": [
+        "Canvas 2D",
+        "Web Audio API"
+      ],
+      "render": "Canvas 2D",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 0,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "use_cases": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "files": [
+        "parting-the-rain.html",
+        "parting-the-rain.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/parting-the-rain/v-4cf5e8d38711/parting-the-rain_1.gif"
+      ],
+      "date": "2026-09-23"
+    },
+    {
       "slug": "dusk-projector",
       "title_en": "Dusk Projector",
       "title_zh": "把黄昏倒回去",
@@ -1879,40 +1913,6 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
-    },
-    {
-      "slug": "parting-the-rain",
-      "title_en": "Parting The Rain",
-      "title_zh": "把雨拉开一道缝",
-      "tagline": "雨是一道幕。捏住它的边往左拉，缝后面是晚霞、电车和十只麻雀。",
-      "tech": [
-        "Canvas 2D",
-        "Web Audio API"
-      ],
-      "render": "Canvas 2D",
-      "has_audio": true,
-      "has_touch": true,
-      "particle_count": "N/A",
-      "dependencies": 0,
-      "healing_domain": "emotional_release",
-      "keywords": [
-        "canvas 2d",
-        "web audio api",
-        "touch interaction"
-      ],
-      "use_cases": [
-        "canvas 2d",
-        "web audio api",
-        "touch interaction"
-      ],
-      "files": [
-        "parting-the-rain.html",
-        "parting-the-rain.md"
-      ],
-      "preview_assets": [
-        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/parting-the-rain/v-4cf5e8d38711/parting-the-rain_1.gif"
-      ],
-      "date": "2026-09-23"
     }
   ]
 }
