@@ -1,0 +1,1587 @@
+<!doctype html>
+<!--
+  Title: Parting The Rain · 把雨拉开一道缝
+  Tech: Canvas 2D, Web Audio API
+  Keywords: canvas 2d, web audio api, touch interaction
+  Features: Canvas 2D rain curtain driven by a spring-damper drag model with seeded deterministic strand geometry. Web Audio API filtered-noise rain whose lowpass cutoff and gain track pull distance, plus a measured radial-gradient fallback replicating ctx.filter blur on WebKit.
+  Render: Canvas 2D
+  Audio: yes
+  Touch: yes
+  Particles: N/A
+  Standalone: yes, single HTML file, 0 CDN dependencies
+  Repo: https://github.com/shasha1108/healing-visual-lab
+--><html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#5a889a" />
+    <meta name="description" content="把雨拉开一道缝，展现漫反射霞光、平稳单节水上电车与电线上栖息的十只小麻雀。" />
+    <title>把雨拉开一道缝</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%235a889a'/%3E%3Cpath d='M9 2v25M16 0v20M23 5v24' stroke='%23f8efe6' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E" />
+    
+    <style>
+      :root {
+        color-scheme: light;
+        --rain-cyan: #5a889a;
+        --navy: #1e3549;
+        --paper: #f8efe6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #1e3549;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        overscroll-behavior: none;
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Segoe UI", sans-serif;
+      }
+
+      .stage {
+        position: relative;
+        width: min(100vw, 75vh);
+        height: 100vh;
+        overflow: hidden;
+        isolation: isolate;
+        background: var(--rain-cyan);
+        box-shadow: 0 0 60px rgba(0, 0, 0, 0.45);
+      }
+
+      @supports (height: 100svh) {
+        .stage {
+          width: min(100vw, 75svh);
+          height: 100svh;
+        }
+      }
+
+      #artwork {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: grab;
+        touch-action: none;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        outline: none;
+        border: none;
+      }
+
+      #artwork.is-grabbing {
+        cursor: grabbing;
+      }
+
+      .gesture-hint {
+        position: absolute;
+        z-index: 2;
+        left: 50%;
+        bottom: max(9%, calc(env(safe-area-inset-bottom) + 30px));
+        margin: 0;
+        padding: 9px 18px;
+        color: var(--paper);
+        background: rgba(26, 45, 62, 0.72);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(248, 239, 230, 0.28);
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        line-height: 1;
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, 10px);
+        transition: opacity 380ms cubic-bezier(0.16, 1, 0.3, 1), transform 380ms cubic-bezier(0.16, 1, 0.3, 1);
+        white-space: nowrap;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      }
+
+      .gesture-hint.is-visible {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .gesture-hint {
+          transition-duration: 0ms;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage" id="stage" aria-describedby="sceneDescription">
+      <canvas
+        id="artwork"
+        tabindex="0"
+        role="slider"
+        aria-label="拉开雨幕"
+        aria-orientation="horizontal"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+        aria-valuetext="雨幕完全闭合"
+      ></canvas>
+
+      <p class="gesture-hint" id="gestureHint" aria-hidden="true">捏住雨边，向左拉开</p>
+      <p class="sr-only" id="sceneDescription">
+        雨幕向左拉开，后方展现出漫射晚霞、平稳行驶的单节水上电车与电线杆上栖息的十只小麻雀。
+      </p>
+    </main>
+
+    <script>
+      (() => {
+        "use strict";
+
+        // ====== 艺术级色彩体系 ======
+        const COLORS = Object.freeze({
+          paper: "#f8efe6",
+          rain: "#5a889a",
+          navy: "#1e3549",
+
+          // 天空底色
+          skyZenith: "#6a5c7f",
+          skyMid: "#b57f93",
+          skyHorizon: "#f6b390",
+
+          // 漫反射大片晚霞散色光带
+          sunsetDiffuseCore: "rgba(242, 138, 116, 0.46)", // 核心漫射珊瑚粉
+          sunsetDiffuseHaze: "rgba(246, 174, 144, 0.30)", // 漫射桃杏薄辉
+          sunsetDiffuseMist: "rgba(215, 126, 140, 0.16)", // 边缘消融霞霭
+
+          // 落日与光晕
+          sunCore: "#ffe699",
+          sunGlowInner: "#ffa573",
+          sunGlowOuter: "#eb6b56",
+          rimLight: "#ffe2ba",
+
+          // 远山与灯塔
+          mountainL1: "rgba(105, 118, 158, 0.58)",
+          mountainL2: "rgba(78, 92, 132, 0.75)",
+          beaconRed: "#d45341",
+          beaconGlow: "#ffe792",
+
+          // 电杆与电网
+          railNavy: "#243a50",
+          railHighlight: "#fff3cc",
+          polePillars: "#2b3c4f",
+          catenaryWire: "rgba(32, 48, 65, 0.75)",
+          insulator: "#ffffff",
+
+          // 麻雀纯黑剪影
+          sparrowSilhouette: "#141e28",
+
+          // 单节千与千寻水上电车
+          trainRoof: "#542a22",
+          trainRoofDeck: "#3d1b15",
+          trainYellow: "#e8b958",
+          trainRed: "#963c2e",
+          trainRedGroove: "#7b2f24",
+          trainWindow: "#152230",
+          trainGlass: "#7ba7bc",
+          trainWindowGlow: "#ffe7b8",
+          trainDoorTrim: "#d29f45",
+          headlightBulb: "#fff8d6",
+          headlightBeam: "rgba(255, 240, 180, 0.28)",
+          waterSpray: "rgba(255, 255, 255, 0.85)",
+
+          // 湖面水体
+          lakeHorizon: "#53859b",
+          lakeDeep: "#2f576a",
+          sunShimmerCore: "#ffeaa8",
+          sunShimmerSpread: "#f8cb8c",
+          buoyRed: "#d84e3d",
+          pylonWood: "#2a3d35",
+          pylonHighlight: "#536c60",
+          waterMist: "rgba(90, 136, 154, 0.45)",
+        });
+
+        const canvas = document.querySelector("#artwork");
+        const stage = document.querySelector("#stage");
+        const hint = document.querySelector("#gestureHint");
+
+        const ctx = canvas.getContext("2d", { desynchronized: true });
+        const sceneCanvas = document.createElement("canvas");
+        const sceneCtx = sceneCanvas.getContext("2d");
+        const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+        // CanvasRenderingContext2D.filter 只有 Chromium / Firefox 实现：WebKit（Safari、
+        // iOS 上的全部浏览器、小工具容器）没有该属性，赋值静默失效，柔焦晕光会退化成
+        // 硬边色环。这里探测一次，不支持时改用径向渐变复刻同一剖面（drawSoftGlowDisc）。
+        const canvasFilterSupported = (() => {
+          try {
+            const probe = document.createElement("canvas").getContext("2d");
+            return typeof probe.filter === "string";
+          } catch (_) {
+            return false;
+          }
+        })();
+
+        const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+        const smoothstep = (value) => {
+          const t = clamp(value, 0, 1);
+          return t * t * (3 - 2 * t);
+        };
+
+        function mulberry32(seed) {
+          let value = seed >>> 0;
+          return () => {
+            value += 0x6d2b79f5;
+            let result = value;
+            result = Math.imul(result ^ (result >>> 15), result | 1);
+            result ^= result + Math.imul(result ^ (result >>> 7), result | 61);
+            return ((result ^ (result >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+
+        const model = {
+          width: 1,
+          height: 1,
+          dpr: 1,
+          maxPull: 1,
+          pull: 0,
+          targetPull: 0,
+          velocity: 0,
+          grabRatio: 0.52,
+          targetGrabRatio: 0.52,
+          activePointer: null,
+          pointerStartX: 0,
+          pullAtGrab: 0,
+          dragged: false,
+          interacted: false,
+          misses: 0,
+          contact: 0,
+          state: "RESTING",
+          startTime: performance.now(),
+          lastTime: performance.now(),
+          hintPulseStart: performance.now() + 900,
+          hintPulse: 0,
+          lastAriaValue: -1,
+          reducedMotion: reducedMotionQuery.matches,
+          recoveryAt: null,
+          recoveryFrom: 0,
+          recoveryStartedAt: null,
+          recoveryDuration: 8000,
+        };
+
+        const train = {
+          state: "waiting",
+          progress: 0,
+          duration: 6.8,
+        };
+
+        let strands = [];
+        let rainGrain = [];
+        let splashes = [];
+        let lastSplashAt = -Infinity;
+        let runtimeRandom = mulberry32(0x5a17c9e3);
+        let audio = null;
+        let lastTrainTick = 0;
+
+        function shapeEnvelope(v, h = model.grabRatio) {
+          if (v <= h) return 0.68 + 0.32 * smoothstep(v / Math.max(h, 0.001));
+          return 1 - 0.28 * smoothstep((v - h) / Math.max(1 - h, 0.001));
+        }
+
+        function edgeAt(v) {
+          return (model.width + 12) - model.pull * shapeEnvelope(v);
+        }
+
+        function pointOnCurtain(u, v, phase = 0, wobbleAmount = 0) {
+          const envelope = shapeEnvelope(v);
+          const edge = edgeAt(v);
+          const amount = model.pull / model.maxPull;
+          const beta = 0.65 * amount * envelope;
+          const mappedU = u + beta * u * u * (1 - u);
+          const time = model.reducedMotion ? 0 : (performance.now() - model.startTime) / 1000;
+          const wobble = Math.sin(v * 9.2 + phase + time * 0.14) * wobbleAmount * (1 - u * u * u * u);
+          const innerCue = -(model.hintPulse * 5 + model.contact * 3) * Math.pow(u, 8) *
+            Math.exp(-Math.pow((v - model.grabRatio) / 0.16, 2));
+          return {
+            x: edge * mappedU + wobble + innerCue,
+            y: v * model.height,
+          };
+        }
+
+        function makePath(strand) {
+          const points = [];
+          let total = 0;
+          for (let index = 0; index <= 36; index += 1) {
+            const v = index / 36;
+            const point = pointOnCurtain(strand.u, v, strand.phaseOffset, strand.wobble);
+            if (index > 0) {
+              const previous = points[index - 1];
+              total += Math.hypot(point.x - previous.x, point.y - previous.y);
+            }
+            points.push({ ...point, distance: total });
+          }
+          return { points, total };
+        }
+
+        function samplePath(path, distance) {
+          const target = clamp(distance, 0, path.total);
+          const points = path.points;
+          let low = 0;
+          let high = points.length - 1;
+          while (low < high) {
+            const middle = Math.floor((low + high) / 2);
+            if (points[middle].distance < target) low = middle + 1;
+            else high = middle;
+          }
+          const endIndex = Math.max(1, low);
+          const start = points[endIndex - 1];
+          const end = points[endIndex];
+          const span = Math.max(0.0001, end.distance - start.distance);
+          const t = (target - start.distance) / span;
+          return {
+            x: start.x + (end.x - start.x) * t,
+            y: start.y + (end.y - start.y) * t,
+          };
+        }
+
+        function tracePath(targetCtx, path, startDistance = 0, endDistance = path.total) {
+          const start = samplePath(path, startDistance);
+          targetCtx.beginPath();
+          targetCtx.moveTo(start.x, start.y);
+          const steps = Math.max(2, Math.ceil((endDistance - startDistance) / 18));
+          for (let index = 1; index <= steps; index += 1) {
+            const distance = startDistance + (endDistance - startDistance) * (index / steps);
+            const point = samplePath(path, distance);
+            targetCtx.lineTo(point.x, point.y);
+          }
+          targetCtx.stroke();
+        }
+
+        function rebuildRainData(previousPhases = []) {
+          const random = mulberry32(0x7261696e);
+          const count = clamp(Math.round(model.width * 0.46), 150, 220);
+          strands = Array.from({ length: count }, (_, index) => {
+            const u = (index + random()) / count;
+            return {
+              u,
+              width: 0.45 + random() * 1.25,
+              alpha: 0.08 + random() * 0.18,
+              bold: random() < 0.12,
+              phaseOffset: random() * Math.PI * 2,
+              wobble: 0.15 + random() * 0.58,
+              paperTrack: random() < 0.34,
+              trackStart: random() * 0.82,
+              trackLength: 0.09 + random() * 0.27,
+              flowRate: 0.24 + random() * 0.34,
+              drop: random() < 0.9,
+              dropPhase: previousPhases[index] ?? random(),
+              speed: model.height * (0.68 + random() * (random() < 0.2 ? 0.78 : 0.46)),
+              streak: 12 + random() * 24,
+              dropWidth: 0.75 + random() * 1.55,
+              path: null,
+            };
+          });
+
+          rainGrain = Array.from({ length: Math.round(model.width * model.height / 650) }, () => ({
+            u: random(),
+            v: random(),
+            length: 1.2 + random() * 8.5,
+            width: 0.45 + random() * 1.35,
+            alpha: 0.04 + random() * 0.095,
+            navy: random() < 0.78,
+          }));
+
+          if (splashes.length === 0) {
+            splashes = Array.from({ length: 32 }, () => ({
+              x: random() * model.width,
+              y: model.height * 0.68 + random() * (model.height * 0.31),
+              age: random() * 1.2,
+              life: 0.85 + random() * 0.55,
+              radius: 4 + random() * 8,
+            }));
+          }
+        }
+
+        // ====== 高斯模糊圆盘的实测径向剖面 ======
+        // 供没有 ctx.filter 的引擎用径向渐变复刻柔焦晕光。每项 [t, alpha]：
+        // t = r / diskRadius，alpha = 该半径处模糊后剩余的不透明度。
+        // 由 Chrome 的 blur() 逐像素实测拟合，ratio = sigma / diskRadius 为对应的模糊比。
+        const SOFT_DISC_PROFILES = [
+          {
+            ratio: 0.405,
+            stops: [
+              [0, 0.9529], [0.1, 0.9478], [0.2, 0.9332], [0.3, 0.9093], [0.4, 0.8725],
+              [0.5, 0.8207], [0.6, 0.7587], [0.7, 0.6814], [0.8, 0.5997], [0.85, 0.5547],
+              [0.9, 0.5074], [0.95, 0.4619], [1, 0.4147], [1.05, 0.3717], [1.1, 0.3272],
+              [1.15, 0.2858], [1.2, 0.248], [1.25, 0.2132], [1.3, 0.1796], [1.35, 0.1492],
+              [1.4, 0.1224], [1.45, 0.1025], [1.5, 0.081], [1.6, 0.0507], [1.7, 0.0302],
+              [1.8, 0.0163], [1.9, 0.0089], [2, 0.0042], [2.1, 0.0016], [2.111, 0],
+            ],
+          },
+          {
+            ratio: 0.29,
+            stops: [
+              [0, 1], [0.1, 0.9998], [0.2, 0.9959], [0.3, 0.9861], [0.4, 0.9678],
+              [0.5, 0.9377], [0.6, 0.8835], [0.7, 0.8008], [0.8, 0.7005], [0.85, 0.6373],
+              [0.9, 0.5732], [0.95, 0.5065], [1, 0.4388], [1.05, 0.38], [1.1, 0.3175],
+              [1.15, 0.261], [1.2, 0.2085], [1.25, 0.1612], [1.3, 0.1238], [1.35, 0.093],
+              [1.4, 0.0684], [1.45, 0.0498], [1.5, 0.034], [1.6, 0.0147], [1.7, 0.0053],
+              [1.8, 0.0015], [1.812, 0],
+            ],
+          },
+        ];
+
+        function hexToRgbTriplet(hex) {
+          const value = parseInt(hex.slice(1), 16);
+          return `${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}`;
+        }
+
+        // 按 blur(diskRadius, sigma) 的等效观感绘制一个柔焦圆盘：挑最接近的实测剖面，
+        // 把 [t, alpha] 映射成径向渐变的色标。与 ctx.filter 版本逐像素误差 < 1.5/255。
+        function drawSoftGlowDisc(targetCtx, cx, cy, diskRadius, sigma, hexColor, alpha) {
+          const ratio = sigma / diskRadius;
+          let profile = SOFT_DISC_PROFILES[0];
+          for (const candidate of SOFT_DISC_PROFILES) {
+            if (Math.abs(candidate.ratio - ratio) < Math.abs(profile.ratio - ratio)) profile = candidate;
+          }
+          const extent = profile.stops[profile.stops.length - 1][0];
+          const rgb = hexToRgbTriplet(hexColor);
+          const gradient = targetCtx.createRadialGradient(cx, cy, 0, cx, cy, diskRadius * extent);
+          for (const [t, p] of profile.stops) {
+            gradient.addColorStop(t / extent, `rgba(${rgb}, ${(alpha * p).toFixed(4)})`);
+          }
+          targetCtx.save();
+          targetCtx.globalAlpha = 1;
+          targetCtx.fillStyle = gradient;
+          targetCtx.beginPath();
+          targetCtx.arc(cx, cy, diskRadius * extent, 0, Math.PI * 2);
+          targetCtx.fill();
+          targetCtx.restore();
+        }
+
+        // ====== 彻底无边界的纯粹漫反射大片晚霞 (Diffuse Ambient Sunset Glow) ======
+        function drawAtmosphericDiffuseGlow(targetCtx, w, h, horizon) {
+          targetCtx.save();
+
+          // 1. 大范围径向漫射扩散光晕 (无固定边界，如大片余晖自然漫入天空)
+          const glowCenterX = w * 0.62;
+          const glowCenterY = horizon - h * 0.22;
+          const glowRadius = Math.max(w * 0.82, h * 0.55);
+
+          const diffuseRadial = targetCtx.createRadialGradient(
+            glowCenterX, glowCenterY, 0,
+            glowCenterX, glowCenterY, glowRadius
+          );
+          diffuseRadial.addColorStop(0, COLORS.sunsetDiffuseCore);
+          diffuseRadial.addColorStop(0.38, COLORS.sunsetDiffuseHaze);
+          diffuseRadial.addColorStop(0.72, COLORS.sunsetDiffuseMist);
+          diffuseRadial.addColorStop(1, "rgba(180, 120, 145, 0)");
+
+          targetCtx.fillStyle = diffuseRadial;
+          targetCtx.fillRect(-5, -5, w + 10, horizon + 5);
+
+          // 2. 中天温润霞气平滑过渡层 (上下完全融合，绝无条状感)
+          const midHaze = targetCtx.createLinearGradient(0, horizon - h * 0.48, 0, horizon);
+          midHaze.addColorStop(0, "rgba(215, 126, 140, 0)");
+          midHaze.addColorStop(0.45, "rgba(244, 150, 128, 0.20)");
+          midHaze.addColorStop(0.85, "rgba(246, 174, 144, 0.26)");
+          midHaze.addColorStop(1, "rgba(246, 180, 147, 0)");
+
+          targetCtx.fillStyle = midHaze;
+          targetCtx.fillRect(-5, horizon - h * 0.48, w + 10, h * 0.48);
+
+          targetCtx.restore();
+        }
+
+        // ====== 绘制场景底图 ======
+        function drawScene() {
+          const { width: w, height: h, dpr } = model;
+          sceneCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          sceneCtx.clearRect(-10, -10, w + 20, h + 20);
+
+          const horizon = h * 0.65;
+
+          // 天空底色渐变
+          const skyGrad = sceneCtx.createLinearGradient(0, 0, 0, horizon);
+          skyGrad.addColorStop(0, COLORS.skyZenith);
+          skyGrad.addColorStop(0.55, COLORS.skyMid);
+          skyGrad.addColorStop(1, COLORS.skyHorizon);
+          sceneCtx.fillStyle = skyGrad;
+          sceneCtx.fillRect(-5, -5, w + 10, horizon + 5);
+
+          // 渲染漫反射大片晚霞 (无条状、无边界)
+          drawAtmosphericDiffuseGlow(sceneCtx, w, h, horizon);
+
+          // 远山
+          sceneCtx.save();
+          sceneCtx.fillStyle = COLORS.mountainL1;
+          sceneCtx.beginPath();
+          sceneCtx.moveTo(-10, horizon);
+          sceneCtx.bezierCurveTo(w * 0.2, horizon - 34, w * 0.45, horizon - 52, w * 0.7, horizon - 26);
+          sceneCtx.bezierCurveTo(w * 0.85, horizon - 12, w * 0.95, horizon - 36, w + 10, horizon - 20);
+          sceneCtx.lineTo(w + 10, horizon);
+          sceneCtx.closePath();
+          sceneCtx.fill();
+
+          // 远丘与灯塔
+          sceneCtx.fillStyle = COLORS.mountainL2;
+          sceneCtx.beginPath();
+          sceneCtx.moveTo(-10, horizon);
+          sceneCtx.bezierCurveTo(w * 0.15, horizon - 18, w * 0.35, horizon - 10, w * 0.55, horizon - 24);
+          sceneCtx.bezierCurveTo(w * 0.72, horizon - 32, w * 0.88, horizon - 14, w + 10, horizon - 12);
+          sceneCtx.lineTo(w + 10, horizon);
+          sceneCtx.closePath();
+          sceneCtx.fill();
+
+          const beaconX = w * 0.32;
+          const beaconY = horizon - 14;
+          sceneCtx.fillStyle = COLORS.beaconRed;
+          sceneCtx.fillRect(beaconX - 2, beaconY + 2, 4, 12);
+          sceneCtx.fillStyle = COLORS.railNavy;
+          sceneCtx.fillRect(beaconX - 4, beaconY + 12, 8, 3);
+          sceneCtx.fillStyle = COLORS.beaconGlow;
+          sceneCtx.beginPath();
+          sceneCtx.arc(beaconX, beaconY + 1, 2.5, 0, Math.PI * 2);
+          sceneCtx.fill();
+          sceneCtx.restore();
+
+          // 落日与柔焦晕光
+          const sunRadius = w * 0.082;
+          const sunX = w * 0.77;
+          const sunY = horizon - h * 0.095;
+
+          const outerGlowRadius = sunRadius * 1.85;
+          const innerGlowRadius = sunRadius * 1.38;
+          const outerGlowSigma = Math.max(14, sunRadius * 0.75);
+          const innerGlowSigma = Math.max(7, sunRadius * 0.4);
+
+          if (canvasFilterSupported) {
+            sceneCtx.save();
+            sceneCtx.fillStyle = COLORS.sunGlowOuter;
+            sceneCtx.globalAlpha = 0.28;
+            sceneCtx.filter = `blur(${outerGlowSigma}px)`;
+            sceneCtx.beginPath();
+            sceneCtx.arc(sunX, sunY, outerGlowRadius, 0, Math.PI * 2);
+            sceneCtx.fill();
+
+            sceneCtx.fillStyle = COLORS.sunGlowInner;
+            sceneCtx.globalAlpha = 0.42;
+            sceneCtx.filter = `blur(${innerGlowSigma}px)`;
+            sceneCtx.beginPath();
+            sceneCtx.arc(sunX, sunY, innerGlowRadius, 0, Math.PI * 2);
+            sceneCtx.fill();
+            sceneCtx.restore();
+          } else {
+            // WebKit 没有 ctx.filter，改用实测剖面渐变换算同样的柔焦晕光
+            drawSoftGlowDisc(sceneCtx, sunX, sunY, outerGlowRadius, outerGlowSigma, COLORS.sunGlowOuter, 0.28);
+            drawSoftGlowDisc(sceneCtx, sunX, sunY, innerGlowRadius, innerGlowSigma, COLORS.sunGlowInner, 0.42);
+          }
+
+          sceneCtx.fillStyle = COLORS.sunCore;
+          sceneCtx.beginPath();
+          sceneCtx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+          sceneCtx.fill();
+
+          // 湖面水体
+          const lakeGrad = sceneCtx.createLinearGradient(0, horizon, 0, h);
+          lakeGrad.addColorStop(0, COLORS.lakeHorizon);
+          lakeGrad.addColorStop(1, COLORS.lakeDeep);
+          sceneCtx.fillStyle = lakeGrad;
+          sceneCtx.fillRect(-5, horizon - 1, w + 10, h - horizon + 10);
+
+          // 写实水上电杆与电网
+          drawAuthenticPoles(sceneCtx, w, h, horizon);
+
+          // 近景木桩
+          drawForegroundShore(sceneCtx, w, h);
+        }
+
+        // ====== 日式海边标准电线杆与电网 ======
+        function drawAuthenticPoles(targetCtx, w, h, horizon) {
+          targetCtx.save();
+
+          // 水下沉箱桩柱
+          const pierSpacing = Math.max(40, w * 0.12);
+          for (let px = w * 0.06; px <= w + 10; px += pierSpacing) {
+            targetCtx.fillStyle = COLORS.navy;
+            targetCtx.globalAlpha = 0.85;
+            targetCtx.beginPath();
+            targetCtx.moveTo(px - 3.5, horizon);
+            targetCtx.lineTo(px + 3.5, horizon);
+            targetCtx.lineTo(px + 5, horizon + 14);
+            targetCtx.lineTo(px - 5, horizon + 14);
+            targetCtx.closePath();
+            targetCtx.fill();
+          }
+
+          // 水上双轨
+          targetCtx.strokeStyle = COLORS.railNavy;
+          targetCtx.lineWidth = 2.0;
+          targetCtx.globalAlpha = 0.95;
+          targetCtx.beginPath();
+          targetCtx.moveTo(-5, horizon);
+          targetCtx.lineTo(w + 5, horizon);
+          targetCtx.stroke();
+
+          targetCtx.strokeStyle = COLORS.railHighlight;
+          targetCtx.lineWidth = 0.75;
+          targetCtx.beginPath();
+          targetCtx.moveTo(-5, horizon - 0.8);
+          targetCtx.lineTo(w + 5, horizon - 0.8);
+          targetCtx.stroke();
+
+          // 4根透视电线杆
+          const poles = [
+            { x: w * 0.18, h: 28 },
+            { x: w * 0.44, h: 42 },
+            { x: w * 0.72, h: 56 },
+            { x: w * 0.95, h: 72 }
+          ];
+
+          for (let i = 0; i < poles.length; i++) {
+            const p = poles[i];
+            const topY = horizon - p.h;
+
+            targetCtx.strokeStyle = COLORS.polePillars;
+            targetCtx.fillStyle = COLORS.polePillars;
+            targetCtx.lineWidth = Math.max(1.3, p.h * 0.038);
+            targetCtx.lineCap = "butt";
+
+            targetCtx.beginPath();
+            targetCtx.moveTo(p.x, horizon + 2);
+            targetCtx.lineTo(p.x, topY);
+            targetCtx.stroke();
+
+            const armW = p.h * 0.22;
+            targetCtx.lineWidth = 1.2;
+            targetCtx.beginPath();
+            targetCtx.moveTo(p.x - armW, topY + p.h * 0.16);
+            targetCtx.lineTo(p.x + armW, topY + p.h * 0.16);
+            targetCtx.stroke();
+
+            targetCtx.fillStyle = COLORS.insulator;
+            for (const ix of [p.x - armW * 0.85, p.x, p.x + armW * 0.85]) {
+              targetCtx.fillRect(ix - 0.8, topY + p.h * 0.16 - 2.5, 1.6, 2.5);
+            }
+
+            if (i < poles.length - 1) {
+              const nextP = poles[i + 1];
+              const nextTopY = horizon - nextP.h;
+              targetCtx.save();
+              targetCtx.strokeStyle = COLORS.catenaryWire;
+              targetCtx.lineWidth = 0.75;
+              targetCtx.beginPath();
+              targetCtx.moveTo(p.x + armW * 0.85, topY + p.h * 0.16 - 1.5);
+              targetCtx.quadraticCurveTo(
+                (p.x + nextP.x) * 0.5,
+                (topY + nextTopY) * 0.5 + p.h * 0.22,
+                nextP.x - (nextP.h * 0.22) * 0.85,
+                nextTopY + nextP.h * 0.16 - 1.5
+              );
+              targetCtx.stroke();
+              targetCtx.restore();
+            }
+          }
+          targetCtx.restore();
+        }
+
+        // ====== 10 只微型纯黑麻雀 (紧密咬合接触面无悬空 + 偏右侧集中) ======
+        function drawTenSparrows(targetCtx, w, h) {
+          const horizon = h * 0.65;
+
+          // 麻雀爪底与附着面 (y=0) 100% 紧贴咬合，绝不浮空
+          const drawSparrowOnPerch = (x, y, scale = 1, flip = false) => {
+            targetCtx.save();
+            targetCtx.translate(x, y);
+            if (flip) targetCtx.scale(-1, 1);
+            targetCtx.scale(scale, scale);
+            targetCtx.fillStyle = COLORS.sparrowSilhouette;
+
+            // 身体：腹底刚好落在 y=0
+            targetCtx.beginPath();
+            targetCtx.ellipse(0, -1.0, 1.7, 1.05, -0.18, 0, Math.PI * 2);
+            targetCtx.fill();
+
+            // 脑袋
+            targetCtx.beginPath();
+            targetCtx.arc(1.3, -1.8, 0.85, 0, Math.PI * 2);
+            targetCtx.fill();
+
+            // 喙
+            targetCtx.beginPath();
+            targetCtx.moveTo(2.0, -1.9);
+            targetCtx.lineTo(3.0, -1.65);
+            targetCtx.lineTo(2.0, -1.4);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            // 翘起的尾羽 (斜向上方，不穿过栖息线)
+            targetCtx.beginPath();
+            targetCtx.moveTo(-1.3, -0.8);
+            targetCtx.lineTo(-2.8, -1.7);
+            targetCtx.lineTo(-2.4, -0.6);
+            targetCtx.closePath();
+            targetCtx.fill();
+
+            // 紧扣接触面的小爪
+            targetCtx.fillRect(-0.4, -0.4, 0.8, 0.5);
+
+            targetCtx.restore();
+          };
+
+          const p2X = w * 0.44, p2TopY = horizon - 42, p2ArmW = 42 * 0.22;
+          const p3X = w * 0.72, p3TopY = horizon - 56, p3ArmW = 56 * 0.22;
+          const p4X = w * 0.95, p4TopY = horizon - 72, p4ArmW = 72 * 0.22;
+
+          const getWirePoint = (x1, y1, x2, y2, sag, t) => {
+            const cx = (x1 + x2) * 0.5;
+            const cy = (y1 + y2) * 0.5 + sag;
+            const x = (1 - t) * (1 - t) * x1 + 2 * (1 - t) * t * cx + t * t * x2;
+            const y = (1 - t) * (1 - t) * y1 + 2 * (1 - t) * t * cy + t * t * y2;
+            return { x, y };
+          };
+
+          // 导线端点
+          const wire23_A = { x: p2X + p2ArmW * 0.85, y: p2TopY + 42 * 0.16 - 1.5 };
+          const wire23_B = { x: p3X - p3ArmW * 0.85, y: p3TopY + 56 * 0.16 - 1.5 };
+          const wire34_A = { x: p3X + p3ArmW * 0.85, y: p3TopY + 56 * 0.16 - 1.5 };
+          const wire34_B = { x: p4X - p4ArmW * 0.85, y: p4TopY + 72 * 0.16 - 1.5 };
+
+          // 横担上表面严密 Y 坐标
+          const barTop_P2 = p2TopY + 42 * 0.16 - 0.6;
+          const barTop_P3 = p3TopY + 56 * 0.16 - 0.6;
+          const barTop_P4 = p4TopY + 72 * 0.16 - 0.6;
+
+          // 1. 【三只凑在一起】停在第3根大电杆横木左侧 (Cluster of 3)
+          drawSparrowOnPerch(p3X - p3ArmW + 2.5, barTop_P3, 0.92, false);
+          drawSparrowOnPerch(p3X - p3ArmW + 6.0, barTop_P3, 0.86, false);
+          drawSparrowOnPerch(p3X - p3ArmW + 9.5, barTop_P3, 0.90, true);
+
+          // 2. 【两两凑在一起】在第2到第3根电杆之间的下垂导线偏右段 (Pair 1 on Wire 2-3)
+          const ptPair1_A = getWirePoint(wire23_A.x, wire23_A.y, wire23_B.x, wire23_B.y, 42 * 0.22, 0.68);
+          const ptPair1_B = getWirePoint(wire23_A.x, wire23_A.y, wire23_B.x, wire23_B.y, 42 * 0.22, 0.72);
+          drawSparrowOnPerch(ptPair1_A.x, ptPair1_A.y - 0.4, 0.85, false);
+          drawSparrowOnPerch(ptPair1_B.x, ptPair1_B.y - 0.4, 0.82, true);
+
+          // 3. 【又两两凑在一起】在最右侧第4根电杆横木左侧 (Pair 2 on Pole 4)
+          drawSparrowOnPerch(p4X - p4ArmW + 3.0, barTop_P4, 0.96, false);
+          drawSparrowOnPerch(p4X - p4ArmW + 7.2, barTop_P4, 0.90, true);
+
+          // 4. 【单独一个】最右侧第4根电杆横木右端远眺 (Solitary 1)
+          drawSparrowOnPerch(p4X + p4ArmW - 3.0, barTop_P4, 0.92, false);
+
+          // 5. 【单独一个】在第3到第4根电杆的导线中央独处 (Solitary 2)
+          const ptSolo1 = getWirePoint(wire34_A.x, wire34_A.y, wire34_B.x, wire34_B.y, 56 * 0.22, 0.46);
+          drawSparrowOnPerch(ptSolo1.x, ptSolo1.y - 0.4, 0.86, false);
+
+          // 6. 【单独一个】在第3根电杆横木右端独处 (Solitary 3)
+          drawSparrowOnPerch(p3X + p3ArmW - 2.5, barTop_P3, 0.88, true);
+        }
+
+        // 近景木桩
+        function drawForegroundShore(targetCtx, w, h) {
+          targetCtx.save();
+          const pylonX = w * 0.91;
+          const pylonY = h * 0.88;
+
+          targetCtx.fillStyle = COLORS.pylonWood;
+          targetCtx.beginPath();
+          targetCtx.roundRect(pylonX, pylonY - 32, 11, 46, [3, 3, 0, 0]);
+          targetCtx.roundRect(pylonX + 16, pylonY - 24, 9, 38, [2, 2, 0, 0]);
+          targetCtx.fill();
+
+          targetCtx.fillStyle = COLORS.pylonHighlight;
+          targetCtx.fillRect(pylonX + 1, pylonY - 30, 2, 42);
+          targetCtx.fillRect(pylonX + 17, pylonY - 22, 1.5, 34);
+
+          targetCtx.globalAlpha = 0.28;
+          targetCtx.fillStyle = COLORS.navy;
+          targetCtx.fillRect(pylonX - 1, pylonY + 14, 13, 16);
+          targetCtx.fillRect(pylonX + 15, pylonY + 14, 11, 14);
+          targetCtx.restore();
+        }
+
+        // 湖面水波
+        function drawLakeMotion(targetCtx, w, h, now) {
+          const horizon = h * 0.65;
+          const time = (now - model.startTime) / 1000;
+          const motionScale = model.reducedMotion ? 0.28 : 1;
+          const sunX = w * 0.77;
+
+          targetCtx.save();
+          targetCtx.beginPath();
+          targetCtx.rect(-5, horizon + 2, w + 10, h - horizon + 5);
+          targetCtx.clip();
+          targetCtx.lineCap = "round";
+
+          // 垂直光柱
+          const shimmerBands = 26;
+          for (let i = 0; i < shimmerBands; i += 1) {
+            const depth = i / shimmerBands;
+            const y = horizon + 4 + Math.pow(depth, 1.35) * (h - horizon - 8);
+            const spread = (w * 0.06) + depth * (w * 0.26);
+            const waveOffset = Math.sin(time * 2.2 * motionScale + i * 0.8) * (5 + depth * 14);
+            const startX = sunX - spread * 0.5 + waveOffset;
+            const endX = sunX + spread * 0.5 + waveOffset;
+
+            targetCtx.beginPath();
+            targetCtx.moveTo(startX, y);
+            targetCtx.lineTo(endX, y);
+            targetCtx.strokeStyle = depth < 0.4 ? COLORS.sunShimmerCore : COLORS.sunShimmerSpread;
+            targetCtx.globalAlpha = (1 - depth * 0.7) * (0.24 + Math.sin(time * 3 + i) * 0.08);
+            targetCtx.lineWidth = 1.3 + (1 - depth) * 1.6;
+            targetCtx.stroke();
+          }
+
+          // 常规波纹
+          const bands = 14;
+          for (let band = 0; band < bands; band += 1) {
+            const depth = (band + 0.72) / bands;
+            const baseY = horizon + (h - horizon) * depth;
+            const phase = time * motionScale * (0.72 + depth * 0.38) + band * 0.73;
+            const amplitude = 0.55 + depth * 1.35;
+            targetCtx.beginPath();
+            for (let x = -16; x <= w + 16; x += 10) {
+              const y = baseY + Math.sin(x * 0.024 + phase) * amplitude +
+                Math.sin(x * 0.008 - phase * 0.64) * amplitude * 0.42;
+              if (x === -16) targetCtx.moveTo(x, y);
+              else targetCtx.lineTo(x, y);
+            }
+            targetCtx.strokeStyle = COLORS.paper;
+            targetCtx.globalAlpha = 0.11 + depth * 0.09;
+            targetCtx.lineWidth = 0.65 + depth * 0.55;
+            targetCtx.stroke();
+          }
+
+          // 浮标
+          const buoyX = w * 0.60;
+          const buoyBaseY = horizon + 38;
+          const buoyWave = Math.sin(time * 2.6) * 2;
+          const buoyRot = Math.cos(time * 2.6) * 0.12;
+
+          targetCtx.save();
+          targetCtx.translate(buoyX, buoyBaseY + buoyWave);
+          targetCtx.rotate(buoyRot);
+          targetCtx.fillStyle = COLORS.buoyRed;
+          targetCtx.beginPath();
+          targetCtx.roundRect(-4, -6, 8, 12, 2);
+          targetCtx.fill();
+          targetCtx.fillStyle = COLORS.paper;
+          targetCtx.fillRect(-4, -2, 8, 4);
+          targetCtx.fillStyle = COLORS.beaconGlow;
+          targetCtx.globalAlpha = 0.6 + Math.sin(time * 5) * 0.4;
+          targetCtx.beginPath();
+          targetCtx.arc(0, -8, 2, 0, Math.PI * 2);
+          targetCtx.fill();
+          targetCtx.restore();
+
+          targetCtx.restore();
+        }
+
+        // ====== 单节水上电车（顺畅行驶，无颠簸抖动） ======
+        function drawSpiritedAwaySingleTrain(targetCtx, w, h, horizon, centerX) {
+          const trainW = Math.max(92, w * 0.23);
+          const carH = Math.max(24, w * 0.076);
+
+          // 去除任何震动扰动量，平稳丝滑顺畅推进
+          const carX = centerX - trainW * 0.5;
+          const carY = horizon - carH * 0.94;
+
+          targetCtx.save();
+
+          // 1. 水面倒影 (稳定顺畅推进)
+          targetCtx.save();
+          targetCtx.beginPath();
+          targetCtx.rect(0, horizon, w, 28);
+          targetCtx.clip();
+          targetCtx.globalAlpha = 0.25;
+          targetCtx.fillStyle = COLORS.trainRed;
+          targetCtx.fillRect(carX, horizon, trainW, 16);
+          targetCtx.fillStyle = COLORS.trainYellow;
+          targetCtx.fillRect(carX, horizon + 2, trainW, 4);
+          targetCtx.restore();
+
+          // 2. 车顶通风盖
+          targetCtx.fillStyle = COLORS.trainRoofDeck;
+          targetCtx.beginPath();
+          targetCtx.roundRect(carX + trainW * 0.12, carY - 3.5, trainW * 0.76, 4, [2, 2, 0, 0]);
+          targetCtx.fill();
+
+          // 3. 车顶主曲面
+          targetCtx.fillStyle = COLORS.trainRoof;
+          targetCtx.beginPath();
+          targetCtx.moveTo(carX, carY + 4);
+          targetCtx.quadraticCurveTo(carX, carY - 1, carX + 6, carY - 1);
+          targetCtx.lineTo(carX + trainW - 3, carY - 1);
+          targetCtx.quadraticCurveTo(carX + trainW, carY - 1, carX + trainW, carY + 4);
+          targetCtx.closePath();
+          targetCtx.fill();
+
+          // 4. 车身上半部：复古芥末黄
+          targetCtx.fillStyle = COLORS.trainYellow;
+          targetCtx.fillRect(carX, carY + 3, trainW, carH * 0.46);
+
+          // 5. 车身下半部：复古砖红木板
+          targetCtx.fillStyle = COLORS.trainRed;
+          targetCtx.fillRect(carX, carY + 3 + carH * 0.46, trainW, carH * 0.48);
+
+          // 竖向木纹条缝
+          targetCtx.fillStyle = COLORS.trainRedGroove;
+          for (let gx = carX + 5; gx < carX + trainW - 5; gx += 4.2) {
+            targetCtx.fillRect(gx, carY + 3 + carH * 0.46, 0.9, carH * 0.48);
+          }
+
+          // 中部白色小铭牌
+          targetCtx.fillStyle = COLORS.paper;
+          targetCtx.fillRect(carX + trainW * 0.46, carY + 3 + carH * 0.58, 6, 2.2);
+
+          // 6. 前后两扇客舱门
+          const doorW = trainW * 0.13;
+          const doorH = carH * 0.86;
+          const doorPositions = [carX + trainW * 0.16, carX + trainW * 0.78];
+
+          for (const dx of doorPositions) {
+            targetCtx.fillStyle = COLORS.trainDoorTrim;
+            targetCtx.fillRect(dx - 1, carY + 3, doorW + 2, doorH);
+            targetCtx.fillStyle = COLORS.trainYellow;
+            targetCtx.fillRect(dx, carY + 4, doorW, doorH - 2);
+
+            targetCtx.fillStyle = COLORS.trainWindow;
+            targetCtx.beginPath();
+            targetCtx.roundRect(dx + doorW * 0.2, carY + 7, doorW * 0.6, doorH * 0.32, 1.2);
+            targetCtx.fill();
+          }
+
+          // 7. 4扇观景窗与乘客剪影
+          const winW = trainW * 0.092;
+          const winH = carH * 0.34;
+          const winStart = carX + trainW * 0.33;
+          const winGap = 3.2;
+
+          for (let wi = 0; wi < 4; wi++) {
+            const wx = winStart + wi * (winW + winGap);
+
+            targetCtx.fillStyle = COLORS.trainWindow;
+            targetCtx.beginPath();
+            targetCtx.roundRect(wx, carY + 5.5, winW, winH, 1.2);
+            targetCtx.fill();
+
+            targetCtx.fillStyle = (wi % 2 === 0) ? COLORS.trainGlass : COLORS.trainWindowGlow;
+            targetCtx.fillRect(wx + 0.8, carY + 6.3, winW - 1.6, winH - 1.6);
+
+            if (wi === 1 || wi === 2) {
+              targetCtx.fillStyle = COLORS.navy;
+              targetCtx.beginPath();
+              targetCtx.arc(wx + winW * 0.5, carY + 6.3 + winH * 0.42, winW * 0.22, 0, Math.PI * 2);
+              targetCtx.fill();
+              targetCtx.fillRect(wx + winW * 0.26, carY + 6.3 + winH * 0.62, winW * 0.48, winH * 0.38);
+            }
+          }
+
+          // 8. 半潜水轮
+          const wheelY = carY + carH * 0.92;
+          targetCtx.fillStyle = COLORS.trainRoofDeck;
+          for (const bx of [carX + trainW * 0.24, carX + trainW * 0.76]) {
+            targetCtx.fillRect(bx - 9, wheelY - 4, 18, 4);
+            for (const wx of [bx - 6, bx + 6]) {
+              targetCtx.beginPath();
+              targetCtx.arc(wx, wheelY - 1, 3.2, 0, Math.PI * 2);
+              targetCtx.fill();
+            }
+          }
+
+          // 9. 车头大灯 (向正前方水平照射)
+          const lampX = carX - 1;
+          const lampY = carY + 3;
+
+          targetCtx.save();
+          const beamLen = w * 0.22;
+          const beamGrad = targetCtx.createLinearGradient(lampX, lampY, lampX - beamLen, lampY);
+          beamGrad.addColorStop(0, COLORS.headlightBulb);
+          beamGrad.addColorStop(0.25, COLORS.headlightBeam);
+          beamGrad.addColorStop(1, "rgba(255, 240, 180, 0)");
+          targetCtx.fillStyle = beamGrad;
+
+          targetCtx.beginPath();
+          targetCtx.moveTo(lampX, lampY - 2);
+          targetCtx.lineTo(lampX - beamLen, lampY - 10);
+          targetCtx.lineTo(lampX - beamLen, lampY + 14);
+          targetCtx.lineTo(lampX, lampY + 4);
+          targetCtx.closePath();
+          targetCtx.fill();
+
+          targetCtx.fillStyle = COLORS.trainRoofDeck;
+          targetCtx.beginPath();
+          targetCtx.roundRect(lampX - 3, lampY - 2.5, 4, 5.5, 1.2);
+          targetCtx.fill();
+          targetCtx.fillStyle = COLORS.headlightBulb;
+          targetCtx.beginPath();
+          targetCtx.arc(lampX - 2, lampY + 0.2, 2.2, 0, Math.PI * 2);
+          targetCtx.fill();
+          targetCtx.restore();
+
+          // 10. 车头破浪白浪花
+          targetCtx.save();
+          targetCtx.fillStyle = COLORS.waterSpray;
+          targetCtx.beginPath();
+          targetCtx.moveTo(carX - 2, horizon + 1);
+          targetCtx.quadraticCurveTo(carX - 9, horizon - 2, carX - 15, horizon + 2);
+          targetCtx.quadraticCurveTo(carX - 7, horizon + 3, carX - 2, horizon + 2);
+          targetCtx.fill();
+
+          targetCtx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+          targetCtx.lineWidth = 1.2;
+          targetCtx.beginPath();
+          targetCtx.moveTo(carX - 2, horizon + 1.2);
+          targetCtx.lineTo(carX + trainW, horizon + 1.2);
+          targetCtx.stroke();
+          targetCtx.restore();
+
+          targetCtx.restore();
+        }
+
+        // 雨幕剪裁路径
+        function curtainClipPath() {
+          const path = new Path2D();
+          path.moveTo(0, 0);
+          path.lineTo(edgeAt(0), 0);
+          for (let index = 1; index <= 48; index += 1) {
+            const v = index / 48;
+            path.lineTo(edgeAt(v), v * (model.height + 10));
+          }
+          path.lineTo(0, model.height + 10);
+          path.closePath();
+          return path;
+        }
+
+        function addSplash(x) {
+          const now = performance.now();
+          if (now - lastSplashAt < 22 || splashes.length >= 64 || runtimeRandom() > 0.72) return;
+          lastSplashAt = now;
+          splashes.push({
+            x: clamp(x + (runtimeRandom() - 0.5) * 8, 2, Math.max(2, edgeAt(1) - 2)),
+            y: model.height * 0.72 + runtimeRandom() * (model.height * 0.26),
+            age: 0,
+            life: 0.72 + runtimeRandom() * 0.48,
+            radius: 4 + runtimeRandom() * 10,
+          });
+        }
+
+        function updateSplashes(dt) {
+          for (const splash of splashes) splash.age += dt;
+          splashes = splashes.filter((splash) => splash.age < splash.life);
+        }
+
+        function drawSplashes(targetCtx) {
+          targetCtx.save();
+          targetCtx.strokeStyle = COLORS.paper;
+          targetCtx.lineWidth = 1;
+          for (const splash of splashes) {
+            const progress = clamp(splash.age / splash.life, 0, 1);
+            const radius = 2 + splash.radius * smoothstep(progress);
+            targetCtx.lineWidth = 1.2;
+            targetCtx.globalAlpha = (1 - progress) * 0.86;
+            targetCtx.beginPath();
+            targetCtx.ellipse(splash.x, splash.y, radius, radius * 0.24, 0, 0, Math.PI * 2);
+            targetCtx.stroke();
+          }
+          targetCtx.restore();
+        }
+
+        function updateRain(dt) {
+          const speedScale = model.reducedMotion ? 0.52 : 1;
+          for (const strand of strands) {
+            strand.path = makePath(strand);
+            if (!strand.drop) continue;
+            strand.dropPhase += (strand.speed * speedScale * dt) / Math.max(1, strand.path.total);
+            if (strand.dropPhase >= 1) {
+              strand.dropPhase %= 1;
+              addSplash(strand.path.points[strand.path.points.length - 1].x);
+            }
+          }
+        }
+
+        function updateTrain(dt) {
+          const openRatio = model.pull / model.maxPull;
+          if (openRatio > 0.18 && train.state === "waiting") {
+            train.state = "running";
+            train.progress = 0;
+          }
+          if (train.state === "running") {
+            train.progress += dt / train.duration;
+            playTrainSoundTick();
+            if (train.progress >= 1) {
+              train.progress = 1;
+              train.state = "passed";
+            }
+          }
+          if (openRatio < 0.006 && model.recoveryStartedAt === null && model.activePointer === null) {
+            train.state = "waiting";
+            train.progress = 0;
+          }
+        }
+
+        // 雨幕前景
+        function drawRain(targetCtx) {
+          const clip = curtainClipPath();
+          const flowTime = (performance.now() - model.startTime) / 1000;
+          const openAmount = model.pull / model.maxPull;
+
+          if (openAmount > 0.02) {
+            targetCtx.save();
+            targetCtx.beginPath();
+            for (let index = 0; index <= 36; index += 1) {
+              const v = index / 36;
+              const x = edgeAt(v);
+              const y = v * model.height;
+              if (index === 0) targetCtx.moveTo(x + 18, y);
+              else targetCtx.lineTo(x + 18, y);
+            }
+            targetCtx.lineTo(0, model.height);
+            targetCtx.lineTo(0, 0);
+            targetCtx.closePath();
+            targetCtx.fillStyle = "rgba(18, 33, 46, 0.11)";
+            targetCtx.fill();
+            targetCtx.restore();
+          }
+
+          targetCtx.save();
+          targetCtx.clip(clip);
+
+          const curtainGrad = targetCtx.createLinearGradient(0, 0, 0, model.height);
+          curtainGrad.addColorStop(0, COLORS.rain);
+          curtainGrad.addColorStop(0.70, COLORS.rain);
+          curtainGrad.addColorStop(1, COLORS.lakeDeep);
+          targetCtx.fillStyle = curtainGrad;
+          targetCtx.fillRect(-5, -5, model.width + 20, model.height + 15);
+
+          for (const grain of rainGrain) {
+            const point = pointOnCurtain(grain.u, grain.v, 0, 0);
+            targetCtx.globalAlpha = grain.alpha;
+            targetCtx.fillStyle = grain.navy ? COLORS.navy : COLORS.paper;
+            targetCtx.fillRect(point.x, point.y, grain.width, grain.length);
+          }
+
+          targetCtx.lineCap = "round";
+          for (const strand of strands) {
+            targetCtx.strokeStyle = COLORS.navy;
+            targetCtx.globalAlpha = strand.bold ? strand.alpha * 0.72 : strand.alpha;
+            targetCtx.lineWidth = strand.bold ? strand.width * 2.3 : strand.width;
+            tracePath(targetCtx, strand.path);
+
+            if (strand.bold) {
+              targetCtx.setLineDash([8 + strand.width * 4, 13 + strand.width * 7]);
+              targetCtx.lineDashOffset = -flowTime * strand.speed * 0.38;
+              targetCtx.strokeStyle = COLORS.navy;
+              targetCtx.globalAlpha = Math.min(0.32, strand.alpha + 0.1);
+              targetCtx.lineWidth = strand.width * 1.55;
+              tracePath(targetCtx, strand.path);
+              targetCtx.setLineDash([]);
+            }
+
+            if (strand.paperTrack) {
+              targetCtx.strokeStyle = COLORS.paper;
+              targetCtx.globalAlpha = 0.42 + strand.alpha;
+              targetCtx.lineWidth = Math.max(0.8, strand.width * 1.05);
+              const phase = (strand.trackStart + flowTime * strand.flowRate) % 1;
+              const start = strand.path.total * phase;
+              const end = start + strand.path.total * strand.trackLength;
+              if (end <= strand.path.total) {
+                tracePath(targetCtx, strand.path, start, end);
+              } else {
+                tracePath(targetCtx, strand.path, start, strand.path.total);
+                tracePath(targetCtx, strand.path, 0, end - strand.path.total);
+              }
+            }
+          }
+
+          for (const strand of strands) {
+            if (!strand.drop) continue;
+            const head = strand.path.total * strand.dropPhase;
+            const tail = Math.max(0, head - strand.streak);
+            targetCtx.strokeStyle = COLORS.paper;
+            targetCtx.globalAlpha = 0.72 + strand.alpha;
+            targetCtx.lineWidth = strand.dropWidth;
+            tracePath(targetCtx, strand.path, tail, head);
+          }
+
+          const mistGrad = targetCtx.createLinearGradient(0, model.height * 0.72, 0, model.height);
+          mistGrad.addColorStop(0, "rgba(90, 136, 154, 0)");
+          mistGrad.addColorStop(0.5, COLORS.waterMist);
+          mistGrad.addColorStop(1, "rgba(47, 87, 106, 0.65)");
+          targetCtx.fillStyle = mistGrad;
+          targetCtx.fillRect(0, model.height * 0.72, model.width + 10, model.height * 0.28);
+
+          targetCtx.save();
+          const edgeStrand = { u: 0.998, phaseOffset: 0, wobble: 0, path: null };
+          edgeStrand.path = makePath(edgeStrand);
+
+          targetCtx.strokeStyle = COLORS.rimLight;
+          targetCtx.globalAlpha = 0.42 + openAmount * 0.45;
+          targetCtx.lineWidth = 2.6;
+          tracePath(targetCtx, edgeStrand.path);
+
+          targetCtx.strokeStyle = COLORS.paper;
+          targetCtx.globalAlpha = 0.88;
+          targetCtx.lineWidth = 1.0;
+          tracePath(targetCtx, edgeStrand.path);
+          targetCtx.restore();
+
+          targetCtx.restore();
+          drawSplashes(targetCtx);
+          targetCtx.globalAlpha = 1;
+        }
+
+        function updateHintPulse(now) {
+          if (model.interacted || model.reducedMotion) {
+            model.hintPulse = 0;
+            return;
+          }
+          const elapsed = now - model.hintPulseStart;
+          if (elapsed >= 0 && elapsed <= 900) model.hintPulse = Math.sin((elapsed / 900) * Math.PI);
+          else model.hintPulse = 0;
+        }
+
+        function scheduleRecovery(delay = 0) {
+          model.recoveryAt = performance.now() + delay;
+          model.recoveryStartedAt = null;
+          model.recoveryFrom = model.pull;
+          model.state = "RECOVERING";
+        }
+
+        function cancelRecovery() {
+          model.recoveryAt = null;
+          model.recoveryStartedAt = null;
+        }
+
+        function integrateModel(dt, now) {
+          if (model.activePointer === null && model.recoveryAt !== null && now >= model.recoveryAt) {
+            if (model.recoveryStartedAt === null) {
+              model.recoveryStartedAt = now;
+              model.recoveryFrom = model.pull;
+              model.targetPull = model.pull;
+              model.velocity = 0;
+            }
+            const elapsed = now - model.recoveryStartedAt;
+            const progress = clamp(elapsed / model.recoveryDuration, 0, 1);
+            model.pull = model.recoveryFrom * (1 - smoothstep(progress));
+            model.targetPull = model.pull;
+            model.velocity = 0;
+            if (progress >= 1) {
+              model.pull = 0;
+              model.targetPull = 0;
+              model.recoveryAt = null;
+              model.recoveryStartedAt = null;
+              model.state = "RESTING";
+            }
+          } else {
+            const omega = model.activePointer !== null ? 22 : 7;
+            const zeta = model.reducedMotion ? 1.18 : model.activePointer !== null ? 0.98 : 1.08;
+            const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
+            const step = dt / steps;
+            for (let index = 0; index < steps; index += 1) {
+              const acceleration = omega * omega * (model.targetPull - model.pull) -
+                2 * zeta * omega * model.velocity;
+              model.velocity += acceleration * step;
+              model.pull += model.velocity * step;
+              if (model.pull <= 0 || model.pull >= model.maxPull) {
+                model.pull = clamp(model.pull, 0, model.maxPull);
+                if ((model.pull === 0 && model.velocity < 0) ||
+                    (model.pull === model.maxPull && model.velocity > 0)) model.velocity = 0;
+              }
+            }
+          }
+          const hEase = 1 - Math.exp(-dt * 9);
+          model.grabRatio += (model.targetGrabRatio - model.grabRatio) * hEase;
+          model.contact += ((model.activePointer === null ? 0 : 1) - model.contact) * (1 - Math.exp(-dt * 18));
+        }
+
+        function updateAccessibility() {
+          const value = Math.round((model.pull / model.maxPull) * 100);
+          if (value === model.lastAriaValue) return;
+          model.lastAriaValue = value;
+          canvas.setAttribute("aria-valuenow", String(value));
+          if (value === 0) canvas.setAttribute("aria-valuetext", "雨幕完全闭合");
+          else if (value >= 96) canvas.setAttribute("aria-valuetext", "雨幕已经拉开，露出电车与晚霞");
+          else canvas.setAttribute("aria-valuetext", `雨幕已拉开 ${value}%`);
+
+          if (audio?.gain && audio.context.state === "running") {
+            const targetVolume = 0.052 * (1 - 0.28 * value / 100);
+            const targetCutoff = 1850 - (value / 100) * 850;
+            audio.gain.gain.setTargetAtTime(targetVolume, audio.context.currentTime, 0.12);
+            audio.filter.frequency.setTargetAtTime(targetCutoff, audio.context.currentTime, 0.15);
+          }
+        }
+
+        function render(now = performance.now()) {
+          ctx.setTransform(model.dpr, 0, 0, model.dpr, 0, 0);
+          ctx.clearRect(-5, -5, model.width + 15, model.height + 15);
+          ctx.drawImage(
+            sceneCanvas,
+            0, 0, sceneCanvas.width, sceneCanvas.height,
+            -2, -2, model.width + 6, model.height + 6
+          );
+
+          drawLakeMotion(ctx, model.width, model.height, now);
+          // 渲染偏右侧紧扣接触面的 10 只微型剪影麻雀
+          drawTenSparrows(ctx, model.width, model.height);
+
+          if (train.state === "running") {
+            // 单节电车平顺滑行
+            const trainX = model.width * (1.20 - 1.45 * train.progress);
+            drawSpiritedAwaySingleTrain(ctx, model.width, model.height, model.height * 0.65, trainX);
+          }
+
+          drawRain(ctx);
+        }
+
+        function frame(now) {
+          const dt = Math.min(0.05, Math.max(0.001, (now - model.lastTime) / 1000));
+          model.lastTime = now;
+          updateHintPulse(now);
+          integrateModel(dt, now);
+          updateRain(dt);
+          updateTrain(dt);
+          updateSplashes(dt);
+          updateAccessibility();
+          render(now);
+          requestAnimationFrame(frame);
+        }
+
+        function resize() {
+          const oldMax = model.maxPull || 1;
+          const pullRatio = model.pull / oldMax;
+          const targetRatio = model.targetPull / oldMax;
+          const previousPhases = strands.map((strand) => strand.dropPhase);
+          const bounds = stage.getBoundingClientRect();
+          model.width = Math.max(1, bounds.width);
+          model.height = Math.max(1, bounds.height);
+          model.dpr = Math.min(2, window.devicePixelRatio || 1);
+          model.maxPull = model.width * 0.60;
+          model.pull = pullRatio * model.maxPull;
+          model.targetPull = targetRatio * model.maxPull;
+          model.activePointer = null;
+          model.state = "RESTING";
+          cancelRecovery();
+          canvas.classList.remove("is-grabbing");
+
+          canvas.width = Math.round(model.width * model.dpr);
+          canvas.height = Math.round(model.height * model.dpr);
+          sceneCanvas.width = canvas.width;
+          sceneCanvas.height = canvas.height;
+
+          rebuildRainData(previousPhases);
+          drawScene();
+          updateRain(0);
+          render();
+        }
+
+        function localPoint(event) {
+          const bounds = canvas.getBoundingClientRect();
+          return { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+        }
+
+        function canGrab(point) {
+          if (point.y < model.height * 0.22 || point.y > model.height * 0.88) return false;
+          if (model.pull < 4) return point.x >= model.width - Math.min(56, model.width * 0.14);
+          const v = clamp(point.y / model.height, 0, 1);
+          return Math.abs(point.x - edgeAt(v)) <= 32;
+        }
+
+        function showHint() {
+          if (!model.interacted) hint.classList.add("is-visible");
+        }
+
+        function hideHint() {
+          hint.classList.remove("is-visible");
+        }
+
+        function endGesture(pointerId = model.activePointer) {
+          if (model.activePointer === null || pointerId !== model.activePointer) return;
+          model.targetPull = model.pull;
+          model.activePointer = null;
+          model.contact = 0;
+          scheduleRecovery(0);
+          canvas.classList.remove("is-grabbing");
+          try {
+            if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+          } catch (_) {}
+        }
+
+        canvas.addEventListener("pointerdown", (event) => {
+          if (model.activePointer !== null || !event.isPrimary) return;
+          const point = localPoint(event);
+          if (!canGrab(point)) {
+            model.misses += 1;
+            if (model.misses >= 2) {
+              showHint();
+              model.hintPulseStart = performance.now();
+              model.misses = 0;
+            }
+            return;
+          }
+          event.preventDefault();
+          ensureRainAudio();
+          cancelRecovery();
+          model.activePointer = event.pointerId;
+          model.pointerStartX = point.x;
+          model.pullAtGrab = model.pull;
+          model.targetPull = model.pull;
+          model.targetGrabRatio = clamp(point.y / model.height, 0.3, 0.82);
+          model.dragged = false;
+          model.state = "GRABBED";
+          canvas.classList.add("is-grabbing");
+          canvas.setPointerCapture(event.pointerId);
+        });
+
+        canvas.addEventListener("pointermove", (event) => {
+          if (event.pointerId !== model.activePointer) return;
+          event.preventDefault();
+          const point = localPoint(event);
+          const delta = model.pointerStartX - point.x;
+          model.targetPull = clamp(model.pullAtGrab + delta, 0, model.maxPull);
+          if (Math.abs(delta) >= 3) {
+            model.dragged = true;
+            model.interacted = true;
+            model.state = "DRAGGING";
+            hideHint();
+          }
+        });
+
+        canvas.addEventListener("pointerup", (event) => endGesture(event.pointerId));
+        canvas.addEventListener("pointercancel", (event) => endGesture(event.pointerId));
+        canvas.addEventListener("lostpointercapture", (event) => endGesture(event.pointerId));
+
+        canvas.addEventListener("keydown", (event) => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          const direction = event.key === "ArrowLeft" ? 1 : -1;
+          ensureRainAudio();
+          cancelRecovery();
+          model.targetPull = clamp(model.targetPull + direction * model.width * 0.06, 0, model.maxPull);
+          model.interacted = true;
+          model.state = "SETTLING";
+          hideHint();
+          scheduleRecovery(900);
+        });
+
+        function createRainAudio() {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return null;
+          const context = new AudioContext();
+          const duration = 2;
+          const buffer = context.createBuffer(1, context.sampleRate * duration, context.sampleRate);
+          const data = buffer.getChannelData(0);
+          let last = 0;
+          for (let index = 0; index < data.length; index += 1) {
+            const white = Math.random() * 2 - 1;
+            last = last * 0.975 + white * 0.025;
+            data[index] = last * 2.6;
+          }
+          const source = context.createBufferSource();
+          source.buffer = buffer;
+          source.loop = true;
+          const filter = context.createBiquadFilter();
+          filter.type = "lowpass";
+          filter.frequency.value = 1850;
+          filter.Q.value = 0.55;
+          const gain = context.createGain();
+          gain.gain.value = 0.052;
+          source.connect(filter).connect(gain).connect(context.destination);
+          source.start();
+          return { context, source, filter, gain };
+        }
+
+        function playTrainSoundTick() {
+          if (!audio || audio.context.state !== "running") return;
+          const now = performance.now();
+          if (now - lastTrainTick < 440) return;
+          lastTrainTick = now;
+
+          try {
+            const osc = audio.context.createOscillator();
+            const tickGain = audio.context.createGain();
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(80, audio.context.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(32, audio.context.currentTime + 0.08);
+            tickGain.gain.setValueAtTime(0.016, audio.context.currentTime);
+            tickGain.gain.exponentialRampToValueAtTime(0.0001, audio.context.currentTime + 0.07);
+            osc.connect(tickGain).connect(audio.context.destination);
+            osc.start();
+            osc.stop(audio.context.currentTime + 0.08);
+          } catch (_) {}
+        }
+
+        function ensureRainAudio() {
+          try {
+            audio ||= createRainAudio();
+            if (!audio) return;
+            if (audio.context.state !== "running") audio.context.resume().catch(() => {});
+          } catch (_) {
+            audio = null;
+          }
+        }
+
+        reducedMotionQuery.addEventListener?.("change", (event) => {
+          model.reducedMotion = event.matches;
+          if (event.matches) model.hintPulse = 0;
+        });
+
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) {
+            endGesture();
+            audio?.context.suspend().catch(() => {});
+          } else {
+            ensureRainAudio();
+          }
+          model.lastTime = performance.now();
+        });
+
+        window.addEventListener("resize", resize, { passive: true });
+
+        window.__rainCurtain = Object.freeze({
+          setPull(progress) {
+            cancelRecovery();
+            model.targetPull = clamp(progress, 0, 1) * model.maxPull;
+            model.interacted = true;
+            hideHint();
+          },
+          getState() {
+            return {
+              state: model.state,
+              pull: model.pull,
+              targetPull: model.targetPull,
+              progress: model.pull / model.maxPull,
+              edge: {
+                top: edgeAt(0) / model.width,
+                grab: edgeAt(model.grabRatio) / model.width,
+                bottom: edgeAt(1) / model.width,
+              },
+              size: { width: model.width, height: model.height, dpr: model.dpr },
+            };
+          },
+        });
+
+        resize();
+        ensureRainAudio();
+        window.setTimeout(showHint, 1500);
+        requestAnimationFrame(frame);
+      })();
+    </script>
+  </body>
+</html>
