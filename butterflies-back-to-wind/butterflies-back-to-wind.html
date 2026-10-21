@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<!--
+  Title: Back to the Wind · 回到风里
+  Concept: 掀开保存太久的瓶盖，六只蝶依次穿过瓶口：三只远飞出画面，三只回到花丛；空下来的瓶子不再索取你。
+  Tech: p5.js, Canvas 2D, Web Audio API, localStorage
+  Keywords: p5.js, canvas 2d, web audio api, touch interaction, localstorage persistence
+  Features: A p5.js canvas scene with pointer-driven cork release, responsive touch interaction, and generative Web Audio.
+  Render: Canvas2D (p5.js)
+  Audio: yes
+  Touch: yes
+  Particles: N/A
+  Standalone: yes, single HTML file, 1 CDN dependencies
+  Repo: https://github.com/shasha1108/healing-visual-lab
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#f1ecf6">
+  <title>回到风里</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --paper: #fbf8f1; }   /* 若接缝仍可见：用取色器从原画左上角取色替换这里 */
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: var(--paper);
+      overscroll-behavior: none;
+    }
+    body {
+      position: fixed; inset: 0;
+      font-family: "Noto Serif SC", "Source Han Serif SC", STSong, SimSun, serif;
+      -webkit-user-select: none; user-select: none;
+    }
+
+    /* 天空：淡紫过渡到纸色，终点落在画的上沿（--seam 由 JS 计算） */
+    .sky {
+      position: fixed; inset: 0; z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(70% 26% at 50% var(--mist-y, 40%), rgba(186, 160, 240, 0.20), rgba(186, 160, 240, 0) 72%),
+        radial-gradient(55% 22% at 18% 10%, rgba(180, 139, 255, 0.12), rgba(180, 139, 255, 0) 72%),
+        radial-gradient(50% 20% at 84% 4%, rgba(246, 206, 140, 0.10), rgba(246, 206, 140, 0) 72%),
+        linear-gradient(180deg, #f1ecf6 0%, var(--paper) var(--seam, 30%));
+    }
+
+    /* 舞台保持 600×800 逻辑坐标，由 JS 整体缩放并贴底 */
+    .stage {
+      position: fixed; left: 0; top: 0; z-index: 1;
+      width: 600px; height: 800px;
+      transform-origin: 0 0;
+      pointer-events: none;
+    }
+    #scene-image {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: center;
+      user-select: none;
+      -webkit-mask-image:
+        linear-gradient(180deg, transparent 0%, rgba(0,0,0,.55) 4%, #000 11%),
+        linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+      -webkit-mask-composite: source-in;
+      mask-image:
+        linear-gradient(180deg, transparent 0%, rgba(0,0,0,.55) 4%, #000 11%),
+        linear-gradient(90deg, transparent 0%, #000 6%, #000 94%, transparent 100%);
+      mask-composite: intersect;
+    }
+    #hydrangea-garden {
+      position: absolute; z-index: 1;
+      left: 50%; bottom: -5%;
+      width: 110%; height: auto;
+      transform: translateX(-50%);
+      user-select: none;
+    }
+
+    /* 画布铺满全屏，蝴蝶可以飞进天空 */
+    #artwork {
+      position: fixed; inset: 0; z-index: 2;
+      cursor: default;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #artwork canvas { display: block; width: 100% !important; height: 100% !important; }
+    #artwork.can-grab { cursor: grab; }
+    #artwork.is-grabbing { cursor: grabbing; }
+    #artwork.can-touch { cursor: pointer; }
+
+    /* 贴图加载前的占位；Canvas 就绪后淡出 */
+    #idle-butterflies {
+      position: absolute; z-index: 3; inset: 0;
+      opacity: 1; transition: opacity 420ms ease;
+    }
+    #idle-butterflies.hidden { opacity: 0; }
+    .idle-butterfly {
+      position: absolute;
+      left: var(--x); top: var(--y);
+      width: 14.4%; height: auto;
+      transform: translate(-50%, -50%) rotate(var(--turn)) scale(var(--scale));
+      filter: drop-shadow(0 2px 3px rgba(77, 91, 183, 0.5));
+      will-change: transform;
+      animation: idle-drift var(--duration) ease-in-out infinite var(--delay);
+    }
+    @keyframes idle-drift {
+      0%, 100% { transform: translate(-50%, -50%) rotate(var(--turn)) scale(var(--scale)); }
+      50% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(calc(var(--turn) + 5deg)) scale(var(--scale)) scaleX(0.88); }
+    }
+
+    /* 天空里的标题，拔塞后淡出 */
+    .intro {
+      position: fixed; z-index: 15; left: 0; right: 0;
+      top: max(calc(env(safe-area-inset-top) + 64px), var(--intro-top, 96px));
+      text-align: center;
+      color: rgba(108, 90, 148, 0.85);
+      pointer-events: none;
+      transition: opacity 1.6s ease, transform 1.6s ease;
+    }
+    .intro h1 {
+      font-size: 26px; font-weight: 400;
+      letter-spacing: 0.5em; text-indent: 0.5em;
+    }
+    .intro p {
+      margin-top: 10px;
+      font-size: 12px; font-weight: 300;
+      letter-spacing: 0.32em; text-indent: 0.32em;
+      opacity: 0.6;
+    }
+    body.released .intro { opacity: 0; transform: translateY(-12px); }
+    body.compact .intro { display: none; }
+
+    .hint {
+      position: fixed; z-index: 20;
+      left: 50%;
+      top: max(calc(env(safe-area-inset-top) + 118px), var(--hint-top, 150px));
+      transform: translateX(-50%);
+      max-width: calc(100% - 40px);
+      padding: 7px 18px;
+      color: rgba(90, 80, 110, 0.72);
+      background: rgba(255, 255, 255, 0.6);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      border-radius: 999px;
+      font-size: 13px; font-weight: 300;
+      letter-spacing: 0.12em;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      pointer-events: none;
+    }
+    .hint.visible { opacity: 1; }
+    body.compact .hint { top: max(12px, env(safe-area-inset-top)); }
+
+    /* 声音按钮放右下角，避开平台右上角菜单 */
+    .sound-toggle {
+      position: fixed; z-index: 21;
+      right: 16px;
+      bottom: calc(env(safe-area-inset-bottom) + 20px);
+      width: 38px; height: 38px;
+      border: 0; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.7);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      color: rgba(90, 80, 115, 0.75);
+      display: grid; place-items: center;
+      cursor: pointer;
+      opacity: 0.75;
+      transition: opacity 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sound-toggle:hover, .sound-toggle:focus-visible { opacity: 1; outline: none; }
+    .sound-toggle svg { width: 18px; height: 18px; }
+    .sound-toggle .icon-off { display: none; }
+    .sound-toggle.muted .icon-on { display: none; }
+    .sound-toggle.muted .icon-off { display: block; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .idle-butterfly { animation: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+
+<div class="stage">
+  <img id="scene-image" src="assets/butterflies-scene-v1.png" alt="">
+  <img id="hydrangea-garden" src="assets/hydrangea-embrace-v3.png" alt="">
+  <div id="idle-butterflies" aria-hidden="true">
+    <img class="idle-butterfly" src="assets/butterfly-v1.png" style="--x:46%; --y:52.8%; --turn:-10deg; --scale:.92; --dx:4px; --dy:-7px; --duration:3.8s; --delay:-1.2s" alt="">
+    <img class="idle-butterfly" src="assets/butterfly-v1.png" style="--x:55%; --y:55.3%; --turn:8deg; --scale:.88; --dx:-5px; --dy:-6px; --duration:4.3s; --delay:-.4s" alt="">
+    <img class="idle-butterfly" src="assets/butterfly-v1.png" style="--x:41%; --y:57.8%; --turn:-14deg; --scale:.94; --dx:5px; --dy:-8px; --duration:3.6s; --delay:-2s" alt="">
+    <img class="idle-butterfly" src="assets/butterfly-v1.png" style="--x:50.7%; --y:60.3%; --turn:3deg; --scale:.87; --dx:-4px; --dy:-5px; --duration:4.6s; --delay:-1s" alt="">
+    <img class="idle-butterfly" src="assets/butterfly-v1.png" style="--x:58.3%; --y:62.8%; --turn:15deg; --scale:.92; --dx:4px; --dy:-6px; --duration:4.1s; --delay:-2.6s" alt="">
+    <img class="idle-butterfly" src="assets/butterfly-v1.png" style="--x:40.3%; --y:65%; --turn:-16deg; --scale:.9; --dx:-4px; --dy:-7px; --duration:3.9s; --delay:-.7s" alt="">
+  </div>
+</div>
+
+<div id="artwork" role="img" aria-label="一只装着六只蝴蝶的玻璃瓶，向上拉开瓶塞即可放飞"></div>
+
+<header class="intro" aria-hidden="true">
+  <h1>回到风里</h1>
+</header>
+
+<p class="hint" id="hint" aria-live="polite">按住瓶塞，向上拉开</p>
+
+<button class="sound-toggle" id="sound-toggle" type="button" aria-label="关闭声音" aria-pressed="true">
+  <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 9.5h3.2L11.5 5.5v13L7.2 14.5H4z" fill="currentColor"/>
+    <path d="M15 9.6a3.4 3.4 0 0 1 0 4.8M17.6 7.2a7 7 0 0 1 0 9.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+  </svg>
+  <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 9.5h3.2L11.5 5.5v13L7.2 14.5H4z" fill="currentColor"/>
+    <path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+  </svg>
+</button>
+
+<script>
+'use strict';
+
+// =====================================================================
+// 基础常量
+// =====================================================================
+const BASE_W = 600;
+const BASE_H = 800;
+const SEED = 42;
+const K = 1.0;
+const FULL_TURN = Math.PI * 2;
+const STEP = 1 / 120;          // 固定物理步长
+const MAX_STEPS = 12;
+const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const FX_DENSITY = REDUCED_MOTION ? 0.45 : 1;
+const MOTION_SCALE = REDUCED_MOTION ? 0.8 : 1;
+const DEBUG_BODY_AXIS = false;  // 打开后可校准贴图身体中线
+
+// 瓶形几何（局部坐标，原点为瓶心）
+const MOUTH_Y = -156 * K;
+const SHOULDER_Y = -105 * K;
+
+function innerR(y) {
+  const u = y / K;
+  let R;
+  if (u < -105) R = 30;
+  else if (u < 10) {
+    const t = (u + 105) / 115;
+    const s = t * t * (3 - 2 * t);
+    R = 30 + 78 * s;
+  } else if (u <= 135) R = 108;
+  else {
+    const t = Math.min(1, (u - 135) / 53);
+    R = 108 * Math.sqrt(Math.max(0, 1 - t * t));
+  }
+  return Math.max(0, (R - 7) * K);
+}
+
+const BOTTLE = Object.freeze({ cx: BASE_W / 2, cy: BASE_H * 0.5, gardenCenterY: 630 });
+const MOUTH_ABS_Y = BOTTLE.cy + MOUTH_Y;
+
+const CORK = Object.freeze({
+  width: 56 * K,
+  height: 18 * K,
+  color: '#d4a86a',
+  shadowColor: '#a68850',
+  highlightColor: '#ede0c8',
+  hitSeated: 64 * K,
+  hitRest: 56 * K
+});
+const CORK_SEAT = Object.freeze({ x: 0, y: MOUTH_Y, rot: 0 });
+const CORK_REST = Object.freeze({ x: 34 * K, y: MOUTH_Y - 76 * K, rot: 0.55 });
+const POP_THRESHOLD = 0.66;   // 拉力阈值（非线性映射后）
+const PULL_SOFTNESS = 110;    // 越大越"紧"
+
+// 贴图身体中线（相对贴图宽高的比例 + 身体倾角）。贴图为 3/4 俯视，头部略向右上。
+const BODY = Object.freeze({ px: 0.515, py: 0.575, tilt: 0.265 });
+const BUTTERFLY_UNIT_W = 86.4;   // scale=1 时在 600 宽舞台上的显示宽度（= 14.4%）
+const SPRITE_W = 320;            // 预渲染贴图宽度
+
+const BUTTERFLY_HOMES = Object.freeze([
+  { x: -190, y: 50 }, { x: -145, y: -4 }, { x: -96, y: 54 }, { x: -48, y: 2 }, { x: 0, y: 64 },
+  { x: 48, y: 8 }, { x: 96, y: 55 }, { x: 142, y: 0 }, { x: 182, y: 48 }, { x: 208, y: -48 }
+]);
+const INITIAL_GARDEN_HOME_INDICES = Object.freeze([0, 4, 8]);
+
+// 与 DOM 占位完全一致的瓶中位置
+const JAR_BUTTERFLIES = Object.freeze([
+  { x: -24, y: 22, turn: -10, scale: 0.92 },
+  { x: 30, y: 42, turn: 8, scale: 0.88 },
+  { x: -54, y: 62, turn: -14, scale: 0.94 },
+  { x: 4, y: 82, turn: 3, scale: 0.87 },
+  { x: 50, y: 102, turn: 15, scale: 0.92 },
+  { x: -58, y: 120, turn: -16, scale: 0.9 }
+]);
+
+// 放飞编排：三只远飞（上 / 左 / 右），三只回花（右 / 左 / 中）
+const RELEASE_PLANS = Object.freeze([
+  { order: 0, fan: 0.08, role: 'departer', exit: 'top' },
+  { order: 1, fan: 0.55, role: 'returner', home: 9 },
+  { order: 2, fan: -0.62, role: 'departer', exit: 'left' },
+  { order: 3, fan: -0.32, role: 'returner', home: 1 },
+  { order: 4, fan: 0.78, role: 'departer', exit: 'right' },
+  { order: 5, fan: 0.22, role: 'returner', home: 5 }
+].map((p) => Object.assign({}, p, { mouthOffset: p.fan * 9, neckSpeed: 100 + p.order * 4 })));
+
+const EXITS = Object.freeze({
+  top: { cx: 340, cy: 64, x: 380, y: -100 },
+  left: { cx: 70, cy: 210, x: -100, y: 280 },
+  right: { cx: 540, cy: 150, x: 700, y: 200 }
+});
+const RELEASE_DELAY = 0.9;
+const RELEASE_STAGGER = 0.85;
+
+// =====================================================================
+// 视图：600×800 舞台缩放后贴住底部，上方多出来的部分是天空
+// =====================================================================
+const MIN_VIEW_W = 460;   // 手机上至少显示多宽。越小瓶子越大、两侧裁得越多（建议 440–500）
+const VIEW = { s: 1, ox: 0, oy: 0, left: 0, right: BASE_W, top: 0, playL: 0, playR: BASE_W };
+
+function layoutView() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const s = Math.min(vw / MIN_VIEW_W, vh / BASE_H);
+  const ox = (vw - BASE_W * s) / 2;
+  const oy = vh - BASE_H * s;
+  VIEW.s = s; VIEW.ox = ox; VIEW.oy = oy;
+  VIEW.left = -ox / s;
+  VIEW.right = (vw - ox) / s;
+  VIEW.top = -oy / s;
+  VIEW.playL = Math.max(VIEW.left, -40);          // 回花蝴蝶的活动范围（宽屏时不飞太远）
+  VIEW.playR = Math.min(VIEW.right, BASE_W + 40);
+
+  document.querySelector('.stage').style.transform = `translate(${ox}px, ${oy}px) scale(${s})`;
+
+  const root = document.documentElement.style;
+  const corkTopPx = oy + (MOUTH_ABS_Y - 40) * s;
+  const introTop = Math.max(84, corkTopPx * 0.36);
+  root.setProperty('--seam', `${Math.max(0, oy + BASE_H * s * 0.08)}px`);
+  root.setProperty('--mist-y', `${oy + MOUTH_ABS_Y * s}px`);
+  root.setProperty('--intro-top', `${introTop}px`);
+  root.setProperty('--hint-top', `${introTop + 56}px`);
+  document.body.classList.toggle('compact', introTop + 100 > corkTopPx);  // 横屏太矮时隐藏标题
+}
+
+// 出口按可见区域重算，保证远飞的蝴蝶真的飞出屏幕再消失
+function exitPoint(name) {
+  const e = EXITS[name];
+  if (name === 'top') return { cx: e.cx, cy: Math.min(e.cy, VIEW.top + 90), x: e.x, y: VIEW.top - 100 };
+  if (name === 'left') return { cx: Math.max(e.cx, VIEW.left + 40), cy: e.cy, x: VIEW.left - 100, y: e.y };
+  return { cx: Math.min(e.cx, VIEW.right - 40), cy: e.cy, x: VIEW.right + 100, y: e.y };
+}
+
+const PALETTE = Object.freeze({
+  blue: '135,166,255',
+  violet: '180,139,255',
+  sky: '154,184,255',
+  gold: '246,206,140',
+  deep: '108,120,226'
+});
+const SPARK_COLORS = ['blue', 'violet', 'sky'];
+
+// =====================================================================
+// 工具
+// =====================================================================
+function mulberry32(a) {
+  return function () {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const mix = (a, b, t) => a + (b - a) * t;
+function smoothstep(e0, e1, x) {
+  const t = clamp((x - e0) / (e1 - e0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+function damp(value, target, rate, dt) {
+  return value + (target - value) * (1 - Math.exp(-rate * dt));
+}
+function angleDelta(target, current) {
+  return Math.atan2(Math.sin(target - current), Math.cos(target - current));
+}
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function depthScale(y) {
+  return 1 + clamp((y - 450) / 350, -0.6, 0.6) * 0.12;
+}
+function makeCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(w));
+  c.height = Math.max(1, Math.ceil(h));
+  return c;
+}
+// Curl noise：无散度的风场，路径不重复且彼此像同一阵风
+function curl(x, y, t) {
+  const s = 0.0042;
+  const e = 0.015;
+  const z = t * 0.08;
+  const nx = x * s;
+  const ny = y * s;
+  const a = noise(nx, ny + e, z) - noise(nx, ny - e, z);
+  const b = noise(nx + e, ny, z) - noise(nx - e, ny, z);
+  const cx = a;
+  const cy = -b;
+  const l = Math.hypot(cx, cy);
+  const k = 1 / (l + 0.006);
+  return { x: cx * k, y: cy * k };
+}
+
+// =====================================================================
+// 贴图预渲染（去除每帧 shadowBlur；左右翅膀可独立扇动）
+// =====================================================================
+const Sprites = { butterfly: null, glow: {}, star: {} };
+
+function buildButterflySprite(img) {
+  const W = img.naturalWidth;
+  const H = img.naturalHeight;
+  const S = SPRITE_W / W;
+  const pivotX = W * BODY.px;
+  const pivotY = H * BODY.py;
+  const c = Math.cos(-BODY.tilt);
+  const s = Math.sin(-BODY.tilt);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const [px, py] of [[0, 0], [W, 0], [0, H], [W, H]]) {
+    const dx = (px - pivotX) * S;
+    const dy = (py - pivotY) * S;
+    const rx = dx * c - dy * s;
+    const ry = dx * s + dy * c;
+    minX = Math.min(minX, rx); maxX = Math.max(maxX, rx);
+    minY = Math.min(minY, ry); maxY = Math.max(maxY, ry);
+  }
+  const pad = 56;
+  const fw = maxX - minX + pad * 2;
+  const fh = maxY - minY + pad * 2;
+  const ox = -minX + pad;
+  const oy = -minY + pad;
+
+  const full = makeCanvas(fw, fh);
+  const g = full.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.translate(ox, oy);
+  g.rotate(-BODY.tilt);
+  g.shadowColor = 'rgba(76, 89, 190, 0.5)';
+  g.shadowBlur = 26;
+  g.shadowOffsetY = 5;
+  g.drawImage(img, -pivotX * S, -pivotY * S, W * S, H * S);
+
+  const seam = Math.round(ox);
+  const left = makeCanvas(seam + 1, full.height);
+  left.getContext('2d').drawImage(full, 0, 0);
+  const right = makeCanvas(full.width - seam + 1, full.height);
+  right.getContext('2d').drawImage(full, -(seam - 1), 0);
+
+  return { left, right, seam, oy, unit: 1 / SPRITE_W };
+}
+
+function buildParticleSprites() {
+  for (const key of Object.keys(PALETTE)) {
+    const rgb = PALETTE[key];
+    const gc = makeCanvas(64, 64);
+    const g = gc.getContext('2d');
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, `rgba(${rgb},1)`);
+    gr.addColorStop(0.18, `rgba(${rgb},0.8)`);
+    gr.addColorStop(0.45, `rgba(${rgb},0.22)`);
+    gr.addColorStop(1, `rgba(${rgb},0)`);
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 64, 64);
+    Sprites.glow[key] = gc;
+
+    const sc = makeCanvas(64, 64);
+    const h = sc.getContext('2d');
+    const halo = h.createRadialGradient(32, 32, 0, 32, 32, 20);
+    halo.addColorStop(0, `rgba(${rgb},0.55)`);
+    halo.addColorStop(1, `rgba(${rgb},0)`);
+    h.fillStyle = halo;
+    h.fillRect(0, 0, 64, 64);
+    h.translate(32, 32);
+    const R = 30;
+    const w = R * 0.12;
+    h.beginPath();
+    h.moveTo(0, -R);
+    h.quadraticCurveTo(w, -w, R, 0);
+    h.quadraticCurveTo(w, w, 0, R);
+    h.quadraticCurveTo(-w, w, -R, 0);
+    h.quadraticCurveTo(-w, -w, 0, -R);
+    h.closePath();
+    h.fillStyle = `rgba(${rgb},0.95)`;
+    h.fill();
+    h.beginPath();
+    h.arc(0, 0, 2.6, 0, FULL_TURN);
+    h.fillStyle = 'rgba(255,255,255,0.95)';
+    h.fill();
+    Sprites.star[key] = sc;
+  }
+}
+
+let BOTTLE_PATH = null;
+function buildBottlePath() {
+  const p = new Path2D();
+  const pts = [];
+  for (let y = MOUTH_Y; y <= 188 * K; y += 4) pts.push([innerR(y) + 7 * K, y]);
+  p.moveTo(-pts[0][0], pts[0][1]);
+  for (const [x, y] of pts) p.lineTo(x, y);
+  for (let i = pts.length - 1; i >= 0; i--) p.lineTo(-pts[i][0], pts[i][1]);
+  p.closePath();
+  return p;
+}
+
+// =====================================================================
+// 粒子（对象数量有上限）
+// =====================================================================
+const MAX_PARTICLES = 160;
+const particles = [];
+const motes = [];
+
+function emit(opts) {
+  if (particles.length >= MAX_PARTICLES) return null;
+  const p = Object.assign({
+    x: 0, y: 0, vx: 0, vy: 0, age: 0, delay: 0, life: 1,
+    size: 8, color: 'blue', kind: 'glow', alpha: 0.8,
+    drag: 1.2, lift: 0, twinkle: 0, spin: 0, rot: 0, layer: 'front',
+    rx0: 10, rx1: 60, ry: 0.3, width: 1.5
+  }, opts);
+  if (p.phase === undefined) p.phase = Math.random() * FULL_TURN;
+  particles.push(p);
+  return p;
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    if (p.delay > 0) { p.delay -= dt; continue; }
+    p.age += dt;
+    if (p.age >= p.life) { particles.splice(i, 1); continue; }
+    const dr = Math.exp(-p.drag * dt);
+    p.vx *= dr;
+    p.vy *= dr;
+    p.vy -= p.lift * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.rot += p.spin * dt;
+  }
+}
+
+function drawParticles(ctx, layer) {
+  for (const p of particles) {
+    if (p.layer !== layer || p.delay > 0) continue;
+    const t = p.age / p.life;
+    let a = p.alpha * smoothstep(0, 0.12, t) * (1 - smoothstep(0.5, 1, t));
+    if (p.twinkle) a *= 0.6 + 0.4 * Math.sin(p.age * p.twinkle + p.phase);
+    if (a <= 0.004) continue;
+    ctx.globalAlpha = a;
+    if (p.kind === 'ring') {
+      const e = 1 - Math.pow(1 - t, 3);
+      const rx = mix(p.rx0, p.rx1, e);
+      ctx.strokeStyle = `rgba(${PALETTE[p.color]},1)`;
+      ctx.lineWidth = p.width * (1 - t * 0.6);
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, rx, rx * p.ry, 0, 0, FULL_TURN);
+      ctx.stroke();
+    } else if (p.kind === 'star') {
+      const s = p.size * (0.8 + 0.2 * Math.sin(p.age * 6 + p.phase));
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.drawImage(Sprites.star[p.color], -s / 2, -s / 2, s, s);
+      ctx.restore();
+    } else {
+      const s = p.size;
+      ctx.drawImage(Sprites.glow[p.color], p.x - s / 2, p.y - s / 2, s, s);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function initMotes() {
+  const n = Math.round(18 * FX_DENSITY * (BASE_H - VIEW.top) / BASE_H);
+  const colors = ['blue', 'violet', 'sky', 'gold'];
+  for (let i = 0; i < n; i++) {
+    motes.push({
+      x: mix(VIEW.left, VIEW.right, Math.random()),
+      y: mix(VIEW.top, BASE_H * 0.95, Math.random()),
+      vy: -(5 + Math.random() * 9),
+      size: 5 + Math.random() * 7,
+      a: 0.16 + Math.random() * 0.22,
+      phase: Math.random() * FULL_TURN,
+      color: colors[i % colors.length]
+    });
+  }
+}
+
+function updateMotes(dt) {
+  for (const m of motes) {
+    m.y += m.vy * dt * MOTION_SCALE;
+    m.x += Math.sin(World.time * 0.25 + m.phase) * 7 * dt;
+    if (m.y < VIEW.top - 12) { m.y = BASE_H + 12; m.x = mix(VIEW.left, VIEW.right, Math.random()); }
+  }
+}
+
+function drawMotes(ctx) {
+  for (const m of motes) {
+    const a = Math.min(0.6, m.a * (0.55 + 0.45 * Math.sin(World.time * 0.8 + m.phase)) * World.moteBoost);
+    ctx.globalAlpha = a;
+    ctx.drawImage(Sprites.glow[m.color], m.x - m.size / 2, m.y - m.size / 2, m.size, m.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// —— 特效配方 ——
+function fxPop(x, y) {
+  emit({ kind: 'ring', x, y, rx0: 16, rx1: 92, ry: 0.3, life: 1.1, width: 2.2, alpha: 0.7, color: 'violet', drag: 0 });
+  emit({ kind: 'ring', x, y, rx0: 10, rx1: 60, ry: 0.3, life: 1.0, width: 1.4, alpha: 0.55, color: 'blue', drag: 0, delay: 0.1 });
+  emit({ kind: 'glow', x, y: y - 4, size: 96, life: 0.8, alpha: 0.5, color: 'sky', drag: 0 });
+  const n = Math.round(12 * FX_DENSITY);
+  for (let i = 0; i < n; i++) {
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+    const sp = 60 + Math.random() * 120;
+    emit({
+      kind: Math.random() < 0.5 ? 'star' : 'glow',
+      x, y: y - 4,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      drag: 2.4, lift: 12,
+      life: 0.9 + Math.random() * 0.8,
+      size: 8 + Math.random() * 10,
+      color: pick(SPARK_COLORS), alpha: 0.85,
+      spin: (Math.random() - 0.5) * 3, twinkle: 8
+    });
+  }
+}
+
+function fxMouth(x, y) {
+  emit({ kind: 'ring', x, y, rx0: 8, rx1: 40, ry: 0.32, life: 0.7, width: 1.2, alpha: 0.5, color: 'sky', drag: 0 });
+  for (let i = 0; i < 3; i++) {
+    emit({
+      kind: 'glow',
+      x: x - 20 + Math.random() * 40, y: y - 8,
+      vx: (Math.random() - 0.5) * 14, vy: -20 - Math.random() * 20,
+      drag: 0.6, lift: 10, life: 1.6 + Math.random() * 0.6,
+      size: 10 + Math.random() * 8, color: pick(SPARK_COLORS), alpha: 0.7, delay: i * 0.08
+    });
+  }
+}
+
+function fxLand(x, y) {
+  emit({ kind: 'ring', x, y: y + 6, rx0: 4, rx1: 26, ry: 0.35, life: 0.9, width: 1.2, alpha: 0.5, color: 'blue', drag: 0, layer: 'back' });
+  const n = 2 + Math.round(Math.random());
+  for (let i = 0; i < n; i++) {
+    emit({
+      kind: 'glow', x: x + (Math.random() - 0.5) * 24, y: y + 4,
+      vy: -10 - Math.random() * 8, drag: 0.4, lift: 6,
+      life: 1.5 + Math.random() * 0.5, size: 8 + Math.random() * 5,
+      color: pick(SPARK_COLORS), alpha: 0.6, delay: 0.05 + i * 0.12, layer: 'back'
+    });
+  }
+}
+
+function fxWingDust(b) {
+  const departing = b.role === 'departer';
+  if (Math.random() > (departing ? 0.6 : 0.26) * FX_DENSITY) return;
+  const star = Math.random() < (departing ? 0.45 : 0.2);
+  emit({
+    kind: star ? 'star' : 'glow',
+    x: b.x + (Math.random() - 0.5) * 14, y: b.y + 6,
+    vx: -b.vx * 0.08 + (Math.random() - 0.5) * 8,
+    vy: -b.vy * 0.08 + 8,
+    drag: 1.6, lift: -8,
+    life: 1.1 + Math.random() * 0.7,
+    size: star ? 9 + Math.random() * 4 : 5 + Math.random() * 4,
+    color: pick(SPARK_COLORS), alpha: departing ? 0.8 : 0.6,
+    spin: (Math.random() - 0.5) * 2, twinkle: 9, layer: 'back'
+  });
+}
+
+function fxTouch(x, y) {
+  for (let i = 0; i < 3; i++) {
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2;
+    emit({
+      kind: 'star', x, y,
+      vx: Math.cos(ang) * 50, vy: Math.sin(ang) * 50,
+      drag: 3, lift: 6, life: 0.9 + Math.random() * 0.4,
+      size: 9 + Math.random() * 5, color: pick(SPARK_COLORS), alpha: 0.8, twinkle: 10
+    });
+  }
+}
+
+function fxJarStar() {
+  const ly = -80 + Math.random() * 220;
+  const r = Math.max(6, innerR(ly) - 14);
+  emit({
+    kind: Math.random() < 0.6 ? 'star' : 'glow',
+    x: BOTTLE.cx + (Math.random() * 2 - 1) * r, y: BOTTLE.cy + ly,
+    vy: -7, drag: 0, lift: 2,
+    life: 2.6 + Math.random() * 1.6, size: 8 + Math.random() * 8,
+    color: pick(SPARK_COLORS), alpha: 0.75, twinkle: 4, layer: 'back'
+  });
+}
+
+function fxClose() {
+  emit({ kind: 'ring', x: BOTTLE.cx, y: MOUTH_ABS_Y, rx0: 12, rx1: 52, ry: 0.3, life: 1.2, width: 1.4, alpha: 0.55, color: 'violet', drag: 0 });
+  for (let i = 0; i < Math.round(4 * FX_DENSITY); i++) World.schedule(0.3 + i * 0.4, fxJarStar);
+}
+
+// =====================================================================
+// 生成式声音（Web Audio）
+// =====================================================================
+const Sound = (() => {
+  const LEVEL = 0.9;
+  const SCENES = {
+    sealed:  { chord: [[38, 0.05], [45, 0.034], [52, 0.02]], wind: 0.12 },
+    release: { chord: [[50, 0.036], [54, 0.026], [57, 0.03], [64, 0.02], [69, 0.012]], wind: 0.18 },
+    respond: { chord: [[50, 0.032], [57, 0.028], [62, 0.024], [66, 0.018], [74, 0.008]], wind: 0.1 },
+    ended:   { chord: [[62, 0.02], [69, 0.011]], wind: 0.06 }
+  };
+  const ESCAPE_NOTES = [74, 76, 78, 81, 83, 86];   // D 宫五声上行
+  const TOUCH_NOTES = [74, 78, 81, 83, 86, 90];
+  const LAND_NOTES = [62, 66, 69, 74];
+  const STORAGE_KEY = 'back-to-wind-sound';
+
+  let ctx = null;
+  let master, fx, padBus, windGain, creakGain, creakFilter, noiseBuf;
+  let enabled = true;
+  let scene = 'sealed';
+  let windExtra = 0;
+  let lastPull = -1;
+  let lastRate = -1;
+  const voices = new Map();
+  try { enabled = localStorage.getItem(STORAGE_KEY) !== 'off'; } catch (e) { /* ignore */ }
+
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const now = () => ctx.currentTime;
+
+  function makeNoise(sec) {
+    const len = Math.floor(ctx.sampleRate * sec);
+    const b = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return b;
+  }
+  function makeImpulse(sec, decay) {
+    const len = Math.floor(ctx.sampleRate * sec);
+    const b = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = b.getChannelData(c);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+    return b;
+  }
+  function panner(pan) {
+    if (ctx.createStereoPanner) {
+      const p = ctx.createStereoPanner();
+      p.pan.value = clamp(pan, -1, 1);
+      return p;
+    }
+    return ctx.createGain();
+  }
+
+  function ensure() {
+    if (ctx) {
+      if (ctx.state === 'suspended' && !document.hidden) ctx.resume();
+      return true;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    try { ctx = new AC(); } catch (e) { ctx = null; return false; }
+
+    noiseBuf = makeNoise(4);
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.knee.value = 18; comp.ratio.value = 3;
+    comp.attack.value = 0.01; comp.release.value = 0.3;
+    comp.connect(ctx.destination);
+
+    master = ctx.createGain();
+    master.gain.value = 0;
+    master.connect(comp);
+
+    const reverb = ctx.createConvolver();
+    reverb.buffer = makeImpulse(3.8, 2.6);
+    const wet = ctx.createGain();
+    wet.gain.value = 0.5;
+    reverb.connect(wet);
+    wet.connect(master);
+
+    fx = ctx.createGain();
+    fx.connect(master);
+    const send = ctx.createGain();
+    send.gain.value = 0.7;
+    fx.connect(send);
+    send.connect(reverb);
+
+    const padLP = ctx.createBiquadFilter();
+    padLP.type = 'lowpass'; padLP.frequency.value = 1600; padLP.Q.value = 0.3;
+    padBus = ctx.createGain();
+    padBus.connect(padLP);
+    padLP.connect(fx);
+
+    // 风：两路带通噪声，左右分开、缓慢漂移
+    windGain = ctx.createGain();
+    windGain.gain.value = 0;
+    windGain.connect(fx);
+    [[-0.6, 420], [0.6, 640]].forEach(([pan, f], i) => {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuf; src.loop = true;
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = 0.7;
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.05 + i * 0.031;
+      const lg = ctx.createGain(); lg.gain.value = f * 0.45;
+      lfo.connect(lg); lg.connect(bp.frequency);
+      const amp = ctx.createGain(); amp.gain.value = 0.5;
+      const alfo = ctx.createOscillator();
+      alfo.frequency.value = 0.09 + i * 0.04;
+      const ag = ctx.createGain(); ag.gain.value = 0.3;
+      alfo.connect(ag); ag.connect(amp.gain);
+      const pn = panner(pan);
+      src.connect(bp); bp.connect(amp); amp.connect(pn); pn.connect(windGain);
+      lfo.start(); alfo.start(); src.start(0, i * 1.7);
+    });
+
+    // 拔塞摩擦声
+    const csrc = ctx.createBufferSource();
+    csrc.buffer = noiseBuf; csrc.loop = true;
+    creakFilter = ctx.createBiquadFilter();
+    creakFilter.type = 'bandpass'; creakFilter.frequency.value = 900; creakFilter.Q.value = 9;
+    creakGain = ctx.createGain(); creakGain.gain.value = 0;
+    csrc.connect(creakFilter); creakFilter.connect(creakGain); creakGain.connect(fx);
+    csrc.start();
+
+    master.gain.setTargetAtTime(enabled ? LEVEL : 0, now(), 0.6);
+    applyScene();
+
+    document.addEventListener('visibilitychange', () => {
+      if (!ctx) return;
+      if (document.hidden) ctx.suspend(); else ctx.resume();
+    });
+    return true;
+  }
+
+  function startVoice(m, level) {
+    const t = now();
+    const g = ctx.createGain();
+    g.gain.value = 0;
+    g.connect(padBus);
+    const f = mtof(m);
+    const o1 = ctx.createOscillator(); o1.type = 'sine'; o1.frequency.value = f;
+    const o2 = ctx.createOscillator(); o2.type = 'triangle'; o2.frequency.value = f; o2.detune.value = 7;
+    const o2g = ctx.createGain(); o2g.gain.value = 0.35;
+    o1.connect(g); o2.connect(o2g); o2g.connect(g);
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.08 + Math.random() * 0.12;
+    const lg = ctx.createGain(); lg.gain.value = level * 0.3;
+    lfo.connect(lg); lg.connect(g.gain);
+    o1.start(t); o2.start(t); lfo.start(t);
+    g.gain.setTargetAtTime(level, t, 1.4);
+    return { g, lg, oscs: [o1, o2, lfo] };
+  }
+
+  function setChord(list) {
+    const t = now();
+    const keep = new Set(list.map((n) => n[0]));
+    for (const [m, v] of voices) {
+      if (keep.has(m)) continue;
+      v.g.gain.setTargetAtTime(0, t, 1.6);
+      v.lg.gain.setTargetAtTime(0, t, 1);
+      v.oscs.forEach((o) => o.stop(t + 9));
+      voices.delete(m);
+    }
+    for (const [m, level] of list) {
+      const v = voices.get(m);
+      if (v) {
+        v.g.gain.setTargetAtTime(level, t, 1.4);
+        v.lg.gain.setTargetAtTime(level * 0.3, t, 1.4);
+      } else {
+        voices.set(m, startVoice(m, level));
+      }
+    }
+  }
+
+  function applyScene() {
+    if (!ctx) return;
+    const s = SCENES[scene];
+    setChord(s.chord);
+    windGain.gain.setTargetAtTime(s.wind + windExtra, now(), 1.2);
+  }
+
+  function setScene(name) {
+    scene = name;
+    if (name !== 'sealed') windExtra = 0;
+    applyScene();
+    if (name === 'ended') {
+      setTimeout(() => {
+        if (scene === 'ended' && ctx) {
+          setChord([]);
+          windGain.gain.setTargetAtTime(0.08, now(), 3);
+        }
+      }, 9000);
+    }
+  }
+
+  function setPull(p, rate) {
+    if (!ctx) return;
+    if (Math.abs(p - lastPull) < 0.01 && Math.abs(rate - lastRate) < 0.05) return;
+    lastPull = p; lastRate = rate;
+    windExtra = p * 0.45;
+    windGain.gain.setTargetAtTime(SCENES[scene].wind + windExtra, now(), 0.25);
+    creakGain.gain.setTargetAtTime(Math.min(0.9, rate * 0.9), now(), 0.04);
+    creakFilter.frequency.setTargetAtTime(760 + p * 1400, now(), 0.06);
+  }
+
+  function tone(m, { kind = 'bell', vel = 0.08, when = 0, decay = 2.2, pan = 0 } = {}) {
+    if (!ctx || !enabled) return;
+    const t = now() + when;
+    const f = mtof(m);
+    const out = ctx.createGain();
+    const pn = panner(pan);
+    out.connect(pn); pn.connect(fx);
+    const parts = kind === 'bell'
+      ? [[1, 'sine', 1], [2.756, 'sine', 0.22], [5.404, 'sine', 0.06]]
+      : kind === 'warm'
+        ? [[1, 'triangle', 1], [2, 'sine', 0.18]]
+        : [[1, 'sine', 1], [3, 'sine', 0.08]];
+    for (const [ratio, type, amp] of parts) {
+      const o = ctx.createOscillator();
+      o.type = type; o.frequency.value = f * ratio;
+      const g = ctx.createGain(); g.gain.value = amp;
+      o.connect(g); g.connect(out);
+      o.start(t); o.stop(t + decay + 0.2);
+    }
+    out.gain.setValueAtTime(0.0001, t);
+    out.gain.linearRampToValueAtTime(vel, t + (kind === 'warm' ? 0.025 : 0.006));
+    out.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+  }
+
+  function pop() {
+    if (!ctx || !enabled) return;
+    const t = now();
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.Q.value = 1.4;
+    bp.frequency.setValueAtTime(2200, t);
+    bp.frequency.exponentialRampToValueAtTime(500, t + 0.09);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.11);
+    src.connect(bp); bp.connect(g); g.connect(fx);
+    src.start(t, Math.random() * 2, 0.15);
+
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(240, t);
+    o.frequency.exponentialRampToValueAtTime(70, t + 0.12);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.35, t + 0.005);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.connect(og); og.connect(fx);
+    o.start(t); o.stop(t + 0.25);
+
+    tone(86, { kind: 'glass', vel: 0.05, when: 0.02, decay: 1.6 });
+    tone(93, { kind: 'glass', vel: 0.025, when: 0.03, decay: 1.2 });
+    setPull(0, 0);
+  }
+
+  function escape(order, departs, pan) {
+    const m = ESCAPE_NOTES[order % ESCAPE_NOTES.length];
+    if (departs) {
+      tone(m, { kind: 'bell', vel: 0.085, decay: 3.2, pan });
+    } else {
+      tone(m - 12, { kind: 'warm', vel: 0.07, decay: 1.8, pan });
+      tone(m, { kind: 'bell', vel: 0.025, decay: 2.2, pan, when: 0.04 });
+    }
+  }
+  function land(x) {
+    tone(pick(LAND_NOTES), { kind: 'warm', vel: 0.035, decay: 1.4, pan: clamp((x / BASE_W) * 2 - 1, -1, 1) });
+  }
+  function touch(x) {
+    tone(pick(TOUCH_NOTES), { kind: 'bell', vel: 0.05, decay: 2.4, pan: clamp((x / BASE_W) * 2 - 1, -1, 1) });
+  }
+  function close() {
+    if (!ctx || !enabled) return;
+    const t = now();
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(180, t);
+    o.frequency.exponentialRampToValueAtTime(90, t + 0.1);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.22, t + 0.006);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(og); og.connect(fx);
+    o.start(t); o.stop(t + 0.2);
+    [86, 83, 81, 78, 74].forEach((m, i) => tone(m, { kind: 'bell', vel: 0.05, decay: 2.6, when: 0.2 + i * 0.24 }));
+  }
+  function toggle() {
+    enabled = !enabled;
+    try { localStorage.setItem(STORAGE_KEY, enabled ? 'on' : 'off'); } catch (e) { /* ignore */ }
+    if (ctx) master.gain.setTargetAtTime(enabled ? LEVEL : 0, now(), 0.3);
+    return enabled;
+  }
+
+  return { ensure, setScene, setPull, pop, escape, land, touch, close, toggle, isEnabled: () => enabled };
+})();
+
+// =====================================================================
+// 蝴蝶（一个类走完整个生命周期）
+//   jar → neck → fly → landed ⇄ fly（惊飞 / 换花）
+//                    └→ gone（远飞出画面）
+// =====================================================================
+class Butterfly {
+  constructor(o) {
+    this.id = o.id;
+    this.role = o.role;          // 'jar' | 'departer' | 'returner' | 'garden'
+    this.state = o.state;        // 'jar' | 'neck' | 'fly' | 'landed' | 'gone'
+    this.rand = mulberry32(o.seed >>> 0);
+    this.seed = this.rand() * 100;
+    this.base = o.base;
+    this.x = o.x;
+    this.y = o.y;
+    this.vx = 0;
+    this.vy = 0;
+    this.heading = -Math.PI / 2;
+    this.speed = 0;
+    this.angVel = 0;
+    this.cruise = (88 + this.rand() * 22) * MOTION_SCALE;
+    this.cruiseHz = 3.4 + this.rand() * 0.8;
+    this.plan = o.plan || null;
+    this.jarHome = null;
+    this.homeIndex = o.homeIndex === undefined ? -1 : o.homeIndex;
+    this.released = false;
+    this.releaseTime = Infinity;
+    this.neckStage = 0;
+    this.route = [];
+    this.wp = 0;
+    this.wpT = 0;
+    this.lingering = false;
+    this.lingerT = 0;
+    this.nearLand = 0;
+    this.boost = 0;
+    // 翅膀
+    this.phase = this.rand() * FULL_TURN;
+    this.cycle = Math.floor(this.phase / FULL_TURN);
+    this.flapHz = this.cruiseHz;
+    this.flapW = 0;
+    this.flapTarget = 0;
+    this.glide = 0;
+    this.glideTarget = 0;
+    this.glideTimer = 0;
+    this.beatsToGlide = 3 + Math.floor(this.rand() * 4);
+    this.restOpen = o.restOpen === undefined ? 0.78 : o.restOpen;
+    this.open = this.restOpen;
+    this.openL = this.open;
+    this.openR = this.open;
+    this.breath = 0;
+    this.breathT = 1 + this.rand() * 4;
+    this.squeeze = 1;
+    this.squeezeTarget = 1;
+    // 姿态
+    this.restRot = o.rot || 0;
+    this.rot = this.restRot;
+    this.rotTarget = this.restRot;
+    this.bobAmp = 0;
+    this.agitation = 0;
+    this.cooldown = 0;
+    this.idleT = 4 + this.rand() * 10;
+  }
+
+  // 航向 + 速度 + 角速度上限：轨迹天然是平滑弧线
+  steer(dirX, dirY, targetSpeed, maxTurn, accel, dt) {
+    if (Math.abs(dirX) + Math.abs(dirY) > 1e-5) {
+      const delta = angleDelta(Math.atan2(dirY, dirX), this.heading);
+      const turn = clamp(delta, -maxTurn * dt, maxTurn * dt);
+      this.heading = Math.atan2(Math.sin(this.heading + turn), Math.cos(this.heading + turn));
+      this.angVel = damp(this.angVel, turn / dt, 10, dt);
+      targetSpeed *= 1 - 0.35 * Math.min(1, Math.abs(delta) / Math.PI);   // 急转时自然减速
+    }
+    this.speed += clamp(targetSpeed - this.speed, -accel * dt, accel * dt);
+    this.vx = Math.cos(this.heading) * this.speed;
+    this.vy = Math.sin(this.heading) * this.speed;
+  }
+
+  setRoute(route) {
+    this.route = route;
+    this.wp = 0;
+    this.wpT = 0;
+    this.lingering = false;
+    this.lingerT = 0;
+    this.state = 'fly';
+    this.flapTarget = 1;
+  }
+
+  takeOff(dx, dy, speed) {
+    this.heading = Math.atan2(dy, dx);
+    this.speed = speed * MOTION_SCALE;
+    this.vx = Math.cos(this.heading) * this.speed;
+    this.vy = Math.sin(this.heading) * this.speed;
+    this.flapTarget = 1;
+    this.flapW = Math.max(this.flapW, 0.6);
+    this.cooldown = 2.2;
+    this.glide = 0;
+    this.glideTarget = 0;
+    this.glideTimer = 0;
+    this.beatsToGlide = 4 + Math.floor(this.rand() * 4);
+  }
+
+  advance() {
+    this.wp++;
+    this.wpT = 0;
+    this.lingering = false;
+    this.lingerT = 0;
+  }
+
+  update(dt) {
+    this.cooldown = Math.max(0, this.cooldown - dt);
+    switch (this.state) {
+      case 'jar': this.updateJar(dt); break;
+      case 'neck': this.updateNeck(dt); break;
+      case 'fly': this.updateFly(dt, 0); break;
+      case 'landed': this.updateLanded(dt); break;
+      default: return;
+    }
+    if (this.state !== 'gone') this.updateWings(dt);
+  }
+
+  containInJar(margin) {
+    const lx = this.x - BOTTLE.cx;
+    const ly = this.y - BOTTLE.cy;
+    const r = Math.max(4, innerR(ly) - margin);
+    if (lx > r) { this.x = BOTTLE.cx + r; this.vx = -Math.abs(this.vx) * 0.3; }
+    else if (lx < -r) { this.x = BOTTLE.cx - r; this.vx = Math.abs(this.vx) * 0.3; }
+  }
+
+  // 瓶中：低速徘徊，随拉塞逐渐躁动并向瓶颈聚拢
+  updateJar(dt) {
+    const a = this.agitation = damp(this.agitation, World.agitation, 2.5, dt);
+    const t = World.time;
+    const h = this.jarHome;
+    const amp = 2.2 + a * 6.5;
+    const sp = 0.8 + a * 1.6;
+    const tx = h.x + Math.sin(t * 0.9 * sp + this.seed) * amp + (noise(this.seed, t * 0.35) - 0.5) * amp * 1.6;
+    const ty = h.y - a * 16 + Math.cos(t * 0.7 * sp + this.seed * 1.7) * amp * 0.8;
+    this.vx = damp(this.vx, (tx - this.x) * 4, 6, dt);
+    this.vy = damp(this.vy, (ty - this.y) * 4, 6, dt);
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.containInJar(18);
+    this.flapTarget = a > 0.04 ? Math.min(1, a * 1.3) : 0;
+    this.flapHz = 3.2 + a * 3.2;
+    this.rotTarget = this.restRot + clamp(this.vx * 0.006, -0.12, 0.12);
+  }
+
+  // 瓶颈：先靠近肩部排队，再收翅穿过窄口
+  updateNeck(dt) {
+    const p = this.plan;
+    const shoulderY = BOTTLE.cy + SHOULDER_Y;
+    if (this.neckStage === 0) {
+      const tx = BOTTLE.cx + p.mouthOffset * 0.6;
+      const ty = shoulderY + 10;
+      const ahead = World.butterflies.some((o) => o !== this && o.state === 'neck' && o.y < this.y && this.y - o.y < 52);
+      this.steer(tx - this.x, ty - this.y, ahead ? 22 : 82 * MOTION_SCALE, 5.5, 220, dt);
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.containInJar(14);
+      this.squeezeTarget = mix(0.45, 1, smoothstep(shoulderY, shoulderY + 60, this.y));
+      if (this.y <= ty + 4 && Math.abs(this.x - tx) < 22) this.neckStage = 1;
+    } else {
+      const tx = BOTTLE.cx + p.mouthOffset;
+      this.vx = damp(this.vx, (tx - this.x) * 5, 10, dt);
+      this.vy = damp(this.vy, -p.neckSpeed * MOTION_SCALE, 5, dt);
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.squeezeTarget = 0.42;
+      this.speed = Math.hypot(this.vx, this.vy);
+      this.heading = Math.atan2(this.vy, this.vx);
+      if (this.y <= MOUTH_ABS_Y - 2) { this.exitBottle(); return; }
+    }
+    this.flapTarget = 1;
+    this.flapHz = 5.4;
+    this.rotTarget = clamp(this.vx * 0.004, -0.12, 0.12);
+  }
+
+  exitBottle() {
+    const p = this.plan;
+    this.state = 'fly';
+    this.role = p.role;
+    this.heading = -Math.PI / 2 + p.fan * 0.55;
+    this.speed = Math.max(this.speed, 150 * MOTION_SCALE);
+    this.vx = Math.cos(this.heading) * this.speed;
+    this.vy = Math.sin(this.heading) * this.speed;
+    this.boost = 1;
+    this.squeezeTarget = 1;
+    this.setRoute(buildReleaseRoute(this));
+    World.onMouthCross(this);
+  }
+
+  updateFly(dt, depth) {
+    const wp = this.route[this.wp];
+    if (!wp) {
+      if (this.role === 'departer') this.state = 'gone';
+      else if (this.homeIndex >= 0) this.land(this.homeIndex);
+      return;
+    }
+    this.wpT += dt;
+    let tx = wp.x;
+    let ty = wp.y;
+
+    if (!wp.land) {
+      const d0 = Math.hypot(tx - this.x, ty - this.y);
+      if (!this.lingering && (d0 < wp.radius || (!wp.exit && this.wpT > 5))) {
+        if (wp.exit) { this.state = 'gone'; return; }
+        if (wp.linger > 0) {
+          this.lingering = true;
+          this.lingerT = 0;
+        } else {
+          this.advance();
+          if (depth < 3) this.updateFly(dt, depth + 1);
+          return;
+        }
+      }
+      if (this.lingering) {
+        this.lingerT += dt;
+        const lt = this.lingerT * 1.3 + this.seed;
+        tx += Math.sin(lt) * wp.wander + Math.sin(lt * 2.3) * wp.wander * 0.3;
+        ty += Math.cos(lt * 0.8) * wp.wander * 0.6;
+        if (this.lingerT >= wp.linger) {
+          this.advance();
+          if (depth < 3) this.updateFly(dt, depth + 1);
+          return;
+        }
+      }
+    }
+
+    const dx = tx - this.x;
+    const dy = ty - this.y;
+    const d = Math.hypot(dx, dy);
+    const inv = d > 1e-4 ? 1 / d : 0;
+    let wx = dx * inv;
+    let wy = dy * inv;
+
+    const landBlend = wp.land ? 1 - smoothstep(30, 150, d) : 0;
+    this.nearLand = landBlend;
+
+    // 风场 + 避让 + 软边界：都作用在"方向"上，不直接推坐标
+    const noiseW = wp.land ? 0.5 * (1 - landBlend) : (this.lingering ? 0.95 : 0.55);
+    const c = curl(this.x, this.y, World.time);
+    wx += c.x * noiseW;
+    wy += c.y * noiseW;
+    const av = World.avoidance(this);
+    wx += av.x;
+    wy += av.y;
+    if (this.role !== 'departer') {
+      const bl = VIEW.playL + 40, br = VIEW.playR - 40, bt = VIEW.top + 46, bb = BASE_H - 50;
+      if (this.x < bl) wx += (bl - this.x) / 40 * 1.4;
+      else if (this.x > br) wx -= (this.x - br) / 40 * 1.4;
+      if (this.y < bt) wy += (bt - this.y) / 46 * 1.4;
+      else if (this.y > bb) wy -= (this.y - bb) / 50 * 1.4;
+    }
+
+    let target = this.cruise * (this.lingering ? 0.82 : 1);
+    if (this.boost > 0) {
+      this.boost = Math.max(0, this.boost - dt * 1.4);
+      target = mix(target, 165 * MOTION_SCALE, this.boost);
+    }
+    if (wp.land) target *= mix(0.25, 1, smoothstep(10, 150, d));
+    const maxTurn = (this.lingering ? 3.1 : 2.5) + landBlend * 3;
+    this.steer(wx, wy, target, maxTurn, 160, dt);
+
+    let vx = this.vx;
+    let vy = this.vy;
+    if (wp.land) {
+      // 落花：越近越由弹簧接管，悬停后稳稳落定
+      const b = 1 - smoothstep(4, 60, d);
+      const k = this.wpT > 8 ? 5 : 3.2;
+      if (b > 0) {
+        vx = mix(vx, dx * k, b);
+        vy = mix(vy, dy * k, b);
+        this.vx = vx;
+        this.vy = vy;
+        this.speed = Math.hypot(vx, vy);
+        if (this.speed > 2) this.heading = Math.atan2(vy, vx);
+      }
+      if (d < 1.5 && this.speed < 12) { this.land(wp.homeIndex); return; }
+    }
+
+    this.x += vx * dt;
+    this.y += vy * dt + 20 * this.glide * dt;   // 滑翔时轻微下沉
+
+    if (this.role === 'departer' && (this.x < VIEW.left - 60 || this.x > VIEW.right + 60 || this.y < VIEW.top - 60 || this.y > BASE_H + 60)) {
+      this.state = 'gone';
+      return;
+    }
+
+    this.flapTarget = 1;
+    this.flapHz = mix(this.cruiseHz, 5.6, landBlend) + this.boost * 1.6;
+    const sp = Math.max(55, this.speed);
+    const rt = clamp(this.vx / sp * 0.6, -0.6, 0.6) + clamp(this.angVel * 0.09, -0.18, 0.18);
+    this.rotTarget = mix(rt, this.restRot, landBlend * landBlend);
+  }
+
+  land(homeIndex) {
+    this.state = 'landed';
+    this.vx = 0;
+    this.vy = 0;
+    this.speed = 0;
+    this.angVel = 0;
+    this.nearLand = 0;
+    this.homeIndex = homeIndex;
+    World.homeOcc[homeIndex] = this;
+    this.flapTarget = 0;
+    this.glideTarget = 0;
+    this.glideTimer = 0;
+    this.idleT = 9 + this.rand() * 14;
+    this.cooldown = 1.2;
+    this.breath = 0;
+    this.breathT = 1.2 + this.rand() * 2;
+    World.onLand(this);
+  }
+
+  updateLanded(dt) {
+    const h = World.homes[this.homeIndex];
+    const t = World.time;
+    const sx = Math.sin(t * 0.55 + this.seed) * 1.8 + (noise(this.seed * 3.1, t * 0.22) - 0.5) * 3.2;
+    const sy = Math.sin(t * 0.83 + this.seed * 2.1) * 1.0;
+    this.x = damp(this.x, h.x + sx, 5, dt);
+    this.y = damp(this.y, h.y + sy, 5, dt);
+    this.flapTarget = 0;
+    this.rotTarget = this.restRot + sx * 0.015;
+    if (World.idleFlightsAllowed()) {
+      this.idleT -= dt;
+      if (this.idleT <= 0) World.spontaneousFlight(this);
+    }
+  }
+
+  updateWings(dt) {
+    this.flapW = damp(this.flapW, this.flapTarget, this.flapTarget > this.flapW ? 8 : 2.5, dt);
+
+    // 扇几下、滑一下：真实蝴蝶的节奏
+    const canGlide = this.state === 'fly' && this.nearLand < 0.15 && this.boost < 0.15;
+    if (this.glideTimer > 0) {
+      this.glideTimer -= dt;
+      if (this.glideTimer <= 0 || !canGlide) {
+        this.glideTimer = 0;
+        this.glideTarget = 0;
+        this.beatsToGlide = 3 + Math.floor(this.rand() * 5);
+      }
+    }
+    this.glide = damp(this.glide, this.glideTarget, 6, dt);
+
+    const hz = this.flapHz * (1 - 0.92 * this.glide);
+    this.phase += FULL_TURN * hz * dt;
+    const cyc = Math.floor(this.phase / FULL_TURN);
+    if (cyc !== this.cycle) {
+      this.cycle = cyc;
+      if (canGlide && this.glideTimer <= 0 && --this.beatsToGlide <= 0) {
+        this.glideTimer = 0.28 + this.rand() * 0.45;
+        this.glideTarget = 1;
+      }
+      if (this.state === 'fly' && this.flapW > 0.5) fxWingDust(this);
+    }
+
+    // 张开时停留久、合拢时快
+    const s = 0.5 + 0.5 * Math.cos(this.phase);
+    const flapOpen = mix(0.2, 1, Math.pow(s, 0.6));
+    const flyOpen = mix(flapOpen, 0.94, this.glide);
+
+    // 停落时的缓慢开合
+    this.breathT -= dt;
+    if (this.breathT <= 0 && this.breath === 0) {
+      this.breath = 0.0001;
+      this.breathT = 2.5 + this.rand() * 3.5;
+    }
+    if (this.breath > 0) {
+      this.breath += dt / 1.1;
+      if (this.breath >= 1) this.breath = 0;
+    }
+    const bump = this.breath > 0 ? Math.sin(this.breath * Math.PI) : 0;
+    const restOpen = this.restOpen - bump * 0.5;
+
+    let open = mix(restOpen, flyOpen, this.flapW);
+    this.squeeze = damp(this.squeeze, this.squeezeTarget, 6, dt);
+    open = Math.min(open, this.squeeze);
+    this.open = open;
+
+    // 转弯时内侧翅膀幅度更小
+    const turn = clamp(this.angVel * 0.08, -0.14, 0.14) * this.flapW;
+    this.openR = open * (1 - Math.max(0, turn));
+    this.openL = open * (1 - Math.max(0, -turn));
+
+    let bobTarget = 0;
+    if (this.state === 'fly') bobTarget = mix(3.4, 1.2, this.nearLand) * (1 - this.glide) * MOTION_SCALE;
+    else if (this.state === 'neck') bobTarget = 1.6;
+    else if (this.state === 'jar') bobTarget = this.agitation * 1.2;
+    this.bobAmp = damp(this.bobAmp, bobTarget, 4, dt);
+    this.rot = damp(this.rot, this.rotTarget, 5, dt);
+  }
+
+  draw(ctx) {
+    const sp = Sprites.butterfly;
+    if (!sp || this.state === 'gone') return;
+    const size = BUTTERFLY_UNIT_W * this.base * depthScale(this.y);
+    const k = size * sp.unit;
+    const bob = -this.bobAmp * Math.sin(this.phase);
+    ctx.save();
+    ctx.translate(this.x, this.y + bob);
+    ctx.rotate(this.rot);
+    ctx.scale(k, k * (1 - 0.035 * this.flapW * (1 - this.open)));
+    ctx.save();
+    ctx.scale(Math.max(0.05, this.openL), 1);
+    ctx.drawImage(sp.left, -sp.seam, -sp.oy);
+    ctx.restore();
+    ctx.save();
+    ctx.scale(Math.max(0.05, this.openR), 1);
+    ctx.drawImage(sp.right, -1, -sp.oy);
+    ctx.restore();
+    if (DEBUG_BODY_AXIS) {
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2 / k;
+      ctx.beginPath();
+      ctx.moveTo(0, -200);
+      ctx.lineTo(0, 200);
+      ctx.stroke();
+      ctx.fillStyle = 'red';
+      ctx.fillRect(-6, -6, 12, 12);
+    }
+    ctx.restore();
+  }
+}
+
+function buildReleaseRoute(b) {
+  const p = b.plan;
+  const r = b.rand;
+  const R = 130 + r() * 55;
+  const lift = {
+    x: BOTTLE.cx + Math.sin(p.fan) * R,
+    y: Math.max(72, MOUTH_ABS_Y - Math.cos(p.fan) * R),
+    radius: 46, linger: 1.0 + r() * 1.1, wander: 24 + r() * 22
+  };
+  if (p.role === 'departer') {
+    const e = exitPoint(p.exit);
+    return [
+      lift,
+      { x: e.cx, y: e.cy, radius: 60, linger: 0 },
+      { x: e.x, y: e.y, radius: 50, linger: 0, exit: true }
+    ];
+  }
+  const h = World.homes[p.home];
+  const side = Math.sign(h.x - BOTTLE.cx) || 1;
+  b.restRot = BODY.tilt * 0.5 + (r() - 0.5) * 0.45;
+  b.restOpen = 0.72 + r() * 0.1;
+  return [
+    lift,
+    { x: clamp(h.x + side * (40 + r() * 30), VIEW.playL + 50, VIEW.playR - 50), y: h.y - (95 + r() * 40), radius: 48, linger: 0.5 + r() * 0.6, wander: 16 },
+    { x: h.x, y: h.y, land: true, homeIndex: p.home }
+  ];
+}
+
+// =====================================================================
+// 世界 / 导演
+// =====================================================================
+const World = {
+  phase: 'sealed',          // sealed → release → respond → ended
+  time: 0,
+  agitation: 0,
+  releaseAt: -1,
+  autoPull: false,
+  moteBoost: 1,
+  mouthFg: 0,
+  butterflies: [],
+  jar: [],
+  homes: [],
+  homeOcc: [],
+  timers: [],
+
+  init() {
+    this.homes = BUTTERFLY_HOMES.map((h) => ({ x: BOTTLE.cx + h.x * K, y: BOTTLE.gardenCenterY + h.y * K }));
+    this.homeOcc = this.homes.map(() => null);
+    let id = 0;
+    this.jar = JAR_BUTTERFLIES.map((j, i) => {
+      const b = new Butterfly({
+        id: id++, role: 'jar', state: 'jar',
+        seed: SEED * 131 + i * 977,
+        base: j.scale,
+        x: BOTTLE.cx + j.x * K, y: BOTTLE.cy + j.y * K,
+        rot: BODY.tilt + j.turn * Math.PI / 180,
+        restOpen: 0.9,
+        plan: RELEASE_PLANS[i]
+      });
+      b.jarHome = { x: b.x, y: b.y };
+      return b;
+    });
+    const garden = INITIAL_GARDEN_HOME_INDICES.map((hi, k) => {
+      const h = this.homes[hi];
+      const b = new Butterfly({
+        id: id++, role: 'garden', state: 'landed',
+        seed: SEED * 71 + hi * 313,
+        base: 0.84 + k * 0.02,
+        x: h.x, y: h.y,
+        rot: BODY.tilt * 0.5 + (k - 1) * 0.22,
+        restOpen: 0.74,
+        homeIndex: hi
+      });
+      b.idleT = 3 + k * 4.5;
+      this.homeOcc[hi] = b;
+      return b;
+    });
+    RELEASE_PLANS.forEach((p) => { if (p.role === 'returner') this.homeOcc[p.home] = 'reserved'; });
+    this.butterflies = [...this.jar, ...garden];
+  },
+
+  schedule(delay, fn) { this.timers.push({ at: this.time + delay, fn }); },
+  runTimers() {
+    for (let i = this.timers.length - 1; i >= 0; i--) {
+      if (this.time >= this.timers[i].at) {
+        const fn = this.timers[i].fn;
+        this.timers.splice(i, 1);
+        fn();
+      }
+    }
+  },
+
+  idleFlightsAllowed() {
+    if (this.phase === 'release') return false;
+    let flying = 0;
+    for (const b of this.butterflies) if (b.state === 'fly') flying++;
+    return flying < 2;
+  },
+
+  freeHomes() {
+    const out = [];
+    this.homeOcc.forEach((o, i) => { if (o === null) out.push(i); });
+    return out;
+  },
+
+  avoidance(b) {
+    let fx = 0;
+    let fy = 0;
+    for (const o of this.butterflies) {
+      if (o === b || (o.state !== 'fly' && o.state !== 'neck')) continue;
+      const dx = b.x - o.x;
+      const dy = b.y - o.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 0.01 && d < 76) {
+        const w = (1 - d / 76) * 1.25;
+        fx += dx / d * w;
+        fy += dy / d * w;
+      }
+    }
+    if (Pointer.inside) {
+      const dx = b.x - Pointer.x;
+      const dy = b.y - Pointer.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 0.01 && d < 90) {
+        const w = (1 - d / 90) * 1.6;
+        fx += dx / d * w;
+        fy += dy / d * w;
+      }
+    }
+    return { x: fx, y: fy };
+  },
+
+  loopFlight(b, side, speed) {
+    const h = this.homes[b.homeIndex];
+    const r = b.rand;
+    const loop = {
+      x: clamp(h.x + side * (40 + r() * 60), VIEW.playL + 40, VIEW.playR - 40),
+      y: h.y - (70 + r() * 60),
+      radius: 34, linger: 0.5 + r() * 0.9, wander: 20
+    };
+    b.takeOff(side * 0.5, -1, speed);
+    b.setRoute([loop, { x: h.x, y: h.y, land: true, homeIndex: b.homeIndex }]);
+  },
+
+  hop(b, to) {
+    const from = this.homes[b.homeIndex];
+    const h = this.homes[to];
+    const r = b.rand;
+    this.homeOcc[b.homeIndex] = null;
+    this.homeOcc[to] = b;
+    const mid = {
+      x: (from.x + h.x) / 2,
+      y: Math.min(from.y, h.y) - (80 + r() * 50),
+      radius: 40, linger: 0.3 + r() * 0.5, wander: 18
+    };
+    b.takeOff(Math.sign(h.x - from.x) * 0.6, -1, 110);
+    b.restRot = BODY.tilt * 0.5 + (r() - 0.5) * 0.45;
+    b.homeIndex = to;
+    b.setRoute([mid, { x: h.x, y: h.y, land: true, homeIndex: to }]);
+  },
+
+  nearestFree(b, side) {
+    const h = this.homes[b.homeIndex];
+    let free = this.freeHomes().filter((i) => Math.abs(this.homes[i].x - h.x) < 260);
+    if (side) {
+      const sided = free.filter((i) => Math.sign(this.homes[i].x - h.x) === side);
+      if (sided.length) free = sided;
+    }
+    free.sort((a, c) => Math.abs(this.homes[a].x - h.x) - Math.abs(this.homes[c].x - h.x));
+    if (!free.length) return -1;
+    return free[Math.min(free.length - 1, Math.floor(b.rand() * 2))];
+  },
+
+  spontaneousFlight(b) {
+    const to = b.rand() < 0.4 ? this.nearestFree(b, 0) : -1;
+    if (to >= 0) this.hop(b, to);
+    else this.loopFlight(b, b.rand() < 0.5 ? -1 : 1, 100);
+  },
+
+  startle(b, px, py) {
+    if (b.state !== 'landed' || b.cooldown > 0) return false;
+    const h = this.homes[b.homeIndex];
+    const side = Math.sign(h.x - px) || 1;
+    const to = b.rand() < 0.25 ? this.nearestFree(b, side) : -1;
+    if (to >= 0) this.hop(b, to);
+    else this.loopFlight(b, side, 135);
+    // 起飞方向：远离指针，并偏向上方
+    const ax = b.x - px;
+    const ay = b.y - py - 40;
+    b.heading = Math.atan2(ay, ax);
+    b.vx = Math.cos(b.heading) * b.speed;
+    b.vy = Math.sin(b.heading) * b.speed;
+    Sound.touch(b.x);
+    fxTouch(b.x, b.y);
+    return true;
+  },
+
+  releaseButterfly(b) {
+    b.released = true;
+    b.state = 'neck';
+    b.neckStage = 0;
+    b.heading = -Math.PI / 2;
+    b.speed = Math.hypot(b.vx, b.vy);
+    b.flapTarget = 1;
+  },
+
+  releaseNext() {
+    const next = this.jar.find((b) => !b.released);
+    if (next && next.releaseTime > this.time + 0.3) next.releaseTime = this.time;
+  },
+
+  onMouthCross(b) {
+    fxMouth(BOTTLE.cx + b.plan.mouthOffset, MOUTH_ABS_Y);
+    Sound.escape(b.plan.order, b.role === 'departer', Math.sin(b.plan.fan));
+  },
+
+  onLand(b) {
+    fxLand(b.x, b.y);
+    Sound.land(b.x);
+  },
+
+  enterRespond() {
+    this.phase = 'respond';
+    Sound.setScene('respond');
+    Hint.show('轻触花间的蝴蝶 · 也可以把瓶塞盖回', 5200);
+    const n = Math.round(10 * FX_DENSITY);
+    for (let i = 0; i < n; i++) this.schedule(0.4 + i * 0.5, fxJarStar);
+    this.butterflies.forEach((b, i) => { if (b.state === 'landed') b.idleT = 4 + i * 2.5 + b.rand() * 4; });
+    updateCursor();
+  },
+
+  onClosed() {
+    this.phase = 'ended';
+    Sound.close();
+    Sound.setScene('ended');
+    fxClose();
+    Hint.show('瓶子空了，风还在。', 7000);
+    if (navigator.vibrate) { try { navigator.vibrate(10); } catch (e) { /* ignore */ } }
+    updateCursor();
+  }
+};
+
+function director(dt) {
+  if (World.phase === 'sealed') {
+    if (World.autoPull && Cork.mode === 'seated') {
+      Cork.pull = Math.min(POP_THRESHOLD, Cork.pull + dt * 0.85);
+      if (Cork.pull >= POP_THRESHOLD) popCork();
+    }
+    World.agitation = clamp(Cork.pull / POP_THRESHOLD, 0, 1) * 0.85;
+  } else if (World.phase === 'release') {
+    World.agitation = 1;
+    for (const b of World.jar) {
+      if (!b.released && World.time >= b.releaseTime) World.releaseButterfly(b);
+    }
+    if (World.jar.every((b) => b.released) && World.butterflies.every((b) => b.state === 'landed')) {
+      World.enterRespond();
+    }
+  } else {
+    World.agitation = 0;
+  }
+  World.moteBoost = damp(World.moteBoost, World.phase === 'release' ? 1.5 : 1, 0.8, dt);
+  const inNeck = World.butterflies.some((b) => b.state === 'neck' && b.neckStage === 1);
+  World.mouthFg = damp(World.mouthFg, inNeck ? 1 : 0, 10, dt);
+}
+
+// =====================================================================
+// 瓶塞
+// =====================================================================
+const Cork = {
+  mode: 'seated',   // seated | flying | rest | carried | closing | closed
+  x: 0, y: MOUTH_Y, rot: 0,
+  vx: 0, vy: 0, vr: 0,
+  tx: 0, ty: 0,
+  pull: 0, wobble: 0,
+  dragging: false, dragStartY: 0, dragMoved: false,
+  grabDX: 0, grabDY: 0,
+  lastPull: 0
+};
+
+function springStep(o, key, vkey, target, k, c, dt) {
+  const a = k * (target - o[key]) - c * o[vkey];
+  o[vkey] += a * dt;
+  o[key] += o[vkey] * dt;
+}
+
+function updateCork(dt) {
+  const t = World.time;
+  switch (Cork.mode) {
+    case 'seated': {
+      if (!Cork.dragging && !World.autoPull) Cork.pull = damp(Cork.pull, 0, 7, dt);
+      Cork.wobble = damp(Cork.wobble, 0, 3.5, dt);
+      const p = Cork.pull;
+      Cork.x = Math.sin(t * 41) * p * 1.3 + Math.sin(t * 26) * Cork.wobble * 1.2;
+      Cork.y = MOUTH_Y - p * 22 * K;
+      Cork.rot = Math.sin(t * 23) * p * 0.05 + Math.sin(t * 19) * Cork.wobble * 0.07;
+      break;
+    }
+    case 'flying':
+    case 'rest': {
+      springStep(Cork, 'x', 'vx', CORK_REST.x, 48, 7, dt);
+      springStep(Cork, 'y', 'vy', CORK_REST.y, 48, 7, dt);
+      springStep(Cork, 'rot', 'vr', CORK_REST.rot, 40, 6, dt);
+      if (Cork.mode === 'flying' && Math.hypot(Cork.vx, Cork.vy) < 4 && Math.hypot(Cork.x - CORK_REST.x, Cork.y - CORK_REST.y) < 0.8) {
+        Cork.mode = 'rest';
+      }
+      break;
+    }
+    case 'carried': {
+      springStep(Cork, 'x', 'vx', Cork.tx, 260, 30, dt);
+      springStep(Cork, 'y', 'vy', Cork.ty, 260, 30, dt);
+      const prox = 1 - smoothstep(20, 170, Math.hypot(Cork.x - CORK_SEAT.x, Cork.y - CORK_SEAT.y));
+      springStep(Cork, 'rot', 'vr', mix(CORK_REST.rot, 0, prox), 120, 18, dt);
+      break;
+    }
+    case 'closing': {
+      springStep(Cork, 'x', 'vx', CORK_SEAT.x, 150, 19, dt);
+      springStep(Cork, 'y', 'vy', CORK_SEAT.y, 150, 19, dt);
+      springStep(Cork, 'rot', 'vr', CORK_SEAT.rot, 150, 19, dt);
+      if (Math.hypot(Cork.x - CORK_SEAT.x, Cork.y - CORK_SEAT.y) < 0.6 && Math.hypot(Cork.vx, Cork.vy) < 6) {
+        Cork.mode = 'closed';
+        Cork.x = CORK_SEAT.x; Cork.y = CORK_SEAT.y; Cork.rot = 0;
+        Cork.vx = Cork.vy = Cork.vr = 0;
+        World.onClosed();
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+function popCork() {
+  if (World.phase !== 'sealed') return;
+  Cork.dragging = false;
+  World.autoPull = false;
+  Cork.mode = 'flying';
+  Cork.vx = 140;
+  Cork.vy = -560;
+  Cork.vr = 7.5;
+  World.phase = 'release';
+  World.releaseAt = World.time + RELEASE_DELAY;
+  World.jar.forEach((b, i) => {
+    b.releaseTime = World.releaseAt + i * RELEASE_STAGGER + (i ? (b.rand() - 0.5) * 0.24 : 0);
+  });
+  fxPop(BOTTLE.cx, MOUTH_ABS_Y);
+  Sound.pop();
+  Sound.setScene('release');
+  if (navigator.vibrate) { try { navigator.vibrate(16); } catch (e) { /* ignore */ } }
+  Hint.hide();
+  document.body.classList.add('released');
+  updateCursor();
+}
+
+function corkCenter() {
+  return { x: BOTTLE.cx + Cork.x, y: BOTTLE.cy + Cork.y + CORK.height / 2 };
+}
+
+function corkHit(x, y) {
+  const c = corkCenter();
+  const d = Math.hypot(x - c.x, y - c.y);
+  if (World.phase === 'sealed' && Cork.mode === 'seated') return d < CORK.hitSeated;
+  if (World.phase === 'respond' && (Cork.mode === 'rest' || Cork.mode === 'flying')) return d < CORK.hitRest;
+  return false;
+}
+
+// =====================================================================
+// 绘制
+// =====================================================================
+function drawCork(ctx) {
+  const bob = Cork.mode === 'rest' ? Math.sin(World.time * 1.3) * 2 : 0;
+  const w = CORK.width;
+  const h = CORK.height;
+  const r = w / 2;
+  ctx.save();
+  ctx.translate(BOTTLE.cx + Cork.x, BOTTLE.cy + Cork.y + bob);
+  ctx.rotate(Cork.rot);
+
+  const grad = ctx.createLinearGradient(0, -2, 0, h + 2);
+  grad.addColorStop(0, CORK.highlightColor);
+  grad.addColorStop(0.4, CORK.color);
+  grad.addColorStop(1, CORK.shadowColor);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(-r, 2);
+  ctx.lineTo(-r, h - 2);
+  ctx.quadraticCurveTo(-r, h, -r + 3, h);
+  ctx.lineTo(r - 3, h);
+  ctx.quadraticCurveTo(r, h, r, h - 2);
+  ctx.lineTo(r, 2);
+  ctx.quadraticCurveTo(r, 0, r - 3, 0);
+  ctx.lineTo(-r + 3, 0);
+  ctx.quadraticCurveTo(-r, 0, -r, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(242, 232, 210, 0.9)';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, (w - 3) / 2, 4, 0, 0, FULL_TURN);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(166, 136, 80, 0.16)';
+  ctx.lineWidth = 0.6;
+  for (let i = 3; i < h - 3; i += 2.5) {
+    const off = Math.sin(i * 0.3) * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-r + 5 + off, i);
+    ctx.lineTo(r - 5 + off, i);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(166, 136, 80, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.ellipse(0, h - 1, (w - 2) / 2, 2, 0, 0, FULL_TURN);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 拖着瓶塞时，瓶口出现一圈虚线目标
+function drawCorkTarget(ctx) {
+  if (Cork.mode !== 'carried') return;
+  const prox = 1 - smoothstep(20, 200, Math.hypot(Cork.x - CORK_SEAT.x, Cork.y - CORK_SEAT.y));
+  ctx.save();
+  ctx.globalAlpha = (0.2 + 0.55 * prox) * (0.75 + 0.25 * Math.sin(World.time * 5));
+  ctx.strokeStyle = `rgba(${PALETTE.violet},1)`;
+  ctx.lineWidth = 1.4;
+  ctx.setLineDash([4, 5]);
+  ctx.beginPath();
+  ctx.ellipse(BOTTLE.cx, MOUTH_ABS_Y + 4, 32, 8, 0, 0, FULL_TURN);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 拉塞时，光从缝里漏出来
+function drawMouthLight(ctx) {
+  if (World.phase !== 'sealed' || Cork.pull < 0.01) return;
+  const p = Cork.pull / POP_THRESHOLD;
+  const s = 36 + p * 90;
+  ctx.globalAlpha = p * 0.75;
+  ctx.drawImage(Sprites.glow.violet, BOTTLE.cx - s / 2, MOUTH_ABS_Y - 4 - s / 2, s, s);
+  ctx.globalAlpha = 1;
+}
+
+// 封存 / 结束时，玻璃上偶尔划过一道高光
+function drawJarShimmer(ctx) {
+  if (World.phase !== 'sealed' && World.phase !== 'ended') return;
+  const period = 7.5;
+  const u = ((World.time + 2) % period) / 1.8;
+  if (u > 1) return;
+  const x = mix(-150, 150, u);
+  ctx.save();
+  ctx.translate(BOTTLE.cx, BOTTLE.cy);
+  ctx.clip(BOTTLE_PATH);
+  ctx.rotate(-0.3);
+  ctx.globalAlpha = Math.sin(u * Math.PI);
+  const g = ctx.createLinearGradient(x - 40, 0, x + 40, 0);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
+  g.addColorStop(0.5, 'rgba(255,255,255,0.28)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(x - 40, -260, 80, 520);
+  ctx.restore();
+}
+
+function drawMouthForeground(ctx) {
+  if (World.mouthFg < 0.01) return;
+  ctx.save();
+  ctx.globalAlpha = World.mouthFg;
+  ctx.translate(BOTTLE.cx, MOUTH_ABS_Y);
+  ctx.strokeStyle = 'rgba(105, 127, 232, 0.67)';
+  ctx.lineWidth = 2.25 * K;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 33.5 * K, 8 * K, 0, 0, Math.PI);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(232, 241, 255, 0.8)';
+  ctx.lineWidth = 1.05 * K;
+  ctx.beginPath();
+  ctx.ellipse(0, -1 * K, 26.5 * K, 4 * K, 0, 0, Math.PI);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 瓶口上方一团淡紫光晕，跨过画与天空的接缝
+function drawAura(ctx) {
+  const s = 720;
+  ctx.globalAlpha = World.phase === 'sealed' ? 0.16 : 0.11;
+  ctx.drawImage(Sprites.glow.violet, BOTTLE.cx - s / 2, MOUTH_ABS_Y - 130 - s * 0.4, s, s * 0.8);
+  ctx.globalAlpha = 1;
+}
+
+function drawOrder(a, b) {
+  const fa = a.state === 'fly' ? 1 : 0;
+  const fb = b.state === 'fly' ? 1 : 0;
+  return fa !== fb ? fa - fb : a.y - b.y;
+}
+
+function renderScene() {
+  const ctx = drawingContext;
+  clear();
+  ctx.save();
+  ctx.translate(VIEW.ox, VIEW.oy);
+  ctx.scale(VIEW.s, VIEW.s);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  drawAura(ctx);
+  drawMotes(ctx);
+  drawJarShimmer(ctx);
+  drawMouthLight(ctx);
+  drawParticles(ctx, 'back');
+  const list = World.butterflies.slice().sort(drawOrder);
+  for (const b of list) b.draw(ctx);
+  drawMouthForeground(ctx);
+  drawCorkTarget(ctx);
+  drawCork(ctx);
+  drawParticles(ctx, 'front');
+  ctx.restore();
+}
+
+// =====================================================================
+// 提示 / 输入
+// =====================================================================
+const Hint = {
+  el: document.getElementById('hint'),
+  timer: null,
+  show(text, ms) {
+    this.el.textContent = text;
+    this.el.classList.add('visible');
+    clearTimeout(this.timer);
+    if (ms > 0) this.timer = setTimeout(() => this.el.classList.remove('visible'), ms);
+  },
+  hide() {
+    clearTimeout(this.timer);
+    this.el.classList.remove('visible');
+  }
+};
+
+const Pointer = { x: -999, y: -999, inside: false, active: false, lastX: -999, lastY: -999 };
+let cnv;
+
+// 屏幕坐标 → 600×800 舞台坐标
+function toCanvas(e) {
+  const rect = cnv.elt.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left - VIEW.ox) / VIEW.s,
+    y: (e.clientY - rect.top - VIEW.oy) / VIEW.s
+  };
+}
+
+function isInsideJar(x, y) {
+  const lx = x - BOTTLE.cx;
+  const ly = y - BOTTLE.cy;
+  return ly > SHOULDER_Y && ly < 180 * K && Math.abs(lx) < innerR(ly);
+}
+
+function onPointerDown(e) {
+  e.preventDefault();
+  Sound.ensure();
+  const p = toCanvas(e);
+  Pointer.x = p.x; Pointer.y = p.y;
+  Pointer.lastX = p.x; Pointer.lastY = p.y;
+  Pointer.inside = true;
+  Pointer.active = true;
+  try { cnv.elt.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+
+  if (corkHit(p.x, p.y)) {
+    if (World.phase === 'sealed') {
+      Cork.dragging = true;
+      Cork.dragStartY = p.y;
+      Cork.dragMoved = false;
+      Hint.hide();
+    } else {
+      Cork.mode = 'carried';
+      const c = corkCenter();
+      Cork.grabDX = c.x - p.x;
+      Cork.grabDY = c.y - p.y;
+      Cork.tx = Cork.x;
+      Cork.ty = Cork.y;
+    }
+    updateCursor();
+    return;
+  }
+
+  if (World.phase === 'release' && isInsideJar(p.x, p.y)) {
+    World.releaseNext();
+    return;
+  }
+  if (World.phase === 'sealed' && isInsideJar(p.x, p.y)) {
+    Hint.show('按住瓶塞，向上拉开', 2600);
+    Cork.wobble = 0.6;
+  }
+
+  for (const b of World.butterflies) {
+    if (b.state === 'landed' && Math.hypot(b.x - p.x, b.y - p.y) < 62) World.startle(b, p.x, p.y);
+  }
+}
+
+function onPointerMove(e) {
+  const p = toCanvas(e);
+  Pointer.x = p.x; Pointer.y = p.y;
+  Pointer.inside = e.pointerType === 'mouse' || Pointer.active;
+
+  if (Cork.dragging && World.phase === 'sealed') {
+    e.preventDefault();
+    const d = Cork.dragStartY - p.y;
+    if (Math.abs(d) > 6) Cork.dragMoved = true;
+    Cork.pull = 1 - Math.exp(-Math.max(0, d) / PULL_SOFTNESS);   // 越往上越吃力
+    if (Cork.pull >= POP_THRESHOLD) popCork();
+  } else if (Cork.mode === 'carried') {
+    e.preventDefault();
+    Cork.tx = p.x + Cork.grabDX - BOTTLE.cx;
+    Cork.ty = p.y + Cork.grabDY - BOTTLE.cy - CORK.height / 2;
+  } else {
+    // 掠过花丛会惊起蝴蝶（鼠标悬停 / 手指划过）
+    const moved = Math.hypot(p.x - Pointer.lastX, p.y - Pointer.lastY);
+    if (moved > 1.5) {
+      const radius = e.pointerType === 'mouse' ? 40 : 50;
+      for (const b of World.butterflies) {
+        if (b.state === 'landed' && Math.hypot(b.x - p.x, b.y - p.y) < radius) World.startle(b, p.x, p.y);
+      }
+    }
+  }
+  Pointer.lastX = p.x;
+  Pointer.lastY = p.y;
+  updateCursor();
+}
+
+function onPointerUp(e) {
+  if (Cork.dragging) {
+    Cork.dragging = false;
+    if (World.phase === 'sealed') {
+      if (!Cork.dragMoved) {
+        Cork.wobble = 1;
+        Hint.show('按住瓶塞，向上拉', 2400);
+      } else if (Cork.pull < POP_THRESHOLD) {
+        Hint.show('再往上一点', 1800);
+      }
+    }
+  }
+  if (Cork.mode === 'carried') {
+    const dist = Math.hypot(Cork.x - CORK_SEAT.x, Cork.y - CORK_SEAT.y);
+    if (dist < 48) {
+      Cork.mode = 'closing';
+    } else {
+      Cork.mode = 'flying';
+      if (dist < 160) Hint.show('放到瓶口就好', 2000);
+    }
+  }
+  Pointer.active = false;
+  if (e.pointerType !== 'mouse') Pointer.inside = false;
+  try { cnv.elt.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  updateCursor();
+}
+
+function onPointerLeave(e) {
+  if (!Pointer.active) Pointer.inside = false;
+  if (e.pointerType === 'mouse') updateCursor();
+}
+
+function updateCursor() {
+  const el = document.getElementById('artwork');
+  let cls = '';
+  if (Cork.dragging || Cork.mode === 'carried') cls = 'is-grabbing';
+  else if (Pointer.inside && corkHit(Pointer.x, Pointer.y)) cls = 'can-grab';
+  else if (Pointer.inside && World.butterflies.some((b) => b.state === 'landed' && Math.hypot(b.x - Pointer.x, b.y - Pointer.y) < 46)) cls = 'can-touch';
+  if (el.className !== cls) el.className = cls;
+}
+
+function setupSoundToggle() {
+  const btn = document.getElementById('sound-toggle');
+  const sync = (on) => {
+    btn.classList.toggle('muted', !on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.setAttribute('aria-label', on ? '关闭声音' : '开启声音');
+  };
+  sync(Sound.isEnabled());
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    Sound.ensure();
+    sync(Sound.toggle());
+  });
+}
+
+function setupKeyboard() {
+  window.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space' && e.code !== 'Enter') return;
+    if (document.activeElement && document.activeElement.id === 'sound-toggle') return;
+    e.preventDefault();
+    Sound.ensure();
+    if (World.phase === 'sealed' && Cork.mode === 'seated') {
+      World.autoPull = true;
+    } else if (World.phase === 'respond' && (Cork.mode === 'rest' || Cork.mode === 'flying')) {
+      Cork.mode = 'closing';
+    }
+  });
+}
+
+function computeDensity() {
+  return clamp(window.devicePixelRatio || 1, 1, 2);
+}
+
+// =====================================================================
+// p5 主循环
+// =====================================================================
+let accumulator = 0;
+
+function setup() {
+  layoutView();
+  cnv = createCanvas(windowWidth, windowHeight);
+  cnv.parent('artwork');
+  pixelDensity(computeDensity());
+  noiseSeed(SEED);
+
+  buildParticleSprites();
+  BOTTLE_PATH = buildBottlePath();
+  World.init();
+  initMotes();
+
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => {
+    try {
+      Sprites.butterfly = buildButterflySprite(img);
+      document.getElementById('idle-butterflies').classList.add('hidden');
+    } catch (err) {
+      console.warn('蝴蝶贴图预渲染失败，保留 DOM 占位', err);
+    }
+  };
+  img.onerror = () => console.warn('蝴蝶贴图加载失败：assets/butterfly-v1.png');
+  img.src = 'assets/butterfly-v1.png';
+
+  const el = cnv.elt;
+  el.addEventListener('pointerdown', onPointerDown);
+  el.addEventListener('pointermove', onPointerMove);
+  el.addEventListener('pointerup', onPointerUp);
+  el.addEventListener('pointercancel', onPointerUp);
+  el.addEventListener('pointerleave', onPointerLeave);
+
+  setupSoundToggle();
+  setupKeyboard();
+
+  setTimeout(() => {
+    if (World.phase === 'sealed' && !Cork.dragging) Hint.show('按住瓶塞，向上拉开', 6500);
+  }, 1500);
+}
+
+function simulate(dt) {
+  World.time += dt;
+  World.runTimers();
+  updateCork(dt);
+  director(dt);
+  for (const b of World.butterflies) b.update(dt);
+  if (World.butterflies.some((b) => b.state === 'gone')) {
+    World.butterflies = World.butterflies.filter((b) => b.state !== 'gone');
+  }
+  updateParticles(dt);
+  updateMotes(dt);
+}
+
+function draw() {
+  const frameDt = Math.min(deltaTime / 1000, STEP * MAX_STEPS);
+  accumulator += frameDt;
+  let steps = 0;
+  while (accumulator >= STEP && steps < MAX_STEPS) {
+    simulate(STEP);
+    accumulator -= STEP;
+    steps++;
+  }
+  if (steps === MAX_STEPS) accumulator = 0;
+
+  if (World.phase === 'sealed' && Cork.mode === 'seated') {
+    const rate = Math.abs(Cork.pull - Cork.lastPull) / Math.max(1e-3, frameDt);
+    Sound.setPull(Cork.pull, rate);
+  }
+  Cork.lastPull = Cork.pull;
+
+  renderScene();
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  const d = computeDensity();
+  if (Math.abs(d - pixelDensity()) > 0.01) pixelDensity(d);
+  layoutView();
+}
+</script>
+</body>
+</html>

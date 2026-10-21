@@ -2,8 +2,8 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 51,
-  "updated": "2026-09-23",
+  "total": 52,
+  "updated": "2026-10-21",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
     "threejs": [
@@ -26,6 +26,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
       "weather-on-the-line",
@@ -84,6 +85,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
       "weather-on-the-line",
@@ -160,6 +162,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
       "weather-on-the-line",
@@ -211,6 +214,7 @@
       "silent-translator"
     ],
     "p5js": [
+      "butterflies-back-to-wind",
       "weather-on-the-line",
       "egret-sunrise",
       "duskfirefly-bottle",
@@ -1913,6 +1917,46 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
+    },
+    {
+      "slug": "butterflies-back-to-wind",
+      "title_en": "Butterflies Back To Wind",
+      "title_zh": "回到风里",
+      "tagline": "Pull the cork free, and let what was held return to the wind.",
+      "tech": [
+        "p5.js",
+        "Canvas 2D",
+        "Web Audio API",
+        "localStorage"
+      ],
+      "render": "Canvas2D (p5.js)",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 1,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "p5.js",
+        "canvas 2d",
+        "web audio api",
+        "touch interaction",
+        "localstorage persistence"
+      ],
+      "use_cases": [
+        "p5.js",
+        "canvas 2d",
+        "web audio api",
+        "touch interaction",
+        "localstorage persistence"
+      ],
+      "files": [
+        "butterflies-back-to-wind.html",
+        "butterflies-back-to-wind.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/butterflies-back-to-wind/v-727fa9545fc0/butterflies-back-to-wind_1.gif"
+      ],
+      "date": "2026-10-21"
     }
   ]
 }
