@@ -10,11 +10,11 @@
   shader_type: N/A
   interaction: touch / click
   audio: Web Audio API synthesis
-  effects: pointer-driven cork physics, staged butterfly flight choreography, particle glows, generative Web Audio
+  effects: embedded illustration assets, pointer-driven cork physics, staged butterfly flight choreography, particle glows, generative Web Audio
   use_cases: p5.js, canvas 2d, web audio api, touch interaction, localstorage persistence
   standalone: yes
   dependencies: 1 CDN (p5)
-  file_size: ~74 KB, 2205 lines
+  file_size: ~7433 KB, 2211 lines
   compatibility: Chrome/Edge/Firefox, Safari iOS 15+
   WORK_META_END
 -->
@@ -25,7 +25,7 @@
 
 《回到风里》是一件以玻璃瓶与六只蝴蝶展开的互动作品。按住瓶塞向上拉开，封存的蝴蝶会依次穿过瓶口：三只飞出画面，三只回到花丛；空下来的瓶子不再索取你。
 
-作品使用 p5.js 在 Canvas 中绘制蝴蝶、瓶身与粒子光点，并以指针操作驱动拔塞与放飞节奏。生成式 Web Audio 随场景状态变化，触摸与鼠标操作均可使用。
+作品使用 p5.js 在 Canvas 中绘制蝴蝶、瓶身与粒子光点，并以指针操作驱动拔塞与放飞节奏。三张画面贴图已嵌入单一 HTML，触摸与鼠标操作均可使用；生成式 Web Audio 随场景状态变化。
 
 ---
 
@@ -37,7 +37,7 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `butterflies-back-to-wind.html` | 完整可运行的 H5 互动作品，约 74KB |
+| `butterflies-back-to-wind.html` | 完整可运行的 H5 互动作品，约 7433KB |
 | [`butterflies-back-to-wind_1.gif`](https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/butterflies-back-to-wind/v-727fa9545fc0/butterflies-back-to-wind_1.gif) | 预览图 1（外部资源仓库） |
 | `butterflies-back-to-wind.md` | 本说明文件 |
 
