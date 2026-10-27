@@ -27,8 +27,8 @@
       "layered-mountains"
     ],
     "canvas_2d": [
-      "yarn-knot-tonight",
       "leaf-corner-summer",
+      "yarn-knot-tonight",
       "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
@@ -89,8 +89,8 @@
       "layered-mountains"
     ],
     "web_audio": [
-      "yarn-knot-tonight",
       "leaf-corner-summer",
+      "yarn-knot-tonight",
       "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
@@ -170,8 +170,8 @@
       "inkmeditation"
     ],
     "touch_interaction": [
-      "yarn-knot-tonight",
       "leaf-corner-summer",
+      "yarn-knot-tonight",
       "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
@@ -219,8 +219,8 @@
       "inkmeditation"
     ],
     "zero_dependency": [
-      "yarn-knot-tonight",
       "leaf-corner-summer",
+      "yarn-knot-tonight",
       "parting-the-rain",
       "dusk-projector",
       "migratory-bird-lighthouse",
@@ -294,6 +294,43 @@
       ],
       "preview_assets": [
         "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/leaf-corner-summer/v-e8b30f4a14cf/leaf-corner-summer_1.gif"
+      ],
+      "date": "2026-10-27"
+    },
+    {
+      "slug": "yarn-knot-tonight",
+      "title_en": "Yarn Knot Tonight",
+      "title_zh": "你今天是哪种结 · 线团团",
+      "tagline": "一天下来，它把自己缠成了这样。",
+      "tech": [
+        "Canvas 2D",
+        "Web Audio API",
+        "localStorage"
+      ],
+      "render": "Canvas 2D",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 0,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction",
+        "localstorage persistence"
+      ],
+      "use_cases": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction",
+        "localstorage persistence"
+      ],
+      "files": [
+        "yarn-knot-tonight.html",
+        "yarn-knot-tonight.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/yarn-knot-tonight/v-be6b0696dde4/yarn-knot-tonight_1.gif"
       ],
       "date": "2026-10-27"
     },
@@ -2042,43 +2079,6 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
-    },
-    {
-      "slug": "yarn-knot-tonight",
-      "title_en": "Yarn Knot Tonight",
-      "title_zh": "你今天是哪种结 · 线团团",
-      "tagline": "一天下来，它把自己缠成了这样。",
-      "tech": [
-        "Canvas 2D",
-        "Web Audio API",
-        "localStorage"
-      ],
-      "render": "Canvas 2D",
-      "has_audio": true,
-      "has_touch": true,
-      "particle_count": "N/A",
-      "dependencies": 0,
-      "healing_domain": "emotional_release",
-      "keywords": [
-        "canvas 2d",
-        "web audio api",
-        "touch interaction",
-        "localstorage persistence"
-      ],
-      "use_cases": [
-        "canvas 2d",
-        "web audio api",
-        "touch interaction",
-        "localstorage persistence"
-      ],
-      "files": [
-        "yarn-knot-tonight.html",
-        "yarn-knot-tonight.md"
-      ],
-      "preview_assets": [
-        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/yarn-knot-tonight/v-be6b0696dde4/yarn-knot-tonight_1.gif"
-      ],
-      "date": "2026-10-27"
     }
   ]
 }
