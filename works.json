@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 53,
+  "total": 54,
   "updated": "2026-10-27",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -27,6 +27,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "leaf-corner-summer",
       "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
@@ -87,6 +88,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "leaf-corner-summer",
       "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
@@ -166,6 +168,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "leaf-corner-summer",
       "butterflies-back-to-wind",
       "parting-the-rain",
       "dusk-projector",
@@ -213,6 +216,7 @@
       "inkmeditation"
     ],
     "zero_dependency": [
+      "leaf-corner-summer",
       "parting-the-rain",
       "dusk-projector",
       "migratory-bird-lighthouse",
@@ -2000,6 +2004,40 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
+    },
+    {
+      "slug": "leaf-corner-summer",
+      "title_en": "Leaf Corner Summer",
+      "title_zh": "掀开落叶的一角",
+      "tagline": "叶子掀开一角，夏天还留在下面。",
+      "tech": [
+        "Canvas 2D",
+        "Web Audio API"
+      ],
+      "render": "Canvas 2D",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 0,
+      "healing_domain": "existential",
+      "keywords": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "use_cases": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "files": [
+        "leaf-corner-summer.html",
+        "leaf-corner-summer.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/leaf-corner-summer/v-e8b30f4a14cf/leaf-corner-summer_1.gif"
+      ],
+      "date": "2026-10-27"
     }
   ]
 }
