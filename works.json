@@ -2,7 +2,7 @@
   "repo": "shasha1108/healing-visual-lab",
   "url": "https://github.com/shasha1108/healing-visual-lab",
   "pages": "https://shasha1108.github.io/healing-visual-lab/",
-  "total": 54,
+  "total": 55,
   "updated": "2026-10-27",
   "description": "Interactive healing H5 experiments — Three.js WebGL, Canvas 2D, GLSL shaders, Web Audio, GSAP, creative coding for emotional design. Most works load Three.js r128 via CDN; silent-translator is the only zero-dependency work.",
   "tech_landscape": {
@@ -27,6 +27,7 @@
       "layered-mountains"
     ],
     "canvas_2d": [
+      "yarn-knot-tonight",
       "leaf-corner-summer",
       "butterflies-back-to-wind",
       "parting-the-rain",
@@ -88,6 +89,7 @@
       "layered-mountains"
     ],
     "web_audio": [
+      "yarn-knot-tonight",
       "leaf-corner-summer",
       "butterflies-back-to-wind",
       "parting-the-rain",
@@ -168,6 +170,7 @@
       "inkmeditation"
     ],
     "touch_interaction": [
+      "yarn-knot-tonight",
       "leaf-corner-summer",
       "butterflies-back-to-wind",
       "parting-the-rain",
@@ -216,6 +219,7 @@
       "inkmeditation"
     ],
     "zero_dependency": [
+      "yarn-knot-tonight",
       "leaf-corner-summer",
       "parting-the-rain",
       "dusk-projector",
@@ -2038,6 +2042,43 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
+    },
+    {
+      "slug": "yarn-knot-tonight",
+      "title_en": "Yarn Knot Tonight",
+      "title_zh": "你今天是哪种结 · 线团团",
+      "tagline": "一天下来，它把自己缠成了这样。",
+      "tech": [
+        "Canvas 2D",
+        "Web Audio API",
+        "localStorage"
+      ],
+      "render": "Canvas 2D",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 0,
+      "healing_domain": "emotional_release",
+      "keywords": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction",
+        "localstorage persistence"
+      ],
+      "use_cases": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction",
+        "localstorage persistence"
+      ],
+      "files": [
+        "yarn-knot-tonight.html",
+        "yarn-knot-tonight.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/yarn-knot-tonight/v-be6b0696dde4/yarn-knot-tonight_1.gif"
+      ],
+      "date": "2026-10-27"
     }
   ]
 }

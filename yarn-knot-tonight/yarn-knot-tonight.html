@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<!--
+  Title: Which Knot Tonight · 你今天是哪种结 · 线团团
+  Tech: Canvas 2D, Web Audio API, localStorage
+  Keywords: canvas 2d, yarn knot, drag interaction, spring physics, web audio api, result card, localstorage
+  Features: Six procedurally drawn yarn knots loosened by drag with spring physics; Web Audio feedback, exportable result card, and localStorage progress.
+  Render: Canvas 2D
+  Audio: yes
+  Touch: yes
+  Particles: N/A
+  Standalone: yes, single HTML file, 0 CDN dependencies
+  Repo: https://github.com/shasha1108/healing-visual-lab
+--><html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>你今天是哪种结 · 线团团</title>
+<meta name="description" content="帮线团团松一个结，看看你今天是哪一种。">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#F4ECDD;
+  --c80:rgba(244,236,221,.82);
+  --c60:rgba(244,236,221,.62);
+  --c45:rgba(244,236,221,.45);
+  --c30:rgba(244,236,221,.3);
+  --glow:#D8FF6A;
+  --navy:#141A3A;
+  --serif:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --sans:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:var(--sans);color:var(--cream);
+  background:#05070F;background-image:radial-gradient(circle at 50% 40%,#1A2048 0%,#05070F 100%);
+  display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;
+  -webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none;
+}
+
+/* 手机容器 */
+.phone{position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;transform-origin:center;
+  background:linear-gradient(180deg,#0B1026 0%,#121A3E 60%,#1A2150 100%)}
+.phone{max-width:480px}
+.phone::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:90;opacity:.35;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+/* 夜空 */
+#sky{position:absolute;inset:0;pointer-events:none}
+.star{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:.2;animation:tw var(--t) ease-in-out infinite;animation-delay:var(--d)}
+@keyframes tw{0%,100%{opacity:.12}50%{opacity:.85}}
+.aura{position:absolute;border-radius:50%;filter:blur(50px);pointer-events:none;animation:float 16s ease-in-out infinite}
+.a1{width:130%;height:45%;top:-16%;left:-40%;background:radial-gradient(closest-side,rgba(92,104,255,.45),transparent)}
+.a2{width:120%;height:45%;bottom:-14%;right:-45%;background:radial-gradient(closest-side,rgba(46,196,182,.26),transparent);animation-delay:-7s}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-20px) rotate(2deg)}}
+
+/* 文字层级 */
+.eyebrow{font-family:var(--sans);font-size:10px;font-weight:500;letter-spacing:.32em;text-transform:uppercase;color:var(--c45)}
+.title{font-family:var(--serif);font-weight:600;font-size:32px;line-height:1.55;letter-spacing:.14em;color:var(--cream);text-align:center}
+.title.sm{font-size:26px}
+.lead{font-family:var(--serif);font-size:15px;line-height:2.1;letter-spacing:.1em;color:var(--c60);text-align:center}
+.note{font-family:var(--sans);font-weight:300;font-size:11px;line-height:2;letter-spacing:.22em;color:var(--c45);text-align:center}
+.cap{font-family:var(--serif);font-size:18px;line-height:2;letter-spacing:.16em;color:var(--cream);text-align:center;min-height:72px;transition:opacity .25s ease}
+
+/* 按钮 */
+.btn{
+  font-family:var(--serif);font-size:15px;letter-spacing:.35em;text-indent:.35em;color:var(--navy);
+  background:var(--cream);border:none;border-radius:999px;padding:15px 44px;cursor:pointer;
+  box-shadow:0 12px 40px -10px rgba(216,255,106,.35),inset 0 2px 4px rgba(255,255,255,.6);
+  transition:transform .5s cubic-bezier(.34,1.56,.64,1)
+}
+.btn:active{transform:scale(.96)}
+.btn.ghost{background:transparent;color:var(--c80);box-shadow:none;border:1px solid rgba(244,236,221,.22);padding:13px 36px;font-size:14px}
+.mute{
+  position:absolute;top:calc(env(safe-area-inset-top) + 18px);right:22px;z-index:60;
+  font-family:var(--sans);font-size:10px;letter-spacing:.25em;text-indent:.25em;color:var(--c60);
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:7px 12px;cursor:pointer
+}
+
+/* 首屏按钮的呼吸光圈 */
+#btn-start{position:relative}
+#btn-start::before,#btn-start::after{
+  content:"";position:absolute;inset:-2px;border-radius:999px;border:1.5px solid var(--glow);
+  opacity:0;pointer-events:none;animation:ring 2.6s ease-out 1.5s infinite
+}
+#btn-start::after{animation-delay:2.4s}
+@keyframes ring{0%{opacity:.75;transform:scale(1)}100%{opacity:0;transform:scale(1.22,1.5)}}
+
+/* 视图 */
+.view{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:calc(env(safe-area-inset-top) + 64px) 32px calc(env(safe-area-inset-bottom) + 36px);
+  opacity:0;pointer-events:none;transform:scale(.98);
+  transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1);z-index:10
+}
+.view.active{opacity:1;pointer-events:auto;transform:scale(1)}
+.rise{opacity:0}
+.view.active .rise{animation:rise .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0s)}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+/* 线团团 */
+.hero svg,.pick-yarn svg,.mini svg,.c-yarn svg{width:100%;height:100%;display:block;overflow:visible}
+.tail{transform-box:view-box;transform-origin:180px 170px;animation:sway 3.2s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(0)}50%{transform:rotate(7deg)}}
+
+/* 首屏 */
+.intro-body{display:flex;flex-direction:column;align-items:center;gap:18px}
+.hero{width:min(68vw,264px);aspect-ratio:1;filter:drop-shadow(0 0 40px rgba(244,236,221,.12));cursor:pointer}
+.hero svg{animation:bob 5s ease-in-out infinite}
+.hero.boing svg{animation:boing .45s cubic-bezier(.34,1.56,.64,1)}
+@keyframes bob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-6px) scale(1.015)}}
+@keyframes boing{0%{transform:scale(1)}40%{transform:scale(1.06,.94)}100%{transform:scale(1)}}
+.intro-foot{display:flex;flex-direction:column;align-items:center;gap:16px}
+
+/* 选结 */
+.pick-body{display:flex;flex-direction:column;align-items:center;gap:12px;width:100%}
+.pick-yarn{width:min(78vw,300px);aspect-ratio:1;margin-top:4px;filter:drop-shadow(0 0 40px rgba(244,236,221,.1))}
+.pick-foot{display:flex;flex-direction:column;align-items:center;gap:10px}
+.dots{display:flex;gap:9px;margin-top:2px}
+.dots i{width:6px;height:6px;border-radius:50%;background:rgba(244,236,221,.18);transition:all .5s ease}
+.dots i.on{background:var(--glow);box-shadow:0 0 8px var(--glow)}
+.knot{cursor:pointer}
+.halo{transform-box:fill-box;transform-origin:center;animation:halo 2.2s ease-in-out infinite}
+@keyframes halo{0%,100%{opacity:.18;transform:scale(.85)}50%{opacity:.75;transform:scale(1.3)}}
+.knot.sel .halo{animation:none;opacity:1;transform:scale(1.7)}
+.knot.done{cursor:default}
+
+/* 松结 */
+#v-loosen{touch-action:none}
+.loosen-top{display:flex;align-items:center;gap:14px;align-self:flex-start}
+.mini{width:62px;height:62px;flex:none}
+.where{font-family:var(--serif);font-size:16px;letter-spacing:.1em;line-height:1.9;color:var(--cream);margin-top:4px}
+.stage{position:relative;flex:1;min-height:0;width:calc(100% + 64px);margin:0 -32px;touch-action:none;cursor:grab}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.loosen-foot{display:flex;flex-direction:column;align-items:center;gap:14px}
+.bar{width:120px;height:2px;border-radius:2px;background:rgba(244,236,221,.12);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--glow);box-shadow:0 0 8px var(--glow);transition:width .3s ease}
+
+/* 结果页：上面可滑，底部按钮固定 */
+#v-result{justify-content:flex-start;padding-bottom:calc(env(safe-area-inset-bottom) + 22px)}
+.result-scroll{flex:1;min-height:0;width:calc(100% + 64px);margin:0 -32px;padding:0 32px 26px;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;align-items:center;gap:18px}
+.result-scroll::-webkit-scrollbar{display:none}
+.result-scroll > *{flex:none}
+.dock{flex:none;width:100%;max-width:322px;display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:12px;position:relative}
+.dock::before{content:"";position:absolute;left:-40px;right:-40px;top:-30px;height:30px;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(22,30,72,0),rgba(22,30,72,.95))}
+.dock-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.dock .btn{width:100%;padding:14px 0;letter-spacing:.22em;text-indent:.22em;font-size:15px}
+.dock .btn.ghost{padding:13px 0;font-size:15px}
+#dock-note{color:var(--c60)}
+
+/* 结果卡片 */
+.card{width:100%;max-width:322px;border-radius:28px;padding:22px 26px 26px;text-align:center;
+  background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.55)}
+.card-head{display:flex;justify-content:space-between;align-items:center}
+.c-yarn{width:112px;height:112px;margin:10px auto 6px;background:radial-gradient(closest-side,rgba(216,255,106,.16),transparent)}
+.c-lead{font-family:var(--serif);font-size:13.5px;line-height:2;letter-spacing:.1em;color:var(--c60)}
+.c-tag{font-family:var(--serif);font-weight:600;font-size:22px;letter-spacing:.12em;line-height:1.6;color:var(--glow);margin-top:10px;text-shadow:0 0 18px rgba(216,255,106,.4)}
+.c-div{width:22px;height:1px;background:rgba(244,236,221,.22);margin:12px auto}
+.c-line{font-family:var(--serif);font-size:14px;line-height:2;letter-spacing:.08em;color:var(--c80)}
+.c-rows{display:grid;gap:10px;margin-top:16px;text-align:left}
+.row{display:grid;grid-template-columns:46px 1fr;align-items:baseline}
+.row .k{font-family:var(--sans);font-size:10.5px;font-weight:500;letter-spacing:.25em;color:var(--c45)}
+.row .v{font-family:var(--serif);font-size:13px;line-height:1.95;letter-spacing:.06em;color:var(--c80)}
+
+/* 保存弹层 */
+.sheet{position:absolute;inset:0;z-index:80;background:rgba(5,7,15,.7);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px;opacity:0;pointer-events:none;transition:opacity .4s}
+.sheet.on{opacity:1;pointer-events:auto}
+.sheet img{width:100%;max-width:290px;border-radius:16px;box-shadow:0 30px 60px -20px rgba(0,0,0,.6);-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
+.sheet-acts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.sheet-acts .btn{padding:13px 26px;letter-spacing:.22em;text-indent:.22em;font-size:14px}
+
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000}
+.phone{
+  position:fixed;left:0;top:0;
+  width:100%;height:100vh;height:100dvh;
+  flex:none;max-width:none;
+  transform-origin:0 0;
+  overflow:hidden;
+}
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div id="sky"></div>
+  <div class="aura a1"></div>
+  <div class="aura a2"></div>
+  <button class="mute" id="mute">有声</button>
+
+  <!-- 1 首屏 -->
+  <section class="view active" id="v-intro">
+    <p class="eyebrow rise" style="--d:.05s">Knot · Tonight</p>
+    <div class="intro-body">
+      <div class="hero rise" style="--d:.15s" id="hero"></div>
+      <h1 class="title rise" style="--d:.3s">你今天<br>是哪种结</h1>
+      <p class="lead rise" style="--d:.42s">一天下来<br>它把自己缠成了这样</p>
+    </div>
+    <div class="intro-foot rise" style="--d:.55s">
+      <button class="btn" id="btn-start">帮它松一松</button>
+      <p class="note">点一下就开始<br>一共六个结，松几个都行</p>
+    </div>
+  </section>
+
+  <!-- 2 选结 -->
+  <section class="view" id="v-pick">
+    <p class="eyebrow rise" style="--d:.05s">Step 1 · Pick</p>
+    <div class="pick-body">
+      <h2 class="title sm rise" style="--d:.12s" id="pick-title">先松哪一个</h2>
+      <p class="lead rise" style="--d:.22s" id="pick-lead">不用想太久<br>凭直觉点一个就好</p>
+      <div class="dots rise" style="--d:.28s" id="dots"></div>
+      <div class="pick-yarn rise" style="--d:.34s" id="pick-yarn"></div>
+    </div>
+    <div class="pick-foot rise" style="--d:.45s">
+      <p class="cap" id="pick-cap">一共六个结<br>发光的地方都可以点</p>
+      <button class="btn" id="btn-reset" hidden>再来一团</button>
+    </div>
+  </section>
+
+  <!-- 3 松结 -->
+  <section class="view" id="v-loosen">
+    <div class="loosen-top rise" style="--d:.05s">
+      <div class="mini" id="mini"></div>
+      <div>
+        <p class="eyebrow">你挑的是</p>
+        <p class="where" id="where"></p>
+      </div>
+    </div>
+    <div class="stage" id="stage"><canvas id="cv"></canvas></div>
+    <div class="loosen-foot">
+      <p class="cap" id="cap">按住屏幕<br>往哪边拉都行</p>
+      <div class="bar"><i id="bar"></i></div>
+      <p class="note" id="pulls">&nbsp;</p>
+    </div>
+  </section>
+
+  <!-- 4 结果 -->
+  <section class="view" id="v-result">
+    <div class="result-scroll" id="result-scroll">
+      <p class="eyebrow rise" style="--d:.05s">Step 2 · Tonight</p>
+      <p class="lead rise" style="--d:.12s" id="r-lead">松开了一个<br>它看起来好一点了</p>
+      <div class="card rise" style="--d:.22s">
+        <div class="card-head">
+          <span class="eyebrow" id="c-no"></span>
+          <span class="eyebrow" id="c-date"></span>
+        </div>
+        <div class="c-yarn" id="c-yarn"></div>
+        <p class="c-lead">我今天有点打结<br>是<span id="c-kind"></span>的那种</p>
+        <h2 class="c-tag" id="c-tag"></h2>
+        <div class="c-div"></div>
+        <p class="c-line" id="c-line"></p>
+        <div class="c-rows">
+          <div class="row"><span class="k">硬拽</span><span class="v" id="c-pull"></span></div>
+          <div class="row"><span class="k">放松</span><span class="v" id="c-rx"></span></div>
+        </div>
+      </div>
+      <p class="note rise" style="--d:.36s">如果累了很久，怎么都松不开<br>找一个信得过的人聊聊<br>也可以找专业的人帮忙</p>
+    </div>
+    <div class="dock rise" style="--d:.3s">
+      <p class="note" id="dock-note">还剩 5 个结</p>
+      <div class="dock-row">
+        <button class="btn ghost" id="btn-save">保存卡片</button>
+        <button class="btn" id="btn-again">再松一个</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 保存弹层 -->
+  <div class="sheet" id="sheet">
+    <img id="sheet-img" alt="今日结况">
+    <p class="note" style="color:rgba(244,236,221,.8)">长按图片保存<br>直接截图也可以</p>
+    <div class="sheet-acts">
+      <button class="btn" id="sheet-again">再松一个</button>
+      <a class="btn ghost" id="sheet-dl" download="今日结况.png" style="text-decoration:none">下载</a>
+      <button class="btn ghost" id="sheet-close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========= 手感参数 ========= */
+const FAST = 2.6;   // 拽多快算太猛（px/ms），调大更宽容
+const PULL = 1200;  // 一共拉多长能松开（px），调小松得更快
+
+/* ========= 文案 ========= */
+const KNOTS = [
+  {where:"头顶翘起来的那个", kind:"脑子还在开会", tag:"后台程序 99+",
+   line:"身体下班了<br>脑子却还在开会", rx:"把烦心的念头先放下来<br>放空才是正经事"},
+  {where:"耳朵边上的那个", kind:"耳朵一直在接收信息", tag:"人形收音机（未关机）",
+   line:"今天没说几句话<br>耳朵却一直没停过", rx:"静音十分钟<br>不算逃避"},
+  {where:"嘴角旁边的那个", kind:"说了好几次没事", tag:"没事人（有事）",
+   line:"今天说了好几次没事<br>其实都有事", rx:"今晚可以对一个懂你人说<br>其实我不太好"},
+  {where:"悬在半空的那个", kind:"一直在等人找", tag:"秒回待机侠",
+   line:"没人找你的时候<br>你似乎也在等人找你", rx:"待命也算上班<br>今晚可以早点下班"},
+  {where:"肚子上最大的那团", kind:"忙了一天说不清忙什么", tag:"原地转圈仓鼠",
+   line:"忙了一整天<br>问我忙什么，我得想想", rx:"说不清为什么忙<br>也是一种消耗，别怪自己"},
+  {where:"藏得最深的那个", kind:"把自己排在最后", tag:"待办清单里没有自己",
+   line:"帮了好多人的忙<br>自己的事却一件没动", rx:"明天多留一些时间给自己<br>哪怕是一件很微小的事"}
+];
+const TIGHT_CAPS = ["别太猛<br>它会缩回去", "它吓了一跳<br>轻一点", "慢一点<br>它也会疼"];
+const RESULT_LEADS = ["松开了一个<br>它看起来好一点了", "又松开一个<br>它的肩膀放下来了", "一半了<br>它开始哼歌了",
+  "又少一个<br>它快想不起刚才多乱了", "只剩最后一个了<br>它在等你", "全都松开了<br>它今天可以好好睡一觉啦"];
+function pullText(n){
+  if(n === 0) return ["0 次", "你真的好温柔"];
+  if(n <= 2)  return [n + " 下", "正常，谁都会着急的"];
+  return [n + " 次", "太用力会疼的，对自己也是"];
+}
+
+/* ========= 工具 ========= */
+const $ = s => document.querySelector(s);
+const COL = {cream:"#F4ECDD", shade:"#D9C8A8", wrap:"#CDB894", ink:"#1A2148",
+             glow:"#D8FF6A", blush:"#FF9DB0", yarnHi:"#FFF9EE", yarnEdge:"#B39B72"};
+function rng(seed){ return () => (seed = seed * 16807 % 2147483647, (seed - 1) / 2147483646); }
+function smooth(p){
+  const f = n => n.toFixed(1);
+  let d = `M${f(p[0][0])} ${f(p[0][1])}`;
+  for(let i = 0; i < p.length - 1; i++){
+    const p0 = p[i-1] || p[i], p1 = p[i], p2 = p[i+1], p3 = p[i+2] || p2;
+    d += ` C${f(p1[0]+(p2[0]-p0[0])/6)} ${f(p1[1]+(p2[1]-p0[1])/6)} ${f(p2[0]-(p3[0]-p1[0])/6)} ${f(p2[1]-(p3[1]-p1[1])/6)} ${f(p2[0])} ${f(p2[1])}`;
+  }
+  return d;
+}
+
+/* 夜空星星 */
+(() => {
+  const sky = $("#sky");
+  for(let i = 0; i < 46; i++){
+    const s = document.createElement("i");
+    s.className = "star";
+    s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*75}%;--t:${2+Math.random()*4}s;--d:${-Math.random()*5}s;transform:scale(${.5+Math.random()})`;
+    sky.appendChild(s);
+  }
+})();
+
+/* ========= 线团团（毛线球） ========= */
+// 结的位置：x, y, 大小, 随机种子
+const KPOS = [[120,62,1,11],[82,82,1,23],[146,160,1,37],[208,192,.9,41],[92,180,1.5,53],[166,96,.7,67]];
+// 每个结拖出来的一根乱线，松开后跟着消失
+const STRAYS = [
+  "M120 62 C110 44 117 30 128 35 C137 40 131 52 122 49",
+  "M82 82 C66 73 49 84 55 98 C59 108 72 105 70 95",
+  "M146 160 C162 168 176 163 178 151 C179 142 169 142 170 151",
+  "M208 192 C222 186 227 174 218 169",
+  "M92 180 C77 193 80 214 98 212 C110 210 108 198 99 200 C91 202 96 220 87 233",
+  "M166 96 C178 85 193 91 189 104"
+];
+const yarnLine = (d, w) =>
+  `<path d="${d}" stroke="${COL.yarnEdge}" stroke-width="${(w + 1.8).toFixed(1)}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+   <path d="${d}" stroke="${COL.yarnHi}" stroke-width="${w.toFixed(1)}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+// 一个鼓起来的毛线结：三个交叠的小线圈和两根线头，底下带阴影
+function knotGlyph(x, y, s, seed){
+  const r = rng(seed), R = 5.6 * s, w = 3 * Math.min(1.25, s);
+  const a0 = r() * 6.28;
+  let out = `<ellipse cx="${(x + 1).toFixed(1)}" cy="${(y + R * .75).toFixed(1)}" rx="${(R * 1.55).toFixed(1)}" ry="${(R * .8).toFixed(1)}" fill="#6E5A38" opacity=".22"/>`;
+  [a0 + 2.6, a0 - .5].forEach(t => {
+    const ex = x + Math.cos(t) * R * 1.9, ey = y + Math.sin(t) * R * 1.9;
+    const mx = x + Math.cos(t + .5) * R * 1.2, my = y + Math.sin(t + .5) * R * 1.2;
+    out += yarnLine(`M${x.toFixed(1)} ${y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}`, w * .85);
+  });
+  for(let i = 0; i < 3; i++){
+    const ang = a0 + i * 2.1 + r() * .5;
+    const lx = x + Math.cos(ang) * R * .42, ly = y + Math.sin(ang) * R * .42;
+    const deg = (ang * 180 / Math.PI).toFixed(0);
+    const e = (sw, col) => `<ellipse cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" rx="${(R * 1.05).toFixed(1)}" ry="${(R * .55).toFixed(1)}" transform="rotate(${deg} ${lx.toFixed(1)} ${ly.toFixed(1)})" fill="none" stroke="${col}" stroke-width="${sw.toFixed(1)}"/>`;
+    out += e(w + 1.8, COL.yarnEdge) + e(w, COL.yarnHi);
+  }
+  out += `<circle cx="${(x - R * .35).toFixed(1)}" cy="${(y - R * .4).toFixed(1)}" r="${(w * .35).toFixed(1)}" fill="#fff" opacity=".8"/>`;
+  return out;
+}
+function sparkle(x, y){
+  return `<circle cx="${x}" cy="${y}" r="11" fill="${COL.glow}" opacity=".22"/>
+    <path d="M${x} ${y-8} Q${x} ${y} ${x+8} ${y} Q${x} ${y} ${x} ${y+8} Q${x} ${y} ${x-8} ${y} Q${x} ${y} ${x} ${y-8}Z" fill="${COL.glow}"/>`;
+}
+function faceSVG(f){
+  const k = COL.ink, b = f === "relief" ? .85 : .55;
+  const st = (w = 2.8) => `stroke="${k}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
+  let s = `<ellipse cx="91" cy="137" rx="9" ry="5" fill="${COL.blush}" opacity="${b}"/>
+           <ellipse cx="149" cy="137" rx="9" ry="5" fill="${COL.blush}" opacity="${b}"/>`;
+  if(f === "tired"){
+    s += `<path d="M96 121 a6 6 0 0 0 12 0 z" fill="${k}"/><path d="M132 121 a6 6 0 0 0 12 0 z" fill="${k}"/>
+          <path d="M94 121 h16 M130 121 h16" ${st(2.4)}/><path d="M114 142 h12" ${st()}/>`;
+  } else if(f === "pout"){
+    s += `<path d="M97 115 l8 5 l-8 5" ${st()}/><path d="M143 115 l-8 5 l8 5" ${st()}/>
+          <path d="M112 145 q4 -4 8 0 q4 4 8 0" ${st(2.4)}/><path d="M172 98 q6 8 0 11 q-6 -3 0 -11z" fill="#9FD8FF"/>`;
+  } else if(f === "ease"){
+    s += `<path d="M96 121 q6 5 12 0" ${st()}/><path d="M132 121 q6 5 12 0" ${st()}/>
+          <circle cx="120" cy="142" r="3.4" ${st(2.4)}/>`;
+  } else {
+    s += `<path d="M96 124 q6 -8 12 0" ${st()}/><path d="M132 124 q6 -8 12 0" ${st()}/>
+          <path d="M112 138 q8 9 16 0" ${st()}/>
+          <path d="M178 92 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2 l5 -2z" fill="${COL.glow}"/>`;
+  }
+  return s;
+}
+function makeYarn(o = {}){
+  const face = o.face || "tired", loose = o.loose || [], uid = "y" + Math.random().toString(36).slice(2, 8);
+  const sz = o.size ? ` width="${o.size}" height="${o.size}"` : "";
+  const strand = (d, w = 7) => `<path d="${d}" stroke="${COL.shade}" stroke-width="${w+2}"/><path d="${d}" stroke="${COL.cream}" stroke-width="${w}"/>`;
+  const knot = i => {
+    const [x, y, s, seed] = KPOS[i], done = loose.includes(i);
+    const g = done ? sparkle(x, y) : yarnLine(STRAYS[i], 3.6) + knotGlyph(x, y, s, seed);
+    if(!o.knots) return g;
+    if(done) return `<g class="knot done">${g}</g>`;
+    return `<g class="knot" data-i="${i}"><circle class="halo" cx="${x}" cy="${y}" r="${(12*s+3).toFixed(1)}" fill="${COL.glow}" style="animation-delay:${-i*.4}s"/>${g}<circle cx="${x}" cy="${y}" r="22" fill="transparent"/></g>`;
+  };
+  const tip = o.tip ? `<circle cx="192" cy="202" r="9" fill="${COL.glow}" opacity=".25"/><circle cx="192" cy="202" r="3.6" fill="${COL.glow}"/>` : "";
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"${sz}>
+  <defs>
+    <radialGradient id="${uid}g" cx=".38" cy=".32" r=".78">
+      <stop offset="0" stop-color="#FFFBF2"/><stop offset=".62" stop-color="${COL.cream}"/><stop offset="1" stop-color="#D3C09D"/>
+    </radialGradient>
+    <radialGradient id="${uid}f">
+      <stop offset="0" stop-color="#FAF4E8" stop-opacity=".95"/><stop offset=".7" stop-color="#FAF4E8" stop-opacity=".7"/><stop offset="1" stop-color="#FAF4E8" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="${uid}c"><circle cx="120" cy="130" r="76"/></clipPath>
+  </defs>
+  <ellipse cx="120" cy="220" rx="58" ry="7" fill="#000" opacity=".35"/>
+  <g fill="none" stroke-linecap="round">
+    ${strand("M94 72 C78 42 106 32 110 62")}${strand("M146 72 C162 42 134 32 130 62")}
+  </g>
+  <g class="tail" fill="none" stroke-linecap="round">
+    ${strand("M180 170 C210 180 220 206 202 216 C188 223 178 208 192 202", 6)}${tip}${knot(3)}
+  </g>
+  <circle cx="120" cy="130" r="76" fill="url(#${uid}g)"/>
+  <g clip-path="url(#${uid}c)" fill="none" stroke="${COL.wrap}" stroke-width="3" stroke-linecap="round" opacity=".7">
+    <path d="M40 100 Q120 92 176 204"/><path d="M48 76 Q140 72 196 178"/><path d="M68 58 Q156 52 206 148"/>
+    <path d="M40 152 Q86 148 104 216"/><path d="M42 128 Q104 130 128 216"/>
+    <path d="M150 54 Q146 96 206 112"/>
+  </g>
+  <path d="M66 104 C72 82 90 66 112 62" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".7"/>
+  <ellipse cx="120" cy="132" rx="46" ry="30" fill="url(#${uid}f)"/>
+  ${faceSVG(face)}
+  ${[0,1,2,4,5].map(knot).join("")}
+</svg>`;
+}
+
+/* ========= 声音 ========= */
+let ac = null, muted = false;
+function audioInit(){
+  if(!ac){ try{ ac = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){} }
+  if(ac && ac.state === "suspended") ac.resume();
+}
+function tone(f, dur, o = {}){
+  if(!ac || muted) return;
+  const t = ac.currentTime + (o.when || 0);
+  const osc = ac.createOscillator(), g = ac.createGain();
+  osc.type = o.type || "sine";
+  osc.frequency.setValueAtTime(f, t);
+  if(o.slide) osc.frequency.exponentialRampToValueAtTime(o.slide, t + dur * .8);
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.exponentialRampToValueAtTime(o.vol || .15, t + .012);
+  g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+  let node = osc;
+  if(o.lp){ const fl = ac.createBiquadFilter(); fl.type = "lowpass"; fl.frequency.value = o.lp; osc.connect(fl); node = fl; }
+  node.connect(g); g.connect(ac.destination);
+  osc.start(t); osc.stop(t + dur + .05);
+}
+function thud(){ tone(150, .26, {vol:.4, slide:60}); tone(90, .18, {type:"triangle", vol:.2, lp:400}); }
+const NOTES = [392, 440, 523, 587, 659, 784, 880, 1047, 1175, 1319];
+function pluck(i){ tone(NOTES[Math.min(i, 9)], .9, {type:"triangle", vol:.12, lp:900 + i * 260}); }
+function bell(){
+  [523.3, 659.3, 784, 1046.5].forEach((f, i) => tone(f, 2.2, {vol:.1, when:i * .08}));
+  tone(1568, 1.4, {vol:.035, when:.32});
+}
+function tap(){ tone(660, .25, {type:"triangle", vol:.08, lp:1500}); }
+
+/* ========= 状态与当天进度 ========= */
+const S = {knot:0, done:[], view:"intro", no:1, lastPulls:0};
+const KEY = "xiantuantuan";
+function today(){ const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+function store(){ try{ localStorage.setItem(KEY, JSON.stringify({d:today(), done:S.done})); }catch(_){} }
+(() => {
+  try{
+    const o = JSON.parse(localStorage.getItem(KEY) || "null");
+    if(o && o.d === today() && Array.isArray(o.done)) S.done = o.done.filter(i => i >= 0 && i < 6);
+  }catch(_){}
+})();
+const allDone = () => S.done.length >= 6;
+const againLabel = () => allDone() ? "再来一团" : "再松一个";
+function progressFace(n){ return n >= 6 ? "relief" : n >= 3 ? "ease" : "tired"; }
+
+/* ========= 视图 ========= */
+let SCALE = 1;
+function go(id){
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  S.view = id;
+  setTimeout(() => $("#v-" + id).classList.add("active"), 250);
+}
+function setCap(h, el = $("#cap")){
+  if(el._h === h) return;
+  el._h = h; el.style.opacity = 0; clearTimeout(el._t);
+  el._t = setTimeout(() => { el.innerHTML = h; el.style.opacity = 1; }, 180);
+}
+
+// ===== 画面比例，只改这里 =====
+// ===== 画面模式：'full'（默认铺满） | '3:4' | '9:16' =====
+let RATIO_MODE = 'full';
+// 也可以用网址参数临时切换：index.html?ratio=3:4
+const _q = new URLSearchParams(location.search).get('ratio');
+if (_q) RATIO_MODE = _q;
+
+const BASE_H = 844;   // 固定比例时用的设计高度
+
+function fit(){
+  const p = $("#phone");
+  const W = innerWidth, H = innerHeight;
+
+  if (RATIO_MODE === 'full') {
+    // 铺满：不缩放，直接用屏幕尺寸
+    SCALE = 1;
+    p.style.width = W + 'px';
+    p.style.height = H + 'px';
+    p.style.left = '0';
+    p.style.top = '0';
+    p.style.transform = '';
+  } else {
+    // 固定比例：等比缩放，居中，四周留边
+    const [a, b] = RATIO_MODE.split(':').map(Number);
+    const bw = Math.round(BASE_H * a / b);
+    SCALE = Math.min(W / bw, H / BASE_H);
+    p.style.width = bw + 'px';
+    p.style.height = BASE_H + 'px';
+    p.style.left = (W - bw * SCALE) / 2 + 'px';
+    p.style.top  = (H - BASE_H * SCALE) / 2 + 'px';
+    p.style.transform = `scale(${SCALE})`;
+  }
+  if (S.view === "loosen") sizeCv();
+}
+
+addEventListener("resize", fit);
+addEventListener("orientationchange", () => setTimeout(fit, 300));
+
+/* 首屏 */
+let heroFace = "tired";
+function renderHero(){ $("#hero").innerHTML = makeYarn({face:heroFace, tip:true, loose:S.done}); }
+renderHero();
+if(S.done.length && !allDone()) $("#btn-start").textContent = "接着松";
+setInterval(() => {
+  if(S.view !== "intro") return;
+  heroFace = "ease"; renderHero();
+  setTimeout(() => { heroFace = "tired"; renderHero(); }, 1200);
+}, 4200);
+
+function startGame(){
+  if(S.view !== "intro") return;
+  audioInit(); tap(); go("pick"); renderPick();
+}
+$("#btn-start").addEventListener("click", startGame);
+$("#hero").addEventListener("click", () => {
+  const h = $("#hero");
+  h.classList.remove("boing"); void h.offsetWidth; h.classList.add("boing");
+  setTimeout(startGame, 280);
+});
+$("#mute").addEventListener("click", () => { muted = !muted; $("#mute").textContent = muted ? "静音" : "有声"; audioInit(); });
+
+/* ========= 选结 ========= */
+let picking = false;
+function renderPick(){
+  picking = false;
+  const n = S.done.length, left = 6 - n;
+  $("#pick-yarn").innerHTML = makeYarn({face:progressFace(n), knots:true, loose:S.done});
+  $("#dots").innerHTML = [0,1,2,3,4,5].map(i => `<i class="${i < n ? "on" : ""}"></i>`).join("");
+  if(n === 0){
+    $("#pick-title").textContent = "先松哪一个";
+    $("#pick-lead").innerHTML = "不用想太久<br>凭直觉点一个就好";
+  } else if(n < 6){
+    $("#pick-title").textContent = "下一个松哪个";
+    $("#pick-lead").innerHTML = "已经松开 " + n + " 个<br>它轻了一点";
+  } else {
+    $("#pick-title").textContent = "全都松开了";
+    $("#pick-lead").innerHTML = "六个结一个不剩<br>它今天可以好好睡了";
+  }
+  $("#btn-reset").hidden = n < 6;
+  $("#pick-cap")._h = "";
+  setCap(n === 0 ? "一共六个结<br>发光的地方都可以点"
+       : n < 6  ? "还剩 " + left + " 个结<br>发光的地方还能点"
+       : "今天辛苦了", $("#pick-cap"));
+}
+$("#pick-yarn").addEventListener("click", e => {
+  const g = e.target.closest(".knot");
+  if(!g || g.classList.contains("done") || picking) return;
+  picking = true; audioInit(); tap();
+  g.classList.add("sel");
+  const i = +g.dataset.i;
+  setCap("你挑了<br>" + KNOTS[i].where, $("#pick-cap"));
+  setTimeout(() => startLoosen(i), 900);
+});
+function resetYarn(){ S.done = []; store(); $("#btn-start").textContent = "帮它松一松"; renderHero(); }
+$("#btn-reset").addEventListener("click", () => { tap(); resetYarn(); renderPick(); });
+
+/* ========= 松结：画布 + 线的物理 ========= */
+const stage = $("#stage"), cv = $("#cv"), ctx = cv.getContext("2d");
+let W = 0, H = 0;
+function sizeCv(){
+  W = stage.clientWidth; H = stage.clientHeight;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function sampleCR(p, seg){
+  const out = [];
+  for(let i = 0; i < p.length - 1; i++){
+    const p0 = p[i-1] || p[i], p1 = p[i], p2 = p[i+1], p3 = p[i+2] || p2;
+    for(let j = 0; j < seg; j++){
+      const t = j / seg, t2 = t * t, t3 = t2 * t;
+      out.push([0, 1].map(k => .5 * ((2*p1[k]) + (-p0[k]+p2[k])*t + (2*p0[k]-5*p1[k]+4*p2[k]-p3[k])*t2 + (-p0[k]+3*p1[k]-3*p2[k]+p3[k])*t3)));
+    }
+  }
+  out.push(p[p.length - 1]);
+  return out;
+}
+function genTangle(seed){
+  const r = rng(seed * 7919 + 1), pts = [];
+  let a = r() * 6;
+  for(let i = 0; i < 30; i++){
+    a += .8 + r() * 1.3;
+    const k = .28 + r() * .72;
+    pts.push([Math.cos(a) * k, Math.sin(a) * k * .9]);
+  }
+  return sampleCR(pts, 14);
+}
+
+const N = 22;
+let rope = [], P = [], rings = [];
+const L = {};
+let tickIdx = 0, capHold = 0, miniCur = "";
+function mini(f){ if(f === miniCur) return; miniCur = f; $("#mini").innerHTML = makeYarn({face:f, loose:S.done}); }
+
+function initRope(ax, ay){
+  const ex = W * .72, ey = H - 14;
+  rope = [];
+  for(let i = 0; i < N; i++){
+    const t = i / (N - 1), x = ax + (ex - ax) * t, y = ay + (ey - ay) * t;
+    rope.push({x, y, px:x, py:y});
+  }
+}
+function startLoosen(i){
+  S.knot = i;
+  Object.assign(L, {T:genTangle(i + 1), p:0, dp:0, pulls:0, released:false, down:false, touched:false,
+                    fx:0, fy:0, lastMove:0, shakeUntil:0, tightFlash:0, poutUntil:0, len:150});
+  P.length = 0; rings.length = 0; tickIdx = 0; capHold = 0; miniCur = "";
+  mini("tired");
+  $("#where").textContent = KNOTS[i].where;
+  $("#bar").style.width = "0%";
+  $("#pulls").innerHTML = "&nbsp;";
+  $("#cap")._h = ""; setCap("按住屏幕<br>往哪边拉都行");
+  go("loosen");
+  requestAnimationFrame(() => { sizeCv(); initRope(W / 2, H * .42); });
+}
+
+function spawn(x, y, spd = 1){
+  if(P.length > 320) return;
+  P.push({x, y, vx:(Math.random() - .5) * 1.8 * spd, vy:(Math.random() - .5) * 1.8 * spd - .3,
+          life:0, max:40 + Math.random() * 35, r:1 + Math.random() * 2.2,
+          c:Math.random() < .6 ? "216,255,106" : "244,236,221"});
+}
+function strokePoly(pts, color, w){
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for(let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.strokeStyle = color; ctx.lineWidth = w; ctx.stroke();
+}
+function ropePath(){
+  ctx.beginPath(); ctx.moveTo(rope[0].x, rope[0].y);
+  for(let i = 1; i < N - 1; i++){
+    const mx = (rope[i].x + rope[i+1].x) / 2, my = (rope[i].y + rope[i+1].y) / 2;
+    ctx.quadraticCurveTo(rope[i].x, rope[i].y, mx, my);
+  }
+  ctx.lineTo(rope[N-1].x, rope[N-1].y);
+}
+
+function frame(){
+  requestAnimationFrame(frame);
+  if(S.view !== "loosen" || !W || !rope.length) return;
+  const now = performance.now();
+  L.dp += (L.p - L.dp) * .18;
+  const p = L.dp;
+  L.len = 150 + p * 200;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const R = Math.min(W, H) * .27, cx = W / 2, cy = H * .42;
+
+  const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 1.7);
+  gr.addColorStop(0, `rgba(216,255,106,${(.05 + .1 * p).toFixed(3)})`);
+  gr.addColorStop(1, "rgba(216,255,106,0)");
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+
+  let anchor = [cx, cy];
+  if(!L.released){
+    const sh = now < L.shakeUntil ? (L.shakeUntil - now) / 420 : 0;
+    const jx = (Math.random() - .5) * 12 * sh, jy = (Math.random() - .5) * 8 * sh;
+    const sc = R * (1 - .42 * p) * (1 - .08 * sh) + Math.sin(now / 700) * 1.5;
+    const rot = now * .00012 + p * 1.8, cs = Math.cos(rot), sn = Math.sin(rot);
+    const n = Math.max(2, Math.floor(L.T.length * (1 - p))), pts = [];
+    for(let i = 0; i < n; i++){
+      const q = L.T[i];
+      pts.push([cx + jx + (q[0] * cs - q[1] * sn) * sc, cy + jy + (q[0] * sn + q[1] * cs) * sc]);
+    }
+    anchor = pts[n - 1];
+    strokePoly(pts, "rgba(4,6,20,.85)", 12);
+    strokePoly(pts, COL.cream, 7);
+    strokePoly(pts.map(q => [q[0] - 1.2, q[1] - 1.8]), "rgba(255,255,255,.5)", 1.8);
+  }
+
+  const e = rope[N - 1];
+  for(let i = 0; i < N; i++){
+    if(i === 0 && !L.released) continue;
+    if(i === N - 1 && L.down) continue;
+    const q = rope[i], vx = (q.x - q.px) * .97, vy = (q.y - q.py) * .97;
+    q.px = q.x; q.py = q.y; q.x += vx; q.y += vy + (L.released ? .15 : .4);
+  }
+  if(!L.released){ rope[0].x = rope[0].px = anchor[0]; rope[0].y = rope[0].py = anchor[1]; }
+  if(L.down){ e.x += (L.fx - e.x) * .4; e.y += (L.fy - e.y) * .4; e.px = e.x; e.py = e.y; }
+  const span = Math.hypot(e.x - rope[0].x, e.y - rope[0].y);
+  const seg = (L.down ? Math.max(L.len, span * 1.04) : L.len) / (N - 1);
+  for(let k = 0; k < 8; k++){
+    for(let i = 0; i < N - 1; i++){
+      const a = rope[i], b = rope[i+1];
+      const fa = (i === 0 && !L.released) ? 0 : 1, fb = (i + 1 === N - 1 && L.down) ? 0 : 1;
+      if(fa + fb === 0) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, diff = (d - seg) / d;
+      const wa = fa / (fa + fb), wb = fb / (fa + fb);
+      a.x += dx * diff * wa; a.y += dy * diff * wa;
+      b.x -= dx * diff * wb; b.y -= dy * diff * wb;
+    }
+    for(const q of rope){
+      if(q.y > H - 12){ q.y = H - 12; q.px = q.x - (q.x - q.px) * .6; }
+      q.x = Math.max(10, Math.min(W - 10, q.x));
+    }
+  }
+
+  const hot = now < L.tightFlash, moving = now - L.lastMove < 120;
+  ropePath(); ctx.strokeStyle = "rgba(4,6,20,.85)"; ctx.lineWidth = 10; ctx.stroke();
+  ctx.save();
+  ctx.shadowColor = hot ? "rgba(255,138,122,.9)" : "rgba(216,255,106,.85)";
+  ctx.shadowBlur = hot ? 18 : moving ? 16 : (L.released ? 12 : 5);
+  ropePath(); ctx.strokeStyle = hot ? "#FFD6CC" : COL.cream; ctx.lineWidth = 6; ctx.stroke();
+  ctx.restore();
+
+  if(!L.released){
+    ctx.save();
+    ctx.shadowColor = hot ? "#FF8A7A" : COL.glow; ctx.shadowBlur = 22;
+    ctx.fillStyle = hot ? "#FF8A7A" : COL.glow;
+    ctx.beginPath(); ctx.arc(e.x, e.y, 9, 0, 7); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(e.x - 2, e.y - 2, 3, 0, 7); ctx.fill();
+    if(!L.touched){
+      const k = (now % 1600) / 1600;
+      ctx.strokeStyle = `rgba(216,255,106,${((1 - k) * .8).toFixed(3)})`; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(e.x, e.y, 12 + k * 28, 0, 7); ctx.stroke();
+    }
+  }
+
+  if(moving && !L.released){
+    if(Math.random() < .8) spawn(anchor[0], anchor[1]);
+    if(Math.random() < .5){ const q = rope[(Math.random() * N) | 0]; spawn(q.x, q.y, .5); }
+  }
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  for(let i = P.length - 1; i >= 0; i--){
+    const q = P[i];
+    q.life++; q.x += q.vx; q.y += q.vy; q.vx *= .97; q.vy = q.vy * .97 - .01;
+    const a = 1 - q.life / q.max;
+    if(a <= 0){ P.splice(i, 1); continue; }
+    ctx.fillStyle = `rgba(${q.c},${a.toFixed(3)})`;
+    ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 7); ctx.fill();
+  }
+  for(let i = rings.length - 1; i >= 0; i--){
+    const g = rings[i];
+    if(now < g.start) continue;
+    g.r += 5; g.a *= .955;
+    if(g.a < .02){ rings.splice(i, 1); continue; }
+    ctx.strokeStyle = `rgba(216,255,106,${g.a.toFixed(3)})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(g.x, g.y, g.r, 0, 7); ctx.stroke();
+  }
+  ctx.restore();
+
+  mini(L.released ? "relief" : now < L.poutUntil ? "pout" : p > .55 ? "ease" : "tired");
+}
+requestAnimationFrame(frame);
+
+/* 手势 */
+function local(e){
+  const r = stage.getBoundingClientRect();
+  return [(e.clientX - r.left) / SCALE, (e.clientY - r.top) / SCALE];
+}
+let lx = 0, ly = 0, lt = 0, speed = 0, lastTight = 0;
+stage.addEventListener("pointerdown", e => {
+  if(L.released) return;
+  audioInit();
+  L.down = true; L.touched = true;
+  [L.fx, L.fy] = local(e); lx = L.fx; ly = L.fy; lt = performance.now(); speed = 0;
+  try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+});
+stage.addEventListener("pointermove", e => {
+  if(!L.down || L.released) return;
+  const [x, y] = local(e), now = performance.now();
+  const dt = Math.min(60, Math.max(1, now - lt));
+  const d = Math.min(60, Math.hypot(x - lx, y - ly)), inst = d / dt;
+  speed = speed * .6 + inst * .4;
+  lx = x; ly = y; lt = now; L.fx = x; L.fy = y;
+  if(speed > FAST){
+    if(now - lastTight > 700){ lastTight = now; tighten(); }
+    return;
+  }
+  if(now - lastTight < 250) return;
+  if(d > .5){ L.p = Math.min(1, L.p + d / PULL); L.lastMove = now; onProgress(); }
+});
+const endDrag = () => { L.down = false; };
+stage.addEventListener("pointerup", endDrag);
+stage.addEventListener("pointercancel", endDrag);
+stage.addEventListener("touchmove", e => e.preventDefault(), {passive:false});
+
+function onProgress(){
+  $("#bar").style.width = (L.p * 100).toFixed(1) + "%";
+  const step = Math.floor(L.p * 10);
+  if(step > tickIdx){ tickIdx = step; pluck(step); if(navigator.vibrate) navigator.vibrate(6); }
+  if(L.p >= 1){ release(); return; }
+  if(performance.now() < capHold) return;
+  setCap(L.p < .35 ? "对，就这样<br>慢慢来" : L.p < .7 ? "线头出来了<br>它在一点点变松" : "快好了<br>最后一点点");
+}
+function tighten(){
+  const now = performance.now();
+  L.pulls++;
+  L.p = Math.max(0, L.p - .05);
+  tickIdx = Math.floor(L.p * 10);
+  thud();
+  if(navigator.vibrate) navigator.vibrate(25);
+  L.poutUntil = now + 1100; L.shakeUntil = now + 420; L.tightFlash = now + 500; capHold = now + 1400;
+  setCap(TIGHT_CAPS[(L.pulls - 1) % TIGHT_CAPS.length]);
+  $("#bar").style.width = (L.p * 100).toFixed(1) + "%";
+  $("#pulls").textContent = "拽太猛 " + L.pulls + " 次";
+}
+function release(){
+  L.released = true; L.down = false;
+  bell();
+  if(navigator.vibrate) navigator.vibrate([12, 40, 12]);
+  const cx = W / 2, cy = H * .42, now = performance.now();
+  for(let i = 0; i < 80; i++) spawn(cx, cy, 4);
+  rings.push({x:cx, y:cy, r:20, a:.9, start:now}, {x:cx, y:cy, r:10, a:.6, start:now + 180});
+  capHold = Infinity;
+  setCap("松开了<br>它长长地舒了口气");
+  setTimeout(() => { fillCard(); go("result"); }, 2000);
+}
+
+/* ========= 结果卡片 ========= */
+function dateStr(){
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return p(d.getMonth() + 1) + " · " + p(d.getDate());
+}
+function fillCard(){
+  const k = KNOTS[S.knot];
+  if(!S.done.includes(S.knot)) S.done.push(S.knot);
+  S.no = S.done.indexOf(S.knot) + 1;
+  S.lastPulls = L.pulls;
+  store();
+  renderHero();
+  const left = 6 - S.done.length;
+
+  $("#r-lead").innerHTML = RESULT_LEADS[Math.min(5, S.no - 1)];
+  $("#c-no").textContent = "第 " + S.no + " 个结";
+  $("#c-date").textContent = dateStr();
+  $("#c-yarn").innerHTML = makeYarn({face:"relief", loose:S.done});
+  $("#c-kind").textContent = k.kind;
+  $("#c-tag").textContent = k.tag;
+  $("#c-line").innerHTML = k.line;
+  $("#c-pull").innerHTML = pullText(S.lastPulls).join("<br>");
+  $("#c-rx").innerHTML = k.rx;
+
+  $("#dock-note").textContent = left ? "还剩 " + left + " 个结" : "六个结都松开了，今天辛苦了";
+  $("#btn-again").textContent = againLabel();
+  $("#sheet-again").textContent = againLabel();
+  $("#result-scroll").scrollTop = 0;
+}
+function doAgain(){
+  tap();
+  $("#sheet").classList.remove("on");
+  if(allDone()) resetYarn();
+  go("pick"); renderPick();
+}
+$("#btn-again").addEventListener("click", doAgain);
+$("#sheet-again").addEventListener("click", doAgain);
+
+/* ========= 导出 1080×1440 图片 ========= */
+const FS = (w, px, fam) => `${w} ${px}px ${fam === "sans"
+  ? '"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif'
+  : '"Noto Serif SC","Songti SC","STSong","SimSun",serif'}`;
+function spaced(c, str, x, y, sp, align = "center"){
+  const ch = [...str], ws = ch.map(t => c.measureText(t).width);
+  const total = ws.reduce((a, b) => a + b, 0) + sp * (ch.length - 1);
+  let px = align === "center" ? x - total / 2 : align === "right" ? x - total : x;
+  c.textAlign = "left";
+  ch.forEach((t, i) => { c.fillText(t, px, y); px += ws[i] + sp; });
+}
+function rr(c, x, y, w, h, r){
+  c.beginPath(); c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function blob(c, x, y, r, col){
+  const g = c.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)");
+  c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2);
+}
+const loadImg = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+const lines = h => h.split("<br>");
+
+async function exportCard(){
+  const btn = $("#btn-save"); btn.textContent = "正在生成";
+  try{ await document.fonts.ready; }catch(_){}
+  const k = KNOTS[S.knot], W2 = 1080, H2 = 1440;
+  const cv2 = document.createElement("canvas"); cv2.width = W2; cv2.height = H2;
+  const c = cv2.getContext("2d");
+
+  const bg = c.createLinearGradient(0, 0, 0, H2);
+  bg.addColorStop(0, "#0B1026"); bg.addColorStop(.6, "#121A3E"); bg.addColorStop(1, "#1A2150");
+  c.fillStyle = bg; c.fillRect(0, 0, W2, H2);
+  blob(c, 180, 160, 560, "rgba(92,104,255,.28)");
+  blob(c, 940, 1320, 600, "rgba(46,196,182,.16)");
+  for(let i = 0; i < 90; i++){
+    c.fillStyle = `rgba(255,255,255,${(.15 + Math.random() * .5).toFixed(2)})`;
+    c.beginPath(); c.arc(Math.random() * W2, Math.random() * H2, .4 + Math.random() * 1.8, 0, 7); c.fill();
+  }
+
+  // 卡片底部那句话已去掉，卡片高度相应收短
+  const CH = 1250;
+  c.save(); c.shadowColor = "rgba(0,0,0,.45)"; c.shadowBlur = 60; c.shadowOffsetY = 24;
+  rr(c, 60, 70, 960, CH, 56); c.fillStyle = "#161E46"; c.fill(); c.restore();
+  rr(c, 60, 70, 960, CH, 56); c.strokeStyle = "rgba(255,255,255,.1)"; c.lineWidth = 2; c.stroke();
+
+  c.textBaseline = "alphabetic";
+  c.fillStyle = "rgba(244,236,221,.45)"; c.font = FS(500, 26, "sans");
+  spaced(c, "今日结况 · 第 " + S.no + " 个", 150, 160, 9, "left");
+  spaced(c, "KNOT · " + dateStr().replace(" · ", "."), 930, 160, 6, "right");
+
+  blob(c, 540, 375, 260, "rgba(216,255,106,.14)");
+  try{
+    const svg = makeYarn({face:"relief", loose:S.done, size:760});
+    const img = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
+    c.drawImage(img, 350, 180, 380, 380);
+  }catch(_){}
+
+  c.fillStyle = "rgba(244,236,221,.62)"; c.font = FS(400, 38, "serif");
+  spaced(c, "我今天有点打结", 540, 640, 6);
+  spaced(c, "是" + k.kind + "的那种", 540, 700, 6);
+
+  c.save(); c.shadowColor = "rgba(216,255,106,.5)"; c.shadowBlur = 22;
+  c.fillStyle = "#D8FF6A"; c.font = FS(600, 62, "serif");
+  spaced(c, k.tag, 540, 810, 8); c.restore();
+  c.fillStyle = "rgba(244,236,221,.22)"; c.fillRect(510, 852, 60, 2);
+
+  c.fillStyle = "rgba(244,236,221,.82)"; c.font = FS(400, 36, "serif");
+  lines(k.line).forEach((t, i) => spaced(c, t, 540, 920 + i * 58, 5));
+
+  [["硬拽", pullText(S.lastPulls), 1070], ["放松", lines(k.rx), 1180]].forEach(([lab, vals, y]) => {
+    c.fillStyle = "rgba(244,236,221,.45)"; c.font = FS(500, 26, "sans");
+    spaced(c, lab, 150, y, 8, "left");
+    c.fillStyle = "rgba(244,236,221,.82)"; c.font = FS(400, 32, "serif");
+    vals.forEach((t, i) => spaced(c, t, 270, y + i * 48, 4, "left"));
+  });
+
+  c.fillStyle = "rgba(244,236,221,.45)"; c.font = FS(400, 22, "serif");
+  spaced(c, "线团团 · 你今天是哪种结", 540, 1392, 6);
+
+  let url;
+  try{ url = cv2.toDataURL("image/png"); }
+  catch(_){ btn.textContent = "保存卡片"; alert("图片生成失败，可以直接截图保存"); return; }
+  $("#sheet-img").src = url;
+  $("#sheet-dl").href = url;
+  $("#sheet-dl").style.display = /MicroMessenger|iPhone|Android/i.test(navigator.userAgent) ? "none" : "";
+  $("#sheet").classList.add("on");
+  btn.textContent = "保存卡片";
+}
+$("#btn-save").addEventListener("click", () => { tap(); exportCard(); });
+$("#sheet-close").addEventListener("click", () => $("#sheet").classList.remove("on"));
+
+fit();
+</script>
+</body>
+</html>
