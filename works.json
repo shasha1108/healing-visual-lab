@@ -260,6 +260,40 @@
   },
   "works": [
     {
+      "slug": "leaf-corner-summer",
+      "title_en": "Leaf Corner Summer",
+      "title_zh": "掀开落叶的一角",
+      "tagline": "叶子掀开一角，夏天还留在下面。",
+      "tech": [
+        "Canvas 2D",
+        "Web Audio API"
+      ],
+      "render": "Canvas 2D",
+      "has_audio": true,
+      "has_touch": true,
+      "particle_count": "N/A",
+      "dependencies": 0,
+      "healing_domain": "existential",
+      "keywords": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "use_cases": [
+        "canvas 2d",
+        "web audio api",
+        "touch interaction"
+      ],
+      "files": [
+        "leaf-corner-summer.html",
+        "leaf-corner-summer.md"
+      ],
+      "preview_assets": [
+        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/leaf-corner-summer/v-e8b30f4a14cf/leaf-corner-summer_1.gif"
+      ],
+      "date": "2026-10-27"
+    },
+    {
       "slug": "butterflies-back-to-wind",
       "title_en": "Butterflies Back To Wind",
       "title_zh": "回到风里",
@@ -2004,40 +2038,6 @@
         "layered-mountains.jpg"
       ],
       "date": "2026-06-11"
-    },
-    {
-      "slug": "leaf-corner-summer",
-      "title_en": "Leaf Corner Summer",
-      "title_zh": "掀开落叶的一角",
-      "tagline": "叶子掀开一角，夏天还留在下面。",
-      "tech": [
-        "Canvas 2D",
-        "Web Audio API"
-      ],
-      "render": "Canvas 2D",
-      "has_audio": true,
-      "has_touch": true,
-      "particle_count": "N/A",
-      "dependencies": 0,
-      "healing_domain": "existential",
-      "keywords": [
-        "canvas 2d",
-        "web audio api",
-        "touch interaction"
-      ],
-      "use_cases": [
-        "canvas 2d",
-        "web audio api",
-        "touch interaction"
-      ],
-      "files": [
-        "leaf-corner-summer.html",
-        "leaf-corner-summer.md"
-      ],
-      "preview_assets": [
-        "https://raw.githubusercontent.com/shasha1108/healing-visual-previews/main/leaf-corner-summer/v-e8b30f4a14cf/leaf-corner-summer_1.gif"
-      ],
-      "date": "2026-10-27"
     }
   ]
 }
